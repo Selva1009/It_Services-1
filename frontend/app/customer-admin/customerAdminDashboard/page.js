@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, subDays, subMonths, startOfWeek, endOfWeek } from "date-fns";
@@ -6,7 +7,7 @@ import {
   Users,
   CheckCircle,
   XCircle,
-  Activity,  
+  Activity,
   UserPlus,
   UserX,
   Plus,
@@ -52,6 +53,7 @@ ChartJS.register(
 );
 
 const CustomerAdminDashboard = () => {
+  const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -254,7 +256,7 @@ const CustomerAdminDashboard = () => {
         const qty = typeof n.quantity === 'string'
           ? parseInt(n.quantity.replace(/[^\d]/g, '')) // extract only digits
           : (n.quantity || 1); // fallback in case it's already a number or undefined
-    
+
         productCounts[n.productName] = (productCounts[n.productName] || 0) + qty;
       }
     });
@@ -265,19 +267,19 @@ const CustomerAdminDashboard = () => {
 
     const backgroundColors = darkMode
       ? [
-          "rgba(255, 0, 0, 0.7)", // Red
-          "rgba(62, 166, 255, 0.7)", // Blue
-          "rgba(255, 204, 0, 0.75)", // Yellow
-          "rgba(29, 185, 84, 0.7)", // Green
-          "rgba(255, 102, 0, 0.95)", // Orange
-        ]
+        "rgba(255, 0, 0, 0.7)", // Red
+        "rgba(62, 166, 255, 0.7)", // Blue
+        "rgba(255, 204, 0, 0.75)", // Yellow
+        "rgba(29, 185, 84, 0.7)", // Green
+        "rgba(255, 102, 0, 0.95)", // Orange
+      ]
       : [
-          "rgba(234, 67, 53, 0.7)", // Red
-          "rgba(66, 133, 244, 0.7)", // Blue
-          "rgba(251, 189, 5, 0.8)", // Yellow
-          "rgba(52, 168, 83, 0.7)", // Green
-          "rgba(255, 102, 0, 0.95)", // Orange
-        ];
+        "rgba(234, 67, 53, 0.7)", // Red
+        "rgba(66, 133, 244, 0.7)", // Blue
+        "rgba(251, 189, 5, 0.8)", // Yellow
+        "rgba(52, 168, 83, 0.7)", // Green
+        "rgba(255, 102, 0, 0.95)", // Orange
+      ];
 
     return {
       labels: sortedProducts.map((p) => p[0]),
@@ -431,37 +433,33 @@ const CustomerAdminDashboard = () => {
   const StatCard = ({ title, value, icon, trend, percentage }) => {
     return (
       <div
-        className={`p-5 rounded-xl shadow-sm transition-all hover:scale-[1.02] ${
-          darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-        }`}
+        className={ `p-5 rounded-xl shadow-sm transition-all hover:scale-[1.02] ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+          }` }
       >
         <div className="flex justify-between">
           <div>
             <p
-              className={`text-sm font-medium ${
-                darkMode ? "text-gray-400" : "text-gray-600"
-              }`}
+              className={ `text-sm font-medium ${darkMode ? "text-gray-400" : "text-gray-600"
+                }` }
             >
-              {title}
+              { title }
             </p>
             <p
-              className={`text-2xl font-bold mt-1 ${
-                darkMode ? "text-white" : "text-gray-900"
-              }`}
+              className={ `text-2xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"
+                }` }
             >
-              {value}
+              { value }
             </p>
-          
+
           </div>
           <div
-            className={`h-12 w-12 rounded-full flex items-center justify-center ${
-              darkMode ? "bg-black bg-opacity-20" : "bg-gray-100"
-            }`}
+            className={ `h-12 w-12 rounded-full flex items-center justify-center ${darkMode ? "bg-black bg-opacity-20" : "bg-gray-100"
+              }` }
           >
-            {React.cloneElement(icon, {
+            { React.cloneElement(icon, {
               className: "h-6 w-6",
               style: { color: darkMode ? "#FFFFFF" : "#5F6368" },
-            })}
+            }) }
           </div>
         </div>
       </div>
@@ -470,10 +468,10 @@ const CustomerAdminDashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch("/api/notification/admin", {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminID }),
+        body: JSON.stringify({ adminID, limit: NOTIFICATION_LIMIT }),
       });
 
       if (!response.ok) throw new Error("Failed to fetch notifications");
@@ -512,7 +510,7 @@ const CustomerAdminDashboard = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          "/api/auth/customerUserSignUp/user-profile",
+          `${API_BASE_URL}/api/customer-users/user-profile`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -535,7 +533,7 @@ const CustomerAdminDashboard = () => {
     const fetchNewUserSummary = async () => {
       try {
         const response = await fetch(
-          `/api/auth/customerUserSignUp/new-users-summary?adminID=${adminID}`
+          `${API_BASE_URL}/api/customer-users/new-users-summary?adminID=${adminID}`
         );
         const data = await response.json();
         setStats(data);
@@ -547,7 +545,7 @@ const CustomerAdminDashboard = () => {
     const fetchRecentActivity = async () => {
       try {
         const response = await fetch(
-          `/api/auth/customerUserSignUp/recent-activity?adminID=${adminID}`
+          `${API_BASE_URL}/api/customer-users/recent-activity?adminID=${adminID}`
         );
         const data = await response.json();
         setRecentActivity(data);
@@ -570,319 +568,287 @@ const CustomerAdminDashboard = () => {
 
   return (
     <div
-      className={`min-h-screen ${
-        darkMode ? "bg-black" : "bg-gray-50"
-      } transition-colors duration-200`}
+      className={ `min-h-screen ${darkMode ? "bg-black" : "bg-gray-50"
+        } transition-colors duration-200` }
     >
-      <CustomerAdminNavbar darkMode={darkMode} />
+      <CustomerAdminNavbar darkMode={ darkMode } />
 
       <div className="p-6 max-w-7xl mx-auto">
-        {/* Header Section with Theme Toggle */}
+        {/* Header Section with Theme Toggle */ }
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1
-              className={`text-3xl font-bold ${
-                darkMode ? "text-white" : "text-gray-900"
-              }`}
+              className={ `text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"
+                }` }
             >
               Dashboard Overview
             </h1>
             <p
-              className={`mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+              className={ `mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}` }
             >
-              Welcome back! Here's what's happening with your business.
+              Welcome back! Here&apos;s what&apos;s happening with your business.
             </p>
           </div>
           <div className="flex gap-3 mt-4 md:mt-0 items-center">
             <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-full ${
-                darkMode
+              onClick={ toggleTheme }
+              className={ `p-2 rounded-full ${darkMode
                   ? "bg-gray-800 hover:bg-gray-700"
                   : "bg-gray-200 hover:bg-gray-300"
-              } transition-colors`}
+                } transition-colors` }
               aria-label="Toggle theme"
             >
-              {darkMode ? (
+              { darkMode ? (
                 <Sun className="h-5 w-5 text-yellow-400" />
               ) : (
                 <Moon className="h-5 w-5 text-gray-700" />
-              )}
+              ) }
             </button>
-            {["week", "month"].map((range) => (
+            { ["week", "month"].map((range) => (
               <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  timeRange === range
+                key={ range }
+                onClick={ () => setTimeRange(range) }
+                className={ `px-4 py-2 text-sm font-medium rounded-lg transition-all ${timeRange === range
                     ? "bg-blue-700 text-white shadow-md"
                     : darkMode
-                    ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600"
-                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                }`}
+                      ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                  }` }
               >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
+                { range.charAt(0).toUpperCase() + range.slice(1) }
               </button>
-            ))}
+            )) }
           </div>
         </div>
 
-        {/* Stat Cards */}
+        {/* Stat Cards */ }
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Users"
-            value={users.length}
-            icon={<Users />}
-            
+            value={ users.length }
+            icon={ <Users /> }
+
           />
           <StatCard
             title="Active Users"
-            value={users.filter((u) => u.status === "Active").length}
-            icon={<Activity />}
-           
+            value={ users.filter((u) => u.status === "Active").length }
+            icon={ <Activity /> }
+
           />
           <StatCard
             title="Inactive Users"
-            value={users.filter((u) => u.status === "Inactive").length}
-            icon={<UserX />}
-            
+            value={ users.filter((u) => u.status === "Inactive").length }
+            icon={ <UserX /> }
+
           />
           <StatCard
             title="Total Orders"
-            value={notificationStats.total}
-            icon={<ShoppingCart />}
-            
+            value={ notificationStats.total }
+            icon={ <ShoppingCart /> }
+
           />
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Section */ }
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* User Growth Chart */}
+          {/* User Growth Chart */ }
           <div
-            className={`rounded-xl p-6 ${
-              darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
+            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+              }` }
           >
             <div className="h-64">
-              {users.length > 0 ? (
+              { users.length > 0 ? (
                 <Line
-                  data={prepareChartData(users)}
-                  options={lineChartOptions}
+                  data={ prepareChartData(users) }
+                  options={ lineChartOptions }
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Clock
-                    className="h-8 w-8"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
                   <p
-                    className="ml-2"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   >
                     Loading user data...
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
 
-          {/* Notification Chart */}
+          {/* Notification Chart */ }
           <div
-            className={`rounded-xl p-6 ${
-              darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
+            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+              }` }
           >
             <div className="h-64">
-              {notifications.length > 0 ? (
+              { notifications.length > 0 ? (
                 <Bar
-                  data={prepareNotificationChartData()}
-                  options={barChartOptions}
+                  data={ prepareNotificationChartData() }
+                  options={ barChartOptions }
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Bell
-                    className="h-8 w-8"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
                   <p
-                    className="ml-2"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   >
                     Loading notifications...
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
+        {/* Bottom Section */ }
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Product Distribution */}
+          {/* Product Distribution */ }
           <div
-            className={`rounded-xl p-6 ${
-              darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
+            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+              }` }
           >
             <div className="h-64">
-              {notifications.length > 0 ? (
+              { notifications.length > 0 ? (
                 <Doughnut
-                  data={prepareProductDistributionData()}
-                  options={doughnutChartOptions}
+                  data={ prepareProductDistributionData() }
+                  options={ doughnutChartOptions }
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <PieChart
-                    className="h-8 w-8"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
                   <p
-                    className="ml-2"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   >
                     Loading product data...
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Activity */ }
 
           <div
-            className={`rounded-xl overflow-hidden ${
-              darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-            }`}
+            className={ `rounded-xl overflow-hidden ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+              }` }
           >
             <div className="p-6">
               <h2
-                className={`text-xl font-bold mb-6 ${
-                  darkMode ? "text-white" : "text-gray-900"
-                }`}
+                className={ `text-xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"
+                  }` }
               >
                 Recent Activity
               </h2>
               <div className="space-y-4">
-                {recentActivity.length === 0 ? (
+                { recentActivity.length === 0 ? (
                   <div className="text-center py-8">
                     <Activity
-                      className="h-10 w-10 mx-auto"
-                      style={{ color: currentColors.textSecondary }}
+                      className={ `h-10 w-10 mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                     />
-                    <p style={{ color: currentColors.textSecondary }}>
+                    <p className={ darkMode ? "text-gray-400" : "text-gray-500" }>
                       No recent activity
                     </p>
                   </div>
                 ) : (
                   recentActivity.slice(0, 5).map((activity) => (
                     <div
-                      key={activity.id}
-                      className={`flex items-start pb-4 ${
-                        darkMode
+                      key={ activity.id }
+                      className={ `flex items-start pb-4 ${darkMode
                           ? "border-b border-gray-700"
                           : "border-b border-gray-200"
-                      } last:border-0`}
+                        } last:border-0` }
                     >
                       <div
-                        className={`p-2 rounded-lg mr-3 ${
-                          darkMode ? "bg-blue-900 bg-opacity-30" : "bg-blue-100"
-                        }`}
+                        className={ `p-2 rounded-lg mr-3 ${darkMode ? "bg-blue-900 bg-opacity-30" : "bg-blue-100"
+                          }` }
                       >
-                        {activity.updated_at ? (
+                        { activity.updated_at ? (
                           <Edit
-                            className="h-4 w-4"
-                            style={{
-                              color: darkMode ? "#FFAB00" : "#FBBC05",
-                            }}
+                            className={ `h-4 w-4 ${darkMode ? "text-amber-400" : "text-amber-500"}` }
                           />
                         ) : (
                           <UserPlus
-                            className="h-4 w-4"
-                            style={{
-                              color: darkMode ? "#3EA6FF" : "#1A73E8",
-                            }}
+                            className={ `h-4 w-4 ${darkMode ? "text-blue-400" : "text-blue-600"}` }
                           />
-                        )}
+                        ) }
                       </div>
                       <div className="flex-1">
                         <p
-                          className={`text-sm font-medium ${
-                            darkMode ? "text-white" : "text-gray-900"
-                          }`}
+                          className={ `text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"
+                            }` }
                         >
                           <span className="font-semibold">
-                            {activity.personName}
-                          </span>{" "}
-                          from{" "}
+                            { activity.personName }
+                          </span>{ " " }
+                          from{ " " }
                           <span
-                            style={{
-                              color: darkMode ? "#3EA6FF" : "#1A73E8",
-                            }}
+                            className={ darkMode ? "text-blue-400" : "text-blue-600" }
                           >
-                            {activity.companyName}
+                            { activity.companyName }
                           </span>
                         </p>
                         <p
-                          className={`text-xs mt-1 ${
-                            darkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={ `text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"
+                            }` }
                         >
-                          {format(
+                          { format(
                             new Date(activity.activity_time),
                             "MMM d, h:mm a"
-                          )}
+                          ) }
                         </p>
                       </div>
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          darkMode
+                        className={ `text-xs px-2 py-1 rounded-full ${darkMode
                             ? "bg-gray-700 text-gray-300"
                             : "bg-gray-100 text-gray-600"
-                        }`}
+                          }` }
                       >
-                        {activity.updated_at ? "Updated" : "Created"}
+                        { activity.updated_at ? "Updated" : "Created" }
                       </span>
                     </div>
                   ))
-                )}
+                ) }
               </div>
             </div>
           </div>
         </div>
 
-        {/* User Management Table */}
+        {/* User Management Table */ }
         <div
-          className={`rounded-xl shadow-sm overflow-hidden ${
-            darkMode
+          className={ `rounded-xl shadow-sm overflow-hidden ${darkMode
               ? "bg-gray-800 border border-gray-700"
               : "bg-white border border-gray-200"
-          }`}
+            }` }
         >
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2
-                className={`text-lg font-semibold ${
-                  darkMode ? "text-white" : "text-gray-900"
-                }`}
+                className={ `text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"
+                  }` }
               >
                 User Management (
-                {timeRange === "week" ? "This Week" : "This Month"})
+                { timeRange === "week" ? "This Week" : "This Month" })
               </h2>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => router.push("/customer-admin/add-user")}
+                  onClick={ () => router.push("/customer-admin/add-user") }
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition flex items-center"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add User
                 </button>
                 <button
-                  onClick={() => router.push("/customer-admin/user-profile")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
-                    darkMode
+                  onClick={ () => router.push("/customer-admin/user-profile") }
+                  className={ `px-4 py-2 text-sm font-medium rounded-lg transition ${darkMode
                       ? "border border-gray-600 hover:bg-gray-700 text-gray-300"
                       : "border border-gray-300 hover:bg-gray-100 text-gray-700"
-                  }`}
+                    }` }
                 >
                   View All
                 </button>
@@ -891,39 +857,36 @@ const CustomerAdminDashboard = () => {
 
             <div className="overflow-x-auto">
               <table
-                className={`min-w-full divide-y ${
-                  darkMode ? "divide-gray-700" : "divide-gray-200"
-                }`}
+                className={ `min-w-full divide-y ${darkMode ? "divide-gray-700" : "divide-gray-200"
+                  }` }
               >
-                <thead className={darkMode ? "bg-gray-700" : "bg-gray-50"}>
+                <thead className={ darkMode ? "bg-gray-700" : "bg-gray-50" }>
                   <tr>
-                    {["User", "Company", "Status", "Joined"].map((head) => (
+                    { ["User", "Company", "Status", "Joined"].map((head) => (
                       <th
-                        key={head}
-                        className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                          darkMode ? "text-gray-300" : "text-gray-500"
-                        }`}
+                        key={ head }
+                        className={ `px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? "text-gray-300" : "text-gray-500"
+                          }` }
                       >
-                        {head}
+                        { head }
                       </th>
-                    ))}
+                    )) }
                   </tr>
                 </thead>
                 <tbody
-                  className={`divide-y ${
-                    darkMode
+                  className={ `divide-y ${darkMode
                       ? "divide-gray-700 bg-gray-800"
                       : "divide-gray-200 bg-white"
-                  }`}
+                    }` }
                 >
-                  {filteredUsers
+                  { filteredUsers
                     .sort(
                       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
                     )
                     .slice(0, 5)
                     .map((user) => (
                       <tr
-                        key={user.id}
+                        key={ user.id }
                         className={
                           darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
                         }
@@ -931,92 +894,82 @@ const CustomerAdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div
-                              className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
-                                darkMode
+                              className={ `flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${darkMode
                                   ? "bg-blue-900 bg-opacity-30"
                                   : "bg-blue-100"
-                              }`}
+                                }` }
                             >
                               <span
-                                style={{
-                                  color: darkMode ? "#3EA6FF" : "#1A73E8",
-                                }}
-                                className="font-medium"
+                                className={ `font-medium ${darkMode ? "text-blue-400" : "text-blue-600"}` }
                               >
-                                {user.personName?.charAt(0) || "U"}
+                                { user.personName?.charAt(0) || "U" }
                               </span>
                             </div>
                             <div className="ml-4">
                               <div
-                                className={`text-sm font-medium ${
-                                  darkMode ? "text-white" : "text-gray-900"
-                                }`}
+                                className={ `text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"
+                                  }` }
                               >
-                                {user.personName}
+                                { user.personName }
                               </div>
                               <div
-                                className={`text-sm ${
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                }`}
+                                className={ `text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                                  }` }
                               >
-                                {user.Email}
+                                { user.Email }
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div
-                            className={`text-sm ${
-                              darkMode ? "text-white" : "text-gray-900"
-                            }`}
+                            className={ `text-sm ${darkMode ? "text-white" : "text-gray-900"
+                              }` }
                           >
-                            {user.companyName || "N/A"}
+                            { user.companyName || "N/A" }
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              user.status === "Active"
+                            className={ `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === "Active"
                                 ? darkMode
                                   ? "bg-green-900 text-green-300"
                                   : "bg-green-100 text-green-800"
                                 : darkMode
-                                ? "bg-red-900 text-red-300"
-                                : "bg-red-100 text-red-800"
-                            }`}
+                                  ? "bg-red-900 text-red-300"
+                                  : "bg-red-100 text-red-800"
+                              }` }
                           >
-                            {user.status === "Active" ? (
+                            { user.status === "Active" ? (
                               <CheckCircle className="h-3 w-3 mr-1" />
                             ) : (
                               <XCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {user.status}
+                            ) }
+                            { user.status }
                           </span>
                         </td>
                         <td
-                          className={`px-6 py-4 whitespace-nowrap text-sm ${
-                            darkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={ `px-6 py-4 whitespace-nowrap text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                            }` }
                         >
-                          {user.createdAt
+                          { user.createdAt
                             ? format(new Date(user.createdAt), "MMM d, yyyy")
-                            : "N/A"}
+                            : "N/A" }
                         </td>
                       </tr>
-                    ))}
+                    )) }
                 </tbody>
               </table>
-              {filteredUsers.length === 0 && (
+              { filteredUsers.length === 0 && (
                 <div className="text-center py-8">
                   <UserX
-                    className="h-10 w-10 mx-auto"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-10 w-10 mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
-                  <p style={{ color: currentColors.textSecondary }}>
+                  <p className={ darkMode ? "text-gray-400" : "text-gray-500" }>
                     No users found for this time period
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </div>
@@ -1026,3 +979,5 @@ const CustomerAdminDashboard = () => {
 };
 
 export default CustomerAdminDashboard;
+
+

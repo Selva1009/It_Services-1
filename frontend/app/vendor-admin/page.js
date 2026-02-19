@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -56,36 +57,32 @@ ChartJS.register(
 const StatCard = ({ title, value, icon, darkMode }) => {
   return (
     <div
-      className={`p-5 rounded-xl shadow-sm transition-all hover:scale-[1.02] ${
-        darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-      }`}
+      className={ `p-5 rounded-xl shadow-sm transition-all hover:scale-[1.02] ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+        }` }
     >
       <div className="flex justify-between">
         <div>
           <p
-            className={`text-sm font-medium ${
-              darkMode ? "text-gray-400" : "text-gray-600"
-            }`}
+            className={ `text-sm font-medium ${darkMode ? "text-gray-400" : "text-gray-600"
+              }` }
           >
-            {title}
+            { title }
           </p>
           <p
-            className={`text-2xl font-bold mt-1 ${
-              darkMode ? "text-white" : "text-gray-900"
-            }`}
+            className={ `text-2xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"
+              }` }
           >
-            {value}
+            { value }
           </p>
         </div>
         <div
-          className={`h-12 w-12 rounded-full flex items-center justify-center ${
-            darkMode ? "bg-black bg-opacity-20" : "bg-gray-100"
-          }`}
+          className={ `h-12 w-12 rounded-full flex items-center justify-center ${darkMode ? "bg-black bg-opacity-20" : "bg-gray-100"
+            }` }
         >
-          {React.cloneElement(icon, {
+          { React.cloneElement(icon, {
             className: "h-6 w-6",
             style: { color: darkMode ? "#FFFFFF" : "#5F6368" },
-          })}
+          }) }
         </div>
       </div>
     </div>
@@ -93,6 +90,7 @@ const StatCard = ({ title, value, icon, darkMode }) => {
 };
 
 const VendorDashboard = () => {
+  const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
   const [vendors, setVendors] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -163,21 +161,21 @@ const VendorDashboard = () => {
   // Fetch notifications data
   const fetchNotifications = async () => {
     try {
-      const response = await fetch("/api/notification/vendor-admin", {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem('vendorToken')}`
         },
-        body: JSON.stringify({ vendorAdminID: vendorID }),
+        body: JSON.stringify({ vendorAdminID: vendorID, limit: NOTIFICATION_LIMIT }),
       });
 
       if (!response.ok) throw new Error("Failed to fetch notifications");
       const data = await response.json();
-    
+
       setNotifications(data.notifications);
       console.log(data.notifications)
-     
+
 
       const unreadCount = data.notifications.filter(n => n.status === "unread").length;
       setNotificationStats({
@@ -320,30 +318,30 @@ const VendorDashboard = () => {
         const qty = typeof n.quantity === 'string'
           ? parseInt(n.quantity.replace(/[^\d]/g, '')) // extract only digits
           : (n.quantity || 1); // fallback in case it's already a number or undefined
-    
+
         productCounts[n.productName] = (productCounts[n.productName] || 0) + qty;
       }
     });
-    
+
     const sortedProducts = Object.entries(productCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
     const backgroundColors = darkMode
       ? [
-          "rgba(255, 0, 0, 0.7)",
-          "rgba(62, 166, 255, 0.7)",
-          "rgba(255, 204, 0, 0.75)",
-          "rgba(29, 185, 84, 0.7)",
-          "rgba(255, 102, 0, 0.95)",
-        ]
+        "rgba(255, 0, 0, 0.7)",
+        "rgba(62, 166, 255, 0.7)",
+        "rgba(255, 204, 0, 0.75)",
+        "rgba(29, 185, 84, 0.7)",
+        "rgba(255, 102, 0, 0.95)",
+      ]
       : [
-          "rgba(234, 67, 53, 0.7)",
-          "rgba(66, 133, 244, 0.7)",
-          "rgba(251, 189, 5, 0.8)",
-          "rgba(52, 168, 83, 0.7)",
-          "rgba(255, 102, 0, 0.95)",
-        ];
+        "rgba(234, 67, 53, 0.7)",
+        "rgba(66, 133, 244, 0.7)",
+        "rgba(251, 189, 5, 0.8)",
+        "rgba(52, 168, 83, 0.7)",
+        "rgba(255, 102, 0, 0.95)",
+      ];
 
     return {
       labels: sortedProducts.map((p) => p[0]),
@@ -364,7 +362,7 @@ const VendorDashboard = () => {
 
   const prepareRecentActivity = (vendors) => {
     const activities = [];
-  
+
     vendors.forEach(vendor => {
       // Always include creation activity
       activities.push({
@@ -375,7 +373,7 @@ const VendorDashboard = () => {
         status: vendor.status,
         id: vendor.id
       });
-  
+
       // Check if there was an update (updated_at is different from createdAt)
       if (vendor.updated_at && new Date(vendor.updated_at).getTime() !== new Date(vendor.createdAt).getTime()) {
         activities.push({
@@ -388,7 +386,7 @@ const VendorDashboard = () => {
         });
       }
     });
-  
+
     // Sort by date descending and limit to 5 most recent
     return activities
       .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -414,7 +412,7 @@ const VendorDashboard = () => {
       if (!vendorID) return;
       try {
         setLoading(true);
-        const response = await fetch("/api/auth/vendor/users", {
+        const response = await fetch(`${API_BASE_URL}/api/vendor-users/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ vendorId: vendorID }),
@@ -563,7 +561,7 @@ const VendorDashboard = () => {
         borderColor: currentColors.accent,
         borderWidth: 1,
         cornerRadius: 8,
-      
+
       },
     },
     cutout: "65%",
@@ -583,277 +581,253 @@ const VendorDashboard = () => {
   const inactiveVendors = vendors.filter(v => v.status !== "Active").length;
 
   return (
-    <div className={`min-h-screen ${darkMode ? "bg-black" : "bg-gray-50"} transition-colors duration-200`}>
-      <Navbar darkMode={darkMode} />
+    <div className={ `min-h-screen ${darkMode ? "bg-black" : "bg-gray-50"} transition-colors duration-200` }>
+      <Navbar darkMode={ darkMode } />
 
       <div className="p-6 max-w-7xl mx-auto">
-        {/* Header Section with Theme Toggle */}
+        {/* Header Section with Theme Toggle */ }
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+            <h1 className={ `text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}` }>
               Vendor Dashboard
             </h1>
-            <p className={`mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-              Welcome back! Here's what's happening with your vendors.
+            <p className={ `mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}` }>
+              Welcome back! Here&apos;s what&apos;s happening with your vendors.
             </p>
           </div>
           <div className="flex gap-3 mt-4 md:mt-0 items-center">
             <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-full ${
-                darkMode
+              onClick={ toggleTheme }
+              className={ `p-2 rounded-full ${darkMode
                   ? "bg-gray-800 hover:bg-gray-700"
                   : "bg-gray-200 hover:bg-gray-300"
-              } transition-colors`}
+                } transition-colors` }
               aria-label="Toggle theme"
             >
-              {darkMode ? (
+              { darkMode ? (
                 <Sun className="h-5 w-5 text-yellow-400" />
               ) : (
                 <Moon className="h-5 w-5 text-gray-700" />
-              )}
+              ) }
             </button>
-            {["week", "month"].map((range) => (
+            { ["week", "month"].map((range) => (
               <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  timeRange === range
+                key={ range }
+                onClick={ () => setTimeRange(range) }
+                className={ `px-4 py-2 text-sm font-medium rounded-lg transition-all ${timeRange === range
                     ? "bg-blue-700 text-white shadow-md"
                     : darkMode
-                    ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600"
-                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                }`}
+                      ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                  }` }
               >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
+                { range.charAt(0).toUpperCase() + range.slice(1) }
               </button>
-            ))}
+            )) }
           </div>
         </div>
 
-        {/* Stat Cards */}
+        {/* Stat Cards */ }
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Vendors"
-            value={vendors.length}
-            icon={<Users />}
-            darkMode={darkMode}
+            value={ vendors.length }
+            icon={ <Users /> }
+            darkMode={ darkMode }
           />
           <StatCard
             title="Active Vendors"
-            value={activeVendors}
-            icon={<Activity />}
-            darkMode={darkMode}
+            value={ activeVendors }
+            icon={ <Activity /> }
+            darkMode={ darkMode }
           />
           <StatCard
             title="Inactive Vendors"
-            value={inactiveVendors}
-            icon={<UserX />}
-            darkMode={darkMode}
+            value={ inactiveVendors }
+            icon={ <UserX /> }
+            darkMode={ darkMode }
           />
           <StatCard
             title="Total Orders"
-            value={notificationStats.total}
-            icon={<ShoppingCart />}
-            darkMode={darkMode}
+            value={ notificationStats.total }
+            icon={ <ShoppingCart /> }
+            darkMode={ darkMode }
           />
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Section */ }
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Vendor Growth Chart */}
-          <div className={`rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}`}>
+          {/* Vendor Growth Chart */ }
+          <div className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="h-64">
-              {vendors.length > 0 ? (
+              { vendors.length > 0 ? (
                 <Line
-                  data={prepareVendorGrowthData(vendors)}
-                  options={lineChartOptions}
+                  data={ prepareVendorGrowthData(vendors) }
+                  options={ lineChartOptions }
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Clock
-                    className="h-8 w-8"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
                   <p
-                    className="ml-2"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   >
                     Loading vendor data...
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
 
-          {/* Notification Chart */}
-          <div className={`rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}`}>
+          {/* Notification Chart */ }
+          <div className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="h-64">
-              {notifications.length > 0 ? (
+              { notifications.length > 0 ? (
                 <Bar
-                  data={prepareNotificationChartData()}
-                  options={barChartOptions}
+                  data={ prepareNotificationChartData() }
+                  options={ barChartOptions }
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Bell
-                    className="h-8 w-8"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
                   <p
-                    className="ml-2"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   >
                     Loading notifications...
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
+        {/* Bottom Section */ }
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Product Distribution */}
-          <div className={`rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}`}>
+          {/* Product Distribution */ }
+          <div className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="h-64">
-              {notifications.length > 0 ? (
+              { notifications.length > 0 ? (
                 <Doughnut
-                  data={prepareProductDistributionData()}
-                  options={doughnutChartOptions}
+                  data={ prepareProductDistributionData() }
+                  options={ doughnutChartOptions }
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Package
-                    className="h-8 w-8"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
                   <p
-                    className="ml-2"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   >
                     Loading product data...
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className={`rounded-xl overflow-hidden ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}`}>
+          {/* Recent Activity */ }
+          <div className={ `rounded-xl overflow-hidden ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="p-6">
-              <h2 className={`text-xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h2 className={ `text-xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}` }>
                 Recent Activity
               </h2>
               <div className="space-y-4">
-                {recentActivity.length === 0 ? (
+                { recentActivity.length === 0 ? (
                   <div className="text-center py-8">
                     <Activity
-                      className="h-10 w-10 mx-auto"
-                      style={{ color: currentColors.textSecondary }}
+                      className={ `h-10 w-10 mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                     />
-                    <p style={{ color: currentColors.textSecondary }}>
+                    <p className={ darkMode ? "text-gray-400" : "text-gray-500" }>
                       No recent activity
                     </p>
                   </div>
                 ) : (
                   recentActivity.slice(0, 5).map((activity, index) => (
                     <div
-                      key={`activity-${index}`}
-                      className={`flex items-start pb-4 ${
-                        darkMode
+                      key={ `activity-${index}` }
+                      className={ `flex items-start pb-4 ${darkMode
                           ? "border-b border-gray-700"
                           : "border-b border-gray-200"
-                      } last:border-0`}
+                        } last:border-0` }
                     >
                       <div
-                        className={`p-2 rounded-lg mr-3 ${
-                          darkMode ? "bg-blue-900 bg-opacity-30" : "bg-blue-100"
-                        }`}
+                        className={ `p-2 rounded-lg mr-3 ${darkMode ? "bg-blue-900 bg-opacity-30" : "bg-blue-100"
+                          }` }
                       >
-                        {activity.type === 'created' ? (
+                        { activity.type === 'created' ? (
                           <UserPlus
-                            className="h-4 w-4"
-                            style={{
-                              color: darkMode ? "#3EA6FF" : "#1A73E8",
-                            }}
+                            className={ `h-4 w-4 ${darkMode ? "text-blue-400" : "text-blue-600"}` }
                           />
                         ) : (
                           <Edit
-                            className="h-4 w-4"
-                            style={{
-                              color: darkMode ? "#FFAB00" : "#FBBC05",
-                            }}
+                            className={ `h-4 w-4 ${darkMode ? "text-amber-400" : "text-amber-500"}` }
                           />
-                        )}
+                        ) }
                       </div>
                       <div className="flex-1">
                         <p
-                          className={`text-sm font-medium ${
-                            darkMode ? "text-white" : "text-gray-900"
-                          }`}
+                          className={ `text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"
+                            }` }
                         >
-                          <span className="font-semibold">{activity.name}</span> from{" "}
+                          <span className="font-semibold">{ activity.name }</span> from{ " " }
                           <span
-                            style={{
-                              color: darkMode ? "#3EA6FF" : "#1A73E8",
-                            }}
+                            className={ darkMode ? "text-blue-400" : "text-blue-600" }
                           >
-                            {activity.company}
+                            { activity.company }
                           </span>
                         </p>
                         <p
-                          className={`text-xs mt-1 ${
-                            darkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={ `text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"
+                            }` }
                         >
-                          {format(new Date(activity.date), "MMM d, h:mm a")}
+                          { format(new Date(activity.date), "MMM d, h:mm a") }
                         </p>
                       </div>
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          darkMode
+                        className={ `text-xs px-2 py-1 rounded-full ${darkMode
                             ? "bg-gray-700 text-gray-300"
                             : "bg-gray-100 text-gray-600"
-                        }`}
+                          }` }
                       >
-                        {activity.type === 'created' ? 'Created' : 'Updated'}
+                        { activity.type === 'created' ? 'Created' : 'Updated' }
                       </span>
                     </div>
                   ))
-                )}
+                ) }
               </div>
             </div>
           </div>
         </div>
 
-        {/* Vendor Management Table */}
-        <div className={`rounded-xl shadow-sm overflow-hidden ${
-          darkMode
+        {/* Vendor Management Table */ }
+        <div className={ `rounded-xl shadow-sm overflow-hidden ${darkMode
             ? "bg-gray-800 border border-gray-700"
             : "bg-white border border-gray-200"
-        }`}>
+          }` }>
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+              <h2 className={ `text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}` }>
                 Vendor Management (
-                {timeRange === "week" ? "This Week" : "This Month"})
+                { timeRange === "week" ? "This Week" : "This Month" })
               </h2>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => router.push("/vendor-admin/addUser")}
+                  onClick={ () => router.push("/vendor-admin/addUser") }
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition flex items-center"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Vendor
                 </button>
                 <button
-                  onClick={() => router.push("/vendor-admin/usersprofile")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
-                    darkMode
+                  onClick={ () => router.push("/vendor-admin/usersprofile") }
+                  className={ `px-4 py-2 text-sm font-medium rounded-lg transition ${darkMode
                       ? "border border-gray-600 hover:bg-gray-700 text-gray-300"
                       : "border border-gray-300 hover:bg-gray-100 text-gray-700"
-                  }`}
+                    }` }
                 >
                   View All
                 </button>
@@ -861,116 +835,105 @@ const VendorDashboard = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className={`min-w-full divide-y ${darkMode ? "divide-gray-700" : "divide-gray-200"}`}>
-                <thead className={darkMode ? "bg-gray-700" : "bg-gray-50"}>
+              <table className={ `min-w-full divide-y ${darkMode ? "divide-gray-700" : "divide-gray-200"}` }>
+                <thead className={ darkMode ? "bg-gray-700" : "bg-gray-50" }>
                   <tr>
-                    {["Vendor", "Company", "Status", "Registered"].map((head) => (
+                    { ["Vendor", "Company", "Status", "Registered"].map((head) => (
                       <th
-                        key={head}
-                        className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                          darkMode ? "text-gray-300" : "text-gray-500"
-                        }`}
+                        key={ head }
+                        className={ `px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? "text-gray-300" : "text-gray-500"
+                          }` }
                       >
-                        {head}
+                        { head }
                       </th>
-                    ))}
+                    )) }
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${darkMode ? "divide-gray-700 bg-gray-800" : "divide-gray-200 bg-white"}`}>
-                  {filteredVendors
+                <tbody className={ `divide-y ${darkMode ? "divide-gray-700 bg-gray-800" : "divide-gray-200 bg-white"}` }>
+                  { filteredVendors
                     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                     .slice(0, 5)
                     .map((vendor) => (
-                      <tr key={vendor.id || vendor.Email} className={darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"}>
+                      <tr key={ vendor.id || vendor.Email } className={ darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50" }>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div
-                              className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
-                                darkMode
+                              className={ `flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${darkMode
                                   ? "bg-blue-900 bg-opacity-30"
                                   : "bg-blue-100"
-                              }`}
+                                }` }
                             >
                               <span
-                                style={{
-                                  color: darkMode ? "#3EA6FF" : "#1A73E8",
-                                }}
-                                className="font-medium"
+                                className={ `font-medium ${darkMode ? "text-blue-400" : "text-blue-600"}` }
                               >
-                                {vendor.personName?.charAt(0) || "V"}
+                                { vendor.personName?.charAt(0) || "V" }
                               </span>
                             </div>
                             <div className="ml-4">
                               <div
-                                className={`text-sm font-medium ${
-                                  darkMode ? "text-white" : "text-gray-900"
-                                }`}
+                                className={ `text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"
+                                  }` }
                               >
-                                {vendor.personName}
+                                { vendor.personName }
                               </div>
                               <div
-                                className={`text-sm ${
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                }`}
+                                className={ `text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                                  }` }
                               >
-                                {vendor.Email}
+                                { vendor.Email }
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div
-                            className={`text-sm ${
-                              darkMode ? "text-white" : "text-gray-900"
-                            }`}
+                            className={ `text-sm ${darkMode ? "text-white" : "text-gray-900"
+                              }` }
                           >
-                            {vendor.companyName || "N/A"}
+                            { vendor.companyName || "N/A" }
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              vendor.status === "Active"
+                            className={ `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${vendor.status === "Active"
                                 ? darkMode
                                   ? "bg-green-900 text-green-300"
                                   : "bg-green-100 text-green-800"
                                 : darkMode
-                                ? "bg-red-900 text-red-300"
-                                : "bg-red-100 text-red-800"
-                            }`}
+                                  ? "bg-red-900 text-red-300"
+                                  : "bg-red-100 text-red-800"
+                              }` }
                           >
-                            {vendor.status === "Active" ? (
+                            { vendor.status === "Active" ? (
                               <CheckCircle className="h-3 w-3 mr-1" />
                             ) : (
                               <XCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {vendor.status}
+                            ) }
+                            { vendor.status }
                           </span>
                         </td>
                         <td
-                          className={`px-6 py-4 whitespace-nowrap text-sm ${
-                            darkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={ `px-6 py-4 whitespace-nowrap text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                            }` }
                         >
-                          {vendor.createdAt
+                          { vendor.createdAt
                             ? format(new Date(vendor.createdAt), "MMM d, yyyy")
-                            : "N/A"}
+                            : "N/A" }
                         </td>
                       </tr>
-                    ))}
+                    )) }
                 </tbody>
               </table>
-              {filteredVendors.length === 0 && (
+              { filteredVendors.length === 0 && (
                 <div className="text-center py-8">
                   <UserX
-                    className="h-10 w-10 mx-auto"
-                    style={{ color: currentColors.textSecondary }}
+                    className={ `h-10 w-10 mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}` }
                   />
-                  <p style={{ color: currentColors.textSecondary }}>
+                  <p className={ darkMode ? "text-gray-400" : "text-gray-500" }>
                     No vendors found for this time period
                   </p>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </div>
@@ -980,3 +943,5 @@ const VendorDashboard = () => {
 };
 
 export default VendorDashboard;
+
+

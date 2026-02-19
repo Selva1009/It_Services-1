@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
@@ -21,38 +22,38 @@ export default function AddProduct() {
   const [productImage, setProductImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
 
-useEffect(() => {
-  const storedVendor = localStorage.getItem("vendorUser");
-  if (storedVendor) {
-    const parsedVendor = JSON.parse(storedVendor);
+  useEffect(() => {
+    const storedVendor = localStorage.getItem("vendorUser");
+    if (storedVendor) {
+      const parsedVendor = JSON.parse(storedVendor);
 
-    // ✅ Set vendorUserId as a number (ID only)
-    setVendorUserId(parsedVendor.id);
+      // ✅ Set vendorUserId as a number (ID only)
+      setVendorUserId(parsedVendor.id);
 
-    // ✅ Set full vendor user object for things like companyName
-    setVendorUser(parsedVendor);
-  } else {
-    Swal.fire({
-      title: "Vendor Not Logged In!",
-      text: "Please log in again to continue adding products.",
-      icon: "warning",
-      confirmButtonColor: "#d33",
-      confirmButtonText: "OK",
-    }).then(() => {
-      window.location.href = "/vendor/login";
-    });
-  }
-}, []);
+      // ✅ Set full vendor user object for things like companyName
+      setVendorUser(parsedVendor);
+    } else {
+      Swal.fire({
+        title: "Vendor Not Logged In!",
+        text: "Please log in again to continue adding products.",
+        icon: "warning",
+        confirmButtonColor: "#d33",
+        confirmButtonText: "OK",
+      }).then(() => {
+        window.location.href = "/SignIn";
+      });
+    }
+  }, []);
 
 
-useEffect(() => {
-  if (vendorUser?.companyName) {
-    setFormData((prev) => ({
-      ...prev,
-      seller: vendorUser.companyName,
-    }));
-  }
-}, [vendorUser]);
+  useEffect(() => {
+    if (vendorUser?.companyName) {
+      setFormData((prev) => ({
+        ...prev,
+        seller: vendorUser.companyName,
+      }));
+    }
+  }, [vendorUser]);
 
 
   const handleInputChange = (e) => {
@@ -93,7 +94,7 @@ useEffect(() => {
 
     try {
       const response = await fetch(
-        "/api/auth/products/add-product",
+        `${API_BASE_URL}/api/products/add-product`,
         {
           method: "POST",
           body: formDataToSend,
@@ -155,20 +156,20 @@ useEffect(() => {
     <>
       <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg mt-8 font-sans w-full md:w-4/5 lg:w-3/5">
         <h2 className="text-lg font-bold text-black mb-4 text-left flex items-center gap-2">
-          <IoBagAdd size={25} />
+          <IoBagAdd size={ 25 } />
           Add New Product
         </h2>
 
         <form
           className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-black"
-          onSubmit={handleSubmit}
+          onSubmit={ handleSubmit }
         >
           <div>
             <label className="block font-medium mb-2">Category</label>
             <select
               name="category"
-              value={formData.category}
-              onChange={handleInputChange}
+              value={ formData.category }
+              onChange={ handleInputChange }
               className="w-full p-2 border rounded-md font-sans"
               required
             >
@@ -623,22 +624,22 @@ useEffect(() => {
             <input
               type="text"
               name="brand"
-              value={formData.brand}
-              onChange={handleInputChange}
+              value={ formData.brand }
+              onChange={ handleInputChange }
               className="w-full p-2 border rounded-md font-sans"
               required
               placeholder="Enter Make & Model"
             />
           </div>
 
-          {/* Row 2 */}
+          {/* Row 2 */ }
           <div>
             <label className="block font-medium mb-2">Product Name</label>
             <input
               type="text"
               name="productName"
-              value={formData.productName}
-              onChange={handleInputChange}
+              value={ formData.productName }
+              onChange={ handleInputChange }
               className="w-full p-2 border rounded-md font-sans"
               required
               placeholder="Enter Product Name"
@@ -650,21 +651,21 @@ useEffect(() => {
             <input
               type="number"
               name="price"
-              value={formData.price}
-              onChange={handleInputChange}
+              value={ formData.price }
+              onChange={ handleInputChange }
               className="w-full p-2 border rounded-md font-sans"
               required
               placeholder="Enter Product Price"
             />
           </div>
 
-          {/* Row 3 */}
+          {/* Row 3 */ }
           <div>
             <label className="block font-medium mb-2">Seller</label>
             <input
               type="text"
               name="seller"
-              value={formData.seller}
+              value={ formData.seller }
               disabled
               className="w-full p-2 border rounded-md font-sans bg-gray-100 cursor-not-allowed"
               placeholder="Seller Name"
@@ -675,37 +676,37 @@ useEffect(() => {
             <label className="block font-medium mb-2">Image</label>
             <input
               type="file"
-              onChange={handleImageChange}
+              onChange={ handleImageChange }
               className="w-full p-2 border rounded-md font-sans"
               required
             />
           </div>
 
-          {/* Image Preview */}
-          {previewImage && (
+          {/* Image Preview */ }
+          { previewImage && (
             <div className="col-span-1 md:col-span-2 flex justify-center">
               <img
-                src={previewImage}
+                src={ previewImage }
                 alt="Product Preview"
                 className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-lg border"
               />
             </div>
-          )}
+          ) }
 
-          {/* Row 4 (Full Width) */}
+          {/* Row 4 (Full Width) */ }
           <div className="col-span-1 md:col-span-2">
             <label className="block font-medium mb-2">Description</label>
             <textarea
               name="description"
-              value={formData.description}
-              onChange={handleInputChange}
+              value={ formData.description }
+              onChange={ handleInputChange }
               className="w-full p-2 border rounded-md h-24 font-sans"
               required
               placeholder="Enter Product Description"
             />
           </div>
 
-          {/* Submit Button (Full Width) */}
+          {/* Submit Button (Full Width) */ }
           <div className="col-span-1 md:col-span-2 flex justify-start">
             <button
               type="submit"
@@ -721,3 +722,4 @@ useEffect(() => {
     </>
   );
 }
+

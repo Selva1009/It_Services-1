@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       const response = await fetch(
-        "/api/forgotpassword/forgot-password",
+        `${API_BASE_URL}/api/password/forgot-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -69,12 +70,12 @@ export default function ForgotPassword() {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-full">
-      {/* Left Side - Image Slider (hidden on mobile) */}
+      {/* Left Side - Image Slider (hidden on mobile) */ }
       <div className="hidden lg:block lg:w-1/2 h-full overflow-hidden">
         <ImageSlider />
       </div>
 
-      {/* Forgot Password - Consistent Design with Login */}
+      {/* Forgot Password - Consistent Design with Login */ }
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-100 px-6 py-10 2xl:py-16">
         <Card className="w-full max-w-md 2xl:max-w-lg shadow-lg p-6 2xl:p-8 bg-white rounded-lg">
           <CardHeader>
@@ -97,7 +98,7 @@ export default function ForgotPassword() {
             </p>
 
             <form
-              onSubmit={handleSubmit(onSubmit)}
+              onSubmit={ handleSubmit(onSubmit) }
               className="space-y-4 2xl:space-y-6"
             >
               <div>
@@ -111,41 +112,40 @@ export default function ForgotPassword() {
                   id="email"
                   type="email"
                   placeholder="Enter your email"
-                  {...register("email")}
+                  { ...register("email") }
                   className="2xl:h-12 2xl:text-base"
                 />
-                {errors.email && (
+                { errors.email && (
                   <p className="text-red-500 text-sm 2xl:text-base mt-1">
-                    {errors.email.message}
+                    { errors.email.message }
                   </p>
-                )}
+                ) }
               </div>
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={ loading }
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 2xl:py-3 rounded-md disabled:bg-gray-400 flex items-center justify-center text-base 2xl:text-lg"
               >
-                {loading ? (
+                { loading ? (
                   <>
                     <Loader2 className="animate-spin mr-2 w-5 h-5 2xl:w-6 2xl:h-6" />
                     Sending...
                   </>
                 ) : (
                   "Submit"
-                )}
+                ) }
               </Button>
             </form>
 
-            {otpMessage && (
+            { otpMessage && (
               <p
-                className={`mt-3 2xl:mt-4 text-sm 2xl:text-base text-left ${
-                  otpSent ? "text-green-500" : "text-red-500"
-                }`}
+                className={ `mt-3 2xl:mt-4 text-sm 2xl:text-base text-left ${otpSent ? "text-green-500" : "text-red-500"
+                  }` }
               >
-                {otpMessage}
+                { otpMessage }
               </p>
-            )}
+            ) }
 
             <Link
               href="/SignIn"

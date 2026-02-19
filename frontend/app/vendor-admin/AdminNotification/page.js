@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import React from "react";
 import {
@@ -36,6 +37,7 @@ import Navbar from "../components/navbar";
 import ExportMenu from "@/app/Components/auth/ExportMenu";
 
 const VendorAdminNotifications = () => {
+  const NOTIFICATION_LIMIT = 200;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,13 +66,13 @@ const VendorAdminNotifications = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/notification/vendor-admin", {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem('vendorToken')}`
         },
-        body: JSON.stringify({ vendorAdminID }),
+        body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
       });
 
       if (!response.ok) {
@@ -151,9 +153,9 @@ const VendorAdminNotifications = () => {
             <Skeleton className="h-10 w-64" />
           </div>
           <div className="grid gap-4">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
-            ))}
+            { [...Array(5)].map((_, i) => (
+              <Skeleton key={ i } className="h-20 w-full rounded-lg" />
+            )) }
           </div>
         </div>
       </div>
@@ -173,10 +175,10 @@ const VendorAdminNotifications = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-red-600 mb-4">{error}</p>
+              <p className="text-red-600 mb-4">{ error }</p>
               <Button
                 variant="outline"
-                onClick={handleRefresh}
+                onClick={ handleRefresh }
                 className="border-red-200 hover:bg-red-50"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -201,7 +203,7 @@ const VendorAdminNotifications = () => {
             <div>
               <h2 className="text-2xl font-bold text-gray-800">Order Notifications</h2>
               <p className="text-sm text-muted-foreground">
-                {notifications.length} total notifications
+                { notifications.length } total notifications
               </p>
             </div>
           </div>
@@ -210,29 +212,29 @@ const VendorAdminNotifications = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search notifications..."
-                value={searchTerm}
-                onChange={(e) => {
+                value={ searchTerm }
+                onChange={ (e) => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
-                }}
+                } }
                 className="pl-9"
               />
             </div>
 
             <div className="w-full md:w-auto">
               <ExportMenu
-                users={filteredNotifications}
+                users={ filteredNotifications }
                 dataType="notifications"
               />
             </div>
           </div>
         </div>
 
-        {filteredNotifications.length === 0 ? (
+        { filteredNotifications.length === 0 ? (
           <Card className="border border-dashed">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                {searchTerm ? (
+                { searchTerm ? (
                   <>
                     <Search className="h-5 w-5" />
                     No matching notifications found
@@ -242,14 +244,14 @@ const VendorAdminNotifications = () => {
                     <Bell className="h-5 w-5" />
                     No notifications yet
                   </>
-                )}
+                ) }
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                {searchTerm
+                { searchTerm
                   ? "Try adjusting your search criteria."
-                  : "New order notifications will appear here."}
+                  : "New order notifications will appear here." }
               </p>
             </CardContent>
           </Card>
@@ -261,7 +263,7 @@ const VendorAdminNotifications = () => {
                   <TableRow>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("personName")}
+                      onClick={ () => handleSort("personName") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Vendor User
@@ -270,7 +272,7 @@ const VendorAdminNotifications = () => {
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("Email")}
+                      onClick={ () => handleSort("Email") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Email
@@ -279,7 +281,7 @@ const VendorAdminNotifications = () => {
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("productName")}
+                      onClick={ () => handleSort("productName") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Product
@@ -288,7 +290,7 @@ const VendorAdminNotifications = () => {
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("companyName")}
+                      onClick={ () => handleSort("companyName") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Company
@@ -297,7 +299,7 @@ const VendorAdminNotifications = () => {
                     </TableHead>
                     <TableHead
                       className="hidden lg:table-cell cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("price")}
+                      onClick={ () => handleSort("price") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Price/Unit
@@ -306,7 +308,7 @@ const VendorAdminNotifications = () => {
                     </TableHead>
                     <TableHead
                       className="hidden lg:table-cell cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("quantity")}
+                      onClick={ () => handleSort("quantity") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Quantity
@@ -315,7 +317,7 @@ const VendorAdminNotifications = () => {
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={() => handleSort("created_at")}
+                      onClick={ () => handleSort("created_at") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
                         Date
@@ -325,30 +327,30 @@ const VendorAdminNotifications = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentNotifications.map((notification, idx) => (
+                  { currentNotifications.map((notification, idx) => (
                     <TableRow
-                      key={idx}
-                      className={`hover:bg-blue-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                        }`}
+                      key={ idx }
+                      className={ `hover:bg-blue-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        }` }
                     >
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="p-2 rounded-full bg-primary/10">
                             <User className="h-4 w-4 text-primary" />
                           </div>
-                          <span className="font-medium">{notification.personName}</span>
+                          <span className="font-medium">{ notification.personName }</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <a
-                          href={`mailto:${notification.Email}`}
+                          href={ `mailto:${notification.Email}` }
                           className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2"
                         >
                           <div className="p-2 rounded-full bg-blue-100">
                             <Mail className="h-4 w-4 text-blue-600" />
                           </div>
                           <span className="truncate max-w-[180px]">
-                            {notification.Email}
+                            { notification.Email }
                           </span>
                         </a>
                       </TableCell>
@@ -357,7 +359,7 @@ const VendorAdminNotifications = () => {
                           <div className="p-2 rounded-full bg-purple-100">
                             <Package className="h-4 w-4 text-purple-600" />
                           </div>
-                          <span>{notification.productName}</span>
+                          <span>{ notification.productName }</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
@@ -365,7 +367,7 @@ const VendorAdminNotifications = () => {
                           <div className="p-2 rounded-full bg-green-100">
                             <Building2 className="h-4 w-4 text-green-600" />
                           </div>
-                          <span>{notification.companyName}</span>
+                          <span>{ notification.companyName }</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell px-4 py-3">
@@ -373,7 +375,7 @@ const VendorAdminNotifications = () => {
                           <div className="p-2 rounded-full bg-yellow-100">
                             <IndianRupee className="h-4 w-4 text-yellow-600" />
                           </div>
-                          <span className="font-medium">{notification.price}</span>
+                          <span className="font-medium">{ notification.price }</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell px-4 py-3">
@@ -381,7 +383,7 @@ const VendorAdminNotifications = () => {
                           <div className="p-2 rounded-full bg-orange-100">
                             <Tag className="h-4 w-4 text-orange-600" />
                           </div>
-                          <span className="font-medium">{notification.quantity}</span>
+                          <span className="font-medium">{ notification.quantity }</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
@@ -390,69 +392,69 @@ const VendorAdminNotifications = () => {
                             <Calendar className="h-4 w-4 text-gray-600" />
                           </div>
                           <span className="text-sm">
-                            {format(new Date(notification.created_at), "MMM dd, yyyy")}
+                            { format(new Date(notification.created_at), "MMM dd, yyyy") }
                             <br />
                             <span className="text-muted-foreground">
-                              {format(new Date(notification.created_at), "HH:mm")}
+                              { format(new Date(notification.created_at), "HH:mm") }
                             </span>
                           </span>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) }
                 </TableBody>
               </Table>
 
-              {/* Pagination */}
+              {/* Pagination */ }
               <div className="px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-100 bg-gray-50/50">
                 <div className="text-sm text-gray-500">
-                  Showing{" "}
+                  Showing{ " " }
                   <span className="font-medium">
-                    {(currentPage - 1) * notificationsPerPage + 1}
-                  </span>{" "}
-                  to{" "}
+                    { (currentPage - 1) * notificationsPerPage + 1 }
+                  </span>{ " " }
+                  to{ " " }
                   <span className="font-medium">
-                    {Math.min(
+                    { Math.min(
                       currentPage * notificationsPerPage,
                       filteredNotifications.length
-                    )}
-                  </span>{" "}
-                  of{" "}
+                    ) }
+                  </span>{ " " }
+                  of{ " " }
                   <span className="font-medium">
-                    {filteredNotifications.length}
-                  </span>{" "}
+                    { filteredNotifications.length }
+                  </span>{ " " }
                   notifications
                 </div>
                 <div className="flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={ currentPage === 1 }
+                    onClick={ () => setCurrentPage((prev) => prev - 1) }
                     className="px-3 py-1 rounded-lg border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     <span>Previous</span>
                   </Button>
-                  {Array.from({ length: totalPages }, (_, i) => (
+                  { Array.from({ length: totalPages }, (_, i) => (
                     <Button
-                      key={i}
-                      variant={i + 1 === currentPage ? "default" : "outline"}
+                      key={ i }
+                      variant={ i + 1 === currentPage ? "default" : "outline" }
                       size="sm"
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-3 py-1 rounded-lg min-w-[40px] ${i + 1 === currentPage
+                      onClick={ () => setCurrentPage(i + 1) }
+                      className={ `px-3 py-1 rounded-lg min-w-[40px] ${i + 1 === currentPage
                         ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
                         : "border-gray-300 hover:bg-gray-100"
-                        } transition-colors`}
+                        } transition-colors` }
                     >
-                      {i + 1}
+                      { i + 1 }
                     </Button>
-                  ))}
+                  )) }
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={ currentPage === totalPages }
+                    onClick={ () => setCurrentPage((prev) => prev + 1) }
                     className="px-3 py-1 rounded-lg border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1"
                   >
                     <span>Next</span>
@@ -462,7 +464,7 @@ const VendorAdminNotifications = () => {
               </div>
             </div>
           </Card>
-        )}
+        ) }
       </div>
     </div>
   );

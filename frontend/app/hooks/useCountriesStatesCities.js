@@ -8,41 +8,34 @@ export const useCountriesStatesCities = (selectedCountry, selectedState) => {
   const [cities, setCities] = useState([]);
 
   // Fetch Countries
-useEffect(() => {
-  const fetchCountries = async () => {
-    try {
-      const response = await fetch("https://restcountries.com/v3.1/all?fields=name,cca2");
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch(
+          "https://restcountries.com/v2/all?fields=name,alpha2Code"
+        );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Failed to fetch countries. Status:", response.status, "Response:", errorText);
-        return;
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const sortedCountries = data
+          .map((country) => ({
+            name: country.name,
+            code: country.alpha2Code,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setCountries(sortedCountries);
+      } catch (error) {
+        console.error("Error fetching countries:", error);
       }
+    };
 
-      const data = await response.json();
-
-      if (!Array.isArray(data)) {
-        console.error("Unexpected countries response:", data);
-        return;
-      }
-
-      const sortedCountries = data
-        .map((country) => ({
-          name: country.name?.common,
-          code: country.cca2,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      setCountries(sortedCountries);
-    } catch (error) {
-      console.error("Error fetching countries:", error);
-    }
-  };
-
-  fetchCountries();
-}, []);
-
-
+    fetchCountries();
+  }, []);
 
   // Fetch States
   const fetchStates = useCallback(async () => {

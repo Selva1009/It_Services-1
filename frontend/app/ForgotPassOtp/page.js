@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export default function ForgotPassOtp() {
       }
 
       const response = await fetch(
-        "/api/forgotpassword/verify-otp",
+        `${API_BASE_URL}/api/password/verify-otp`,
         {
           method: "POST",
           headers: {
@@ -83,12 +84,12 @@ export default function ForgotPassOtp() {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-full">
-      {/* Left Side - Image Slider (hidden on mobile) */}
+      {/* Left Side - Image Slider (hidden on mobile) */ }
       <div className="hidden lg:block lg:w-1/2 h-full overflow-hidden">
         <ImageSlider />
       </div>
 
-      {/* Right Side - OTP Form */}
+      {/* Right Side - OTP Form */ }
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-100 px-6 py-10 2xl:py-16">
         <Card className="w-full max-w-md 2xl:max-w-lg shadow-lg p-6 2xl:p-8 bg-white rounded-lg">
           <CardHeader>
@@ -112,23 +113,23 @@ export default function ForgotPassOtp() {
             </p>
 
             <form
-              onSubmit={handleSubmit(onSubmit)}
+              onSubmit={ handleSubmit(onSubmit) }
               className="space-y-4 2xl:space-y-6"
             >
               <div className="flex justify-between space-x-3 2xl:space-x-4">
-                {[...Array(4)].map((_, index) => (
-                  <div key={index} className="flex-1">
+                { [...Array(4)].map((_, index) => (
+                  <div key={ index } className="flex-1">
                     <Controller
                       name="otp"
-                      control={control}
-                      render={({ field }) => (
+                      control={ control }
+                      render={ ({ field }) => (
                         <Input
-                          {...field}
-                          maxLength={1}
+                          { ...field }
+                          maxLength={ 1 }
                           type="text"
                           className="w-full text-center border border-gray-300 rounded-md py-2 px-3 2xl:py-3 2xl:px-4 text-lg 2xl:text-xl"
                           placeholder="0"
-                          onChange={(e) => {
+                          onChange={ (e) => {
                             const value = e.target.value;
                             if (/^\d*$/.test(value)) {
                               const newOtp = field.value.split("");
@@ -141,45 +142,45 @@ export default function ForgotPassOtp() {
                                 if (nextInput) nextInput.focus();
                               }
                             }
-                          }}
-                          value={field.value[index] || ""}
-                          name={`otp-${index}`}
+                          } }
+                          value={ field.value[index] || "" }
+                          name={ `otp-${index}` }
                         />
-                      )}
+                      ) }
                     />
                   </div>
-                ))}
+                )) }
               </div>
 
-              {errors.otp && (
+              { errors.otp && (
                 <p className="text-red-500 text-xs 2xl:text-sm mt-1">
-                  {errors.otp.message}
+                  { errors.otp.message }
                 </p>
-              )}
-              {errorMessage && (
+              ) }
+              { errorMessage && (
                 <p className="text-red-500 text-xs 2xl:text-sm mt-2">
-                  {errorMessage}
+                  { errorMessage }
                 </p>
-              )}
-              {successMessage && (
+              ) }
+              { successMessage && (
                 <p className="text-green-500 text-xs 2xl:text-sm mt-2">
-                  {successMessage}
+                  { successMessage }
                 </p>
-              )}
+              ) }
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={ loading }
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 2xl:py-3 rounded-md disabled:bg-gray-400 flex items-center justify-center text-base 2xl:text-lg"
               >
-                {loading ? (
+                { loading ? (
                   <>
                     <Loader2 className="animate-spin mr-2 w-4 h-4 2xl:w-5 2xl:h-5" />
                     Verifying...
                   </>
                 ) : (
                   "Submit"
-                )}
+                ) }
               </Button>
             </form>
 

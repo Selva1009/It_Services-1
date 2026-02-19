@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowBigLeftDash } from "lucide-react";
@@ -16,16 +17,66 @@ const CustomerAdminProfile = () => {
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
   useEffect(() => {
-    const storedCustomer = localStorage.getItem("customer");
-    if (!storedCustomer) {
-      router.push("/login");
-    } else {
-      const customerData = JSON.parse(storedCustomer);
-      setCustomer(customerData);
-      setFormData(customerData);
-    }
+    let isMounted = true;
+
+    const loadCustomerProfile = async () => {
+      const storedCustomer = localStorage.getItem("customer");
+      if (!storedCustomer) {
+        router.push("/SignIn");
+        return;
+      }
+
+      try {
+        const customerData = JSON.parse(storedCustomer);
+        if (!customerData?.id) {
+          router.push("/SignIn");
+          return;
+        }
+
+        try {
+          const authToken = getAuthToken();
+          const response = await fetch(
+            `${API_BASE_URL}/api/customers/profile`,
+            {
+              cache: "no-store",
+              headers: authToken
+                ? { Authorization: `Bearer ${authToken}` }
+                : undefined,
+            }
+          );
+
+          if (response.ok) {
+            const payload = await response.json();
+            const latestCustomer = payload.customer || payload;
+            if (isMounted) {
+              setCustomer(latestCustomer);
+              setFormData(latestCustomer);
+              localStorage.setItem("customer", JSON.stringify(latestCustomer));
+            }
+            return;
+          }
+        } catch (fetchError) {
+          console.error("Failed to fetch latest customer admin profile:", fetchError);
+        }
+
+        if (isMounted) {
+          setCustomer(customerData);
+          setFormData(customerData);
+        }
+      } catch (parseError) {
+        console.error("Invalid customer data in localStorage:", parseError);
+        router.push("/SignIn");
+      }
+    };
+
+    void loadCustomerProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   const handleChange = (e) => {
@@ -40,16 +91,24 @@ const CustomerAdminProfile = () => {
     setIsLoading(true);
     try {
       const updatedFormData = { ...formData, id: customer.id };
+      const authToken = getAuthToken();
 
-      const response = await fetch("/api/customer-edit/update-profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch(`${API_BASE_URL}/api/customers/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
         body: JSON.stringify(updatedFormData),
       });
 
       if (response.ok) {
-        localStorage.setItem("customer", JSON.stringify(formData));
-        setCustomer(formData);
+        const payload = await response.json().catch(() => ({}));
+        const latestCustomer = payload.customer || updatedFormData;
+
+        localStorage.setItem("customer", JSON.stringify(latestCustomer));
+        setCustomer(latestCustomer);
+        setFormData(latestCustomer);
         setIsEditing(false);
 
         // Trigger navbar update
@@ -108,12 +167,12 @@ const CustomerAdminProfile = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <CustomerAdminNavbar />
-      
+
       <div className="bg-gray-50 flex-1 pt-5 pb-12 ">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center mb-8">
             <button
-              onClick={() => router.push("/customer-admin/")}
+              onClick={ () => router.push("/customer-admin/") }
               className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Back to dashboard"
             >
@@ -130,93 +189,93 @@ const CustomerAdminProfile = () => {
                   alt="Profile"
                   className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-md"
                 />
-                {isEditing && (
+                { isEditing && (
                   <div className="absolute bottom-0 right-0 bg-blue-100 p-1.5 rounded-full border-2 border-white">
                     <FiEdit2 className="text-blue-600 h-4 w-4" />
                   </div>
-                )}
+                ) }
               </div>
               <div className="ml-5">
                 <h2 className="text-xl font-semibold text-gray-800">
-                  {customer.firstName} {customer.lastName}
+                  { customer.firstName } { customer.lastName }
                 </h2>
                 <p className="text-sm text-gray-600">Customer Admin</p>
               </div>
             </div>
 
             <div className="p-6">
-              {!isEditing ? (
+              { !isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.entries(customer)
+                  { Object.entries(customer)
                     .filter(([key]) => !["id", "password", "created_at"].includes(key))
                     .map(([key, value]) => (
-                      <div key={key} className="space-y-1">
+                      <div key={ key } className="space-y-1">
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          {key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())}
+                          { key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase()) }
                         </p>
                         <p className="text-base font-medium text-gray-800 break-words">
-                          {value || <span className="text-gray-400 italic">Not provided</span>}
+                          { value || <span className="text-gray-400 italic">Not provided</span> }
                         </p>
                       </div>
-                    ))}
+                    )) }
                 </div>
               ) : (
-                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+                <form onSubmit={ (e) => { e.preventDefault(); handleSave(); } } className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {profileFields.map(({ label, name, type = "text", disabled }) => (
-                      <div key={name} className="space-y-2">
-                        <Label htmlFor={name} className="text-gray-700">
-                          {label}
+                    { profileFields.map(({ label, name, type = "text", disabled }) => (
+                      <div key={ name } className="space-y-2">
+                        <Label htmlFor={ name } className="text-gray-700">
+                          { label }
                         </Label>
                         <Input
-                          id={name}
-                          name={name}
-                          type={type}
-                          value={formData[name] || ""}
-                          onChange={handleChange}
+                          id={ name }
+                          name={ name }
+                          type={ type }
+                          value={ formData[name] || "" }
+                          onChange={ handleChange }
                           className="focus:ring-2 focus:ring-blue-500"
-                          disabled={disabled}
+                          disabled={ disabled }
                         />
                       </div>
-                    ))}
+                    )) }
                   </div>
 
                   <div className="flex justify-end space-x-3 pt-4">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
+                      onClick={ () => {
                         setFormData(customer);
                         setIsEditing(false);
-                      }}
-                      disabled={isLoading}
+                      } }
+                      disabled={ isLoading }
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? (
+                    <Button type="submit" disabled={ isLoading }>
+                      { isLoading ? (
                         <span className="flex items-center">
                           <AiOutlineLoading3Quarters className="animate-spin mr-2 h-4 w-4" />
                           Saving...
                         </span>
                       ) : (
                         "Save Changes"
-                      )}
+                      ) }
                     </Button>
                   </div>
                 </form>
-              )}
+              ) }
 
-              {!isEditing && (
+              { !isEditing && (
                 <div className="flex justify-end mt-8">
                   <Button
-                    onClick={() => setIsEditing(true)}
+                    onClick={ () => setIsEditing(true) }
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     Edit Profile
                   </Button>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </div>
@@ -226,3 +285,4 @@ const CustomerAdminProfile = () => {
 };
 
 export default CustomerAdminProfile;
+

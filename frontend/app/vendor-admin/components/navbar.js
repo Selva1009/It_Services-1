@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,6 +24,7 @@ import Swal from "sweetalert2";
 import { Badge } from "@/components/ui/badge";
 
 export default function Navbar() {
+  const NOTIFICATION_LIMIT = 50;
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,6 +34,7 @@ export default function Navbar() {
   const [vendorAdminID, setVendorAdminID] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
+  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "short",
@@ -39,31 +42,89 @@ export default function Navbar() {
   });
 
   useEffect(() => {
-    try {
-      const storedVendor = localStorage.getItem("vendor");
-      if (storedVendor) {
+    let isMounted = true;
+
+    const loadVendor = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const storedVendor = localStorage.getItem("vendor");
+        if (!storedVendor) {
+          return;
+        }
+
         const vendorData = JSON.parse(storedVendor);
-        setVendor(vendorData);
-        setVendorAdminID(vendorData.id);
+        if (isMounted) {
+          setVendor(vendorData);
+          setVendorAdminID(vendorData.id);
+        }
+
+        if (!vendorData?.id) {
+          return;
+        }
+
+        try {
+          const authToken = getAuthToken();
+          const response = await fetch(
+            `${API_BASE_URL}/api/vendors/profile`,
+            {
+              cache: "no-store",
+              headers: authToken
+                ? { Authorization: `Bearer ${authToken}` }
+                : undefined,
+            }
+          );
+
+          if (response.ok) {
+            const payload = await response.json();
+            const latestVendor = payload.vendor || payload;
+            if (isMounted) {
+              setVendor(latestVendor);
+              setVendorAdminID(latestVendor.id);
+              localStorage.setItem("vendor", JSON.stringify(latestVendor));
+            }
+          }
+        } catch (fetchError) {
+          console.error("Failed to fetch latest vendor details:", fetchError);
+        }
+      } catch (err) {
+        setError("Failed to load vendor details");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      setError("Failed to load vendor details");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    void loadVendor();
+
+    const handleStorage = () => {
+      void loadVendor();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const fetchNotifications = async () => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return;
+    }
+
     try {
       const response = await fetch(
-        "/api/notification/vendor-admin",
+        `${API_BASE_URL}/api/notifications/vendor-admin`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("vendorToken")}`,
           },
-          body: JSON.stringify({ vendorAdminID }),
+          body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
         }
       );
 
@@ -120,11 +181,11 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Desktop Navbar */}
+      {/* Desktop Navbar */ }
       <nav className="hidden sm:flex fixed top-0 left-0 w-full h-20 bg-white border-b shadow-sm items-center justify-between px-4 sm:px-6 z-50">
-        {/* Left: Brand Name */}
+        {/* Left: Brand Name */ }
         <div className="flex items-center gap-4">
-          <Link href="/vendor-admin" passHref>
+          <Link href="/vendor-admin" >
             <div className="cursor-pointer w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
               <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
                 <img
@@ -136,7 +197,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Center: Nav Items (Desktop) */}
+          {/* Center: Nav Items (Desktop) */ }
           <div className="hidden sm:flex items-center gap-6 text-sm text-gray-700">
             <Link
               href="/vendor-admin"
@@ -183,40 +244,40 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Right: Date, Notifications and Vendor Profile */}
+        {/* Right: Date, Notifications and Vendor Profile */ }
         <div className="flex items-center gap-4 sm:gap-6">
-          {/* Date (Desktop) */}
+          {/* Date (Desktop) */ }
           <div className="hidden sm:flex items-center gap-2">
             <Calendar className="text-black-900" />
-            <span className="ml-2">{currentDate}</span>
+            <span className="ml-2">{ currentDate }</span>
           </div>
           <div className="hidden sm:block h-10 w-[1px] bg-gray-300"></div>
 
-          {/* Vendor Admin Name & Dropdown */}
+          {/* Vendor Admin Name & Dropdown */ }
           <div className="relative">
             <div
               className="group flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors cursor-pointer"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onClick={ () => setDropdownOpen(!dropdownOpen) }
             >
               <User
-                size={32}
+                size={ 32 }
                 className="text-gray-800 group-hover:text-blue-700 transition-colors"
               />
               <div className="hidden sm:block text-[14px]">
-                {loading && <span>Loading...</span>}
-                {error && <span className="text-red-500">{error}</span>}
-                {vendor && (
+                { loading && <span>Loading...</span> }
+                { error && <span className="text-red-500">{ error }</span> }
+                { vendor && (
                   <span>
-                    {vendor.firstName} {vendor.lastName}
+                    { vendor.firstName } { vendor.lastName }
                     <br />
                     <p className="text-[#999999] text-[12px]">Vendor Admin</p>
                   </span>
-                )}
+                ) }
               </div>
             </div>
 
-            {/* Dropdown Menu */}
-            {dropdownOpen && (
+            {/* Dropdown Menu */ }
+            { dropdownOpen && (
               <div className="absolute right-0 left-2 top-full mt-3 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
                 <ul className="py-2 text-sm text-gray-700 font-medium">
                   <li>
@@ -224,30 +285,30 @@ export default function Navbar() {
                       href="/vendor-admin/myProfile"
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors"
                     >
-                      <User size={20} className="text-gray-600" />
+                      <User size={ 20 } className="text-gray-600" />
                       <span>My Profile</span>
                     </Link>
                   </li>
 
                   <li>
                     <button
-                      onClick={handleLogout}
+                      onClick={ handleLogout }
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
                     >
-                      <LogOut size={20} className="text-red-500" />
+                      <LogOut size={ 20 } className="text-red-500" />
                       <span>Logout</span>
                     </button>
                   </li>
                 </ul>
               </div>
-            )}
+            ) }
           </div>
         </div>
       </nav>
 
-      {/* Mobile Navbar */}
+      {/* Mobile Navbar */ }
       <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        {/* Left: Brand Name and Mobile Menu Button */}
+        {/* Left: Brand Name and Mobile Menu Button */ }
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
             <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
@@ -262,115 +323,115 @@ export default function Navbar() {
           <span className="font-medium text-sm">Vendor Admin</span>
         </div>
 
-        {/* Right: Menu Button */}
+        {/* Right: Menu Button */ }
         <button
           className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onClick={ () => setMobileMenuOpen(!mobileMenuOpen) }
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          { mobileMenuOpen ? <X size={ 24 } /> : <Menu size={ 24 } /> }
         </button>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
+        {/* Mobile Menu */ }
+        { mobileMenuOpen && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={ () => setMobileMenuOpen(false) }
           >
             <div
               className="absolute right-0 top-0 h-full w-72 bg-white shadow-xl"
-              onClick={(e) => e.stopPropagation()}
+              onClick={ (e) => e.stopPropagation() }
             >
-              {/* Profile Info */}
+              {/* Profile Info */ }
               <div className="flex items-center gap-4 p-4 border-b">
                 <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <User size={24} className="text-gray-600" />
+                  <User size={ 24 } className="text-gray-600" />
                 </div>
                 <div>
                   <p className="font-medium">
-                    {vendor.firstName} {vendor.lastName}
+                    { vendor.firstName } { vendor.lastName }
                   </p>
                   <p className="text-sm text-gray-500">Vendor Admin</p>
                 </div>
               </div>
 
-              {/* Navigation Links */}
+              {/* Navigation Links */ }
               <div className="p-4 space-y-2">
                 <Link
                   href="/vendor-admin"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={ () => setMobileMenuOpen(false) }
                 >
-                  <LayoutDashboard size={20} />
+                  <LayoutDashboard size={ 20 } />
                   <span>Dashboard</span>
                 </Link>
                 <Link
                   href="/vendor-admin/addUser"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={ () => setMobileMenuOpen(false) }
                 >
-                  <UserPlus size={20} />
+                  <UserPlus size={ 20 } />
                   <span>Add User</span>
                 </Link>
                 <Link
                   href="/vendor-admin/usersprofile"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={ () => setMobileMenuOpen(false) }
                 >
-                  <Users size={20} />
+                  <Users size={ 20 } />
                   <span>Users Profiles</span>
                 </Link>
                 <Link
                   href="/vendor-admin/products"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={ () => setMobileMenuOpen(false) }
                 >
-                  <List size={20} />
+                  <List size={ 20 } />
                   <span>Vendor Product View</span>
                 </Link>
                 <Link
                   href="/vendor-admin/AdminNotification"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={ () => setMobileMenuOpen(false) }
                 >
-                  <Bell size={20} />
+                  <Bell size={ 20 } />
                   <span>Orders</span>
                 </Link>
                 <Link
                   href="/vendor-admin/PoTracking"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={ () => setMobileMenuOpen(false) }
                 >
-                  <Clipboard size={20} />
+                  <Clipboard size={ 20 } />
                   <span>Po Tracking</span>
                 </Link>
               </div>
 
-              {/* Bottom Section */}
+              {/* Bottom Section */ }
               <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
                 <div className="space-y-2">
                   <Link
                     href="/vendor-admin/myProfile"
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={ () => setMobileMenuOpen(false) }
                   >
-                    <UserRoundPen size={20} />
+                    <UserRoundPen size={ 20 } />
                     <span>My Profile</span>
                   </Link>
                   <button
-                    onClick={() => {
+                    onClick={ () => {
                       setMobileMenuOpen(false);
                       handleLogout();
-                    }}
+                    } }
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
                   >
-                    <LogOut size={20} />
+                    <LogOut size={ 20 } />
                     <span>Logout</span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        ) }
       </nav>
     </>
   );

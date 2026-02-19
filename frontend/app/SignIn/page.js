@@ -1,209 +1,153 @@
 "use client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
 import { useState, useEffect, useCallback } from "react";
 import ImageSlider from "./ImageSlider";
-import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
+import "./login.css";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  // ✅ Prevent Back Navigation After Login
+  /* Prevent back navigation */
   useEffect(() => {
-    window.history.pushState(null, "", window.location.href);
-    window.onpopstate = function () {
+    const preventBackNavigation = () => {
       window.history.pushState(null, "", window.location.href);
     };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", preventBackNavigation);
+
+    return () =>
+      window.removeEventListener("popstate", preventBackNavigation);
   }, []);
 
   const handleLogin = useCallback(async () => {
-  setLoading(true);
+    if (!email || !password) {
+      Swal.fire("Missing Credentials", "Enter email & password", "warning");
+      return;
+    }
 
-  try {
-    const response = await fetch("/api/auth/signin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    
+    setLoading(true);
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        response.status === 401
-          ? "Invalid email or password. Please try again."
-          : data.message || "Login failed. Please try again."
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
       );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      /* Save token */
+      if (rememberMe)
+        localStorage.setItem("token", data.authToken);
+      else
+        sessionStorage.setItem("token", data.authToken);
+
+      localStorage.setItem("userRole", data.role);
+
+      Swal.fire({
+        title: "Login Successful!",
+        imageUrl: "/login.gif",
+        confirmButtonColor: "#3085D6",
+      }).then(() => {
+        if (data.role.toLowerCase().includes("vendor"))
+          router.push("/vendor-admin");
+        else
+          router.push("/customer-admin/customerAdminDashboard");
+      });
+
+    } catch (err) {
+      Swal.fire("Login Failed", err.message, "error");
+    } finally {
+      setLoading(false);
     }
-
-    console.log("✅ Login Successful:", data);
-
-    // Store authentication token
-    if (rememberMe) {
-      localStorage.setItem("token", data.token);
-    } else {
-      sessionStorage.setItem("token", data.token);
-    }
-
-    localStorage.setItem("userType", data.userType);
-    localStorage.setItem("userId", data.user.id.toString());
-
-    // SweetAlert
-    Swal.fire({
-      title: "Login Successful!",
-      text: "You are now logged in.",
-      imageUrl: "/login.gif",
-      imageWidth: 127,
-      imageHeight: 151,
-      imageAlt: "Login Success",
-      confirmButtonColor: "#3085D6",
-      customClass: {
-        popup: "rounded-lg shadow-md",
-        confirmButton: "px-6 py-2 bg-blue-600 text-white rounded-md",
-      },
-    }).then(() => {
-      
-      if (data.userType === "vendor-admin") {
-        localStorage.setItem("vendor", JSON.stringify(data.user));
-        localStorage.setItem("vendorAdminId", data.user.id.toString());
-        router.push(`/vendor-admin`);
-      
-      } else if (data.userType === "customer-admin") {
-        localStorage.setItem("customer", JSON.stringify(data.user));
-        // router.push(`/customer/products`);
-        router.push(`/customer-admin/customerAdminDashboard`);
-
-      
-      } else if (data.userType === "vendor-user") {
-        localStorage.setItem("vendorUser", JSON.stringify(data.user));
-        localStorage.setItem("vendorUserId", data.user.id.toString()); 
-        router.push(`/vendorUser`);
-      
-      }else if(data.userType=="customer-user"){
-        localStorage.setItem("customerUser", JSON.stringify(data.user));
-        localStorage.setItem("customerUserId",data.user.id.toString());
-        router.push("/customer/products")
-      }
-      else {
-        Swal.fire("Unknown User Type", "Please contact support.", "warning");
-      }
-      
-    });
-    
-  } catch (err) {
-    Swal.fire({
-      title: "Login Failed!",
-      text: err.message,
-      icon: "error",
-      confirmButtonColor: "#D33",
-    });
-  } finally {
-    setLoading(false);
-  }
-}, [email, password, rememberMe, router]);
+  }, [email, password, rememberMe, router]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen w-full">
-      {/* Image Slider - Fixed solution to ensure visibility */}
-      <div className="hidden lg:block lg:w-1/2 h-full overflow-hidden">
+    <div className="login-page">
+
+      {/* Left slider */}
+      <div className="slider-section">
         <ImageSlider />
       </div>
-      
-      {/* Login Form Container */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-100 px-6 py-10 2xl:py-16">
-        <Card className="w-full max-w-md 2xl:max-w-lg shadow-lg p-6 2xl:p-8 bg-white rounded-lg">
-          <CardHeader>
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 2xl:w-24 2xl:h-24 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-              <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
-                <img
-                  src="/Logo.png"
-                  alt="M-Place Logo"
-                  className="w-12 h-12 sm:w-16 sm:h-16 2xl:w-20 2xl:h-20 object-contain"
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <h2 className="text-2xl 2xl:text-3xl font-semibold text-gray-800">Welcome Back</h2>
-            <p className="text-gray-600 mb-4 2xl:mb-6 2xl:text-lg">Log in to continue your journey.</p>
 
-            <div className="space-y-4 2xl:space-y-6">
-              <div>
-                <label htmlFor="email" className="text-sm 2xl:text-base text-gray-700">
-                  Email Address
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="2xl:h-12 2xl:text-base"
-                />
-              </div>
+      {/* Login Section */}
+      <div className="login-section">
+        <div className="login-card">
 
-              <div>
-                <label htmlFor="password" className="text-sm 2xl:text-base text-gray-700">
-                  Password
-                </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="2xl:h-12 2xl:text-base"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? <EyeOff size={20} className="2xl:w-6 2xl:h-6" /> : <Eye size={20} className="2xl:w-6 2xl:h-6" />}
-                  </button>
-                </div>
-              </div>
+          <div className="logo-wrapper">
+            <Image
+              src="/Logo.png"
+              alt="Logo"
+              width={80}
+              height={80}
+            />
+          </div>
 
-              <div className="flex justify-between items-center text-sm 2xl:text-base">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={() => setRememberMe(!rememberMe)}
-                    className="mr-2 w-4 h-4 2xl:w-5 2xl:h-5"
-                  />
-                  Remember Me
-                </label>
-                <Link href="../ForgotPassword" className="text-blue-500 hover:text-blue-700">
-                  Forgot password?
-                </Link>
-              </div>
+          <h2>Welcome Back</h2>
+          <p>Log in to continue your journey.</p>
 
-              <Button
-                onClick={handleLogin}
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 2xl:py-3 rounded-md disabled:bg-gray-400 flex items-center justify-center text-base 2xl:text-lg"
-              >
-                {loading ? <Loader2 className="animate-spin" size={24} /> : "Login"}
-              </Button>
-            </div>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-            <p className="text-center text-sm 2xl:text-base mt-4 2xl:mt-6">
-              New here? <Link href="/LandingPage" className="text-blue-500 hover:text-blue-700">Create an account</Link>
-            </p>
-          </CardContent>
-        </Card>
+          <div className="password-box">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              onClick={() => setShowPassword(!showPassword)}
+              type="button"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          <div className="login-options">
+            <label>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={() => setRememberMe(!rememberMe)}
+              />
+              Remember Me
+            </label>
+
+            <a href="/ForgotPassword">Forgot password?</a>
+          </div>
+
+          <button
+            onClick={handleLogin}
+            disabled={loading}
+            className="login-btn"
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+
+          <p className="signup-link">
+            New here? <a href="/">Create an account</a>
+          </p>
+
+        </div>
       </div>
     </div>
   );

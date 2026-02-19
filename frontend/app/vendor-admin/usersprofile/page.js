@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import Navbar from "../components/navbar";
 import { Input } from "@/components/ui/input";
 import { EditUserForm } from "../components/editUserProfile";
@@ -87,7 +88,7 @@ const Page = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          "/api/auth/vendor/users",
+          `${API_BASE_URL}/api/vendor-users/users`,
           {
             method: "POST",
             headers: {
@@ -144,7 +145,7 @@ const Page = () => {
       if (!result.isConfirmed) return;
 
       const response = await fetch(
-        "/api/auth/vendor/delete-user",
+        `${API_BASE_URL}/api/vendor-users/delete-user`,
         {
           method: "POST",
           headers: {
@@ -189,7 +190,7 @@ const Page = () => {
   const handleUserUpdate = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/auth/vendor/users", {
+      const response = await fetch(`${API_BASE_URL}/api/vendor-users/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,7 +237,7 @@ const Page = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-xl">
-                <UserCog className="text-blue-600" size={28} />
+                <UserCog className="text-blue-600" size={ 28 } />
               </div>
               <span className="pt-1">Vendor Users</span>
             </h1>
@@ -247,30 +248,30 @@ const Page = () => {
 
           <div className="flex gap-3 w-full md:w-auto">
             <Button
-              onClick={() => setShowTransfer(true)}
+              onClick={ () => setShowTransfer(true) }
               variant="outline"
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
               <span>Transfer Products</span>
             </Button>
-            
+
             <div className="relative w-full md:w-[300px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 className="pl-10 pr-4 py-2 rounded-xl bg-white shadow-sm border border-gray-300 
                hover:border-blue-500 focus:border-blue-500 focus:ring-0 focus:outline-none transition-all"
                 placeholder="Search by name, email, or company"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={ searchTerm }
+                onChange={ (e) => setSearchTerm(e.target.value) }
               />
             </div>
-            <ExportMenu users={filteredUsers} dataType="users" />
+            <ExportMenu users={ filteredUsers } dataType="users" />
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          {loading ? (
+          { loading ? (
             <div className="p-12 flex flex-col items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-3" />
               <p className="text-gray-500">Loading user data...</p>
@@ -282,9 +283,9 @@ const Page = () => {
                 No users found
               </h3>
               <p className="text-gray-500 mt-1">
-                {searchTerm
+                { searchTerm
                   ? "Try a different search term"
-                  : "Create your first user"}
+                  : "Create your first user" }
               </p>
             </div>
           ) : (
@@ -313,9 +314,9 @@ const Page = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentUsers.map((user) => (
+                  { currentUsers.map((user) => (
                     <TableRow
-                      key={user.id}
+                      key={ user.id }
                       className="border-t border-gray-100 transition-colors hover:bg-blue-50/50"
                     >
                       <TableCell className="pl-6 py-4 font-medium text-gray-800">
@@ -324,7 +325,7 @@ const Page = () => {
                             <Building2 className="h-5 w-5 text-blue-600" />
                           </div>
                           <div className="font-medium">
-                            {user.companyName || "N/A"}
+                            { user.companyName || "N/A" }
                           </div>
                         </div>
                       </TableCell>
@@ -333,40 +334,39 @@ const Page = () => {
                           <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
                             <User className="h-4 w-4 text-gray-600" />
                           </div>
-                          {user.personName || "N/A"}
+                          { user.personName || "N/A" }
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex items-center gap-1">
                           <Phone className="h-4 w-4 text-gray-400" />
-                          {user.phoneNumber || "N/A"}
+                          { user.phoneNumber || "N/A" }
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
                         <a
-                          href={`mailto:${user.Email}`}
+                          href={ `mailto:${user.Email}` }
                           className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
                         >
                           <Mail className="h-4 w-4" />
                           <span className="truncate max-w-[180px]">
-                            {user.Email || "N/A"}
+                            { user.Email || "N/A" }
                           </span>
                         </a>
                       </TableCell>
                       <TableCell className="py-4">
                         <Badge
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            user.status === "Active"
+                          className={ `px-3 py-1 rounded-full text-xs font-medium ${user.status === "Active"
                               ? "bg-green-50 text-green-700 border border-green-100"
                               : "bg-red-50 text-red-700 border border-red-100"
-                          } flex items-center gap-1`}
+                            } flex items-center gap-1` }
                         >
-                          {user.status === "Active" ? (
+                          { user.status === "Active" ? (
                             <CheckCircle2 className="h-3 w-3" />
                           ) : (
                             <XCircle className="h-3 w-3" />
-                          )}
-                          {user.status || "Inactive"}
+                          ) }
+                          { user.status || "Inactive" }
                         </Badge>
                       </TableCell>
                       <TableCell className="pr-6 py-4">
@@ -375,7 +375,7 @@ const Page = () => {
                             size="sm"
                             variant="ghost"
                             className="hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded-lg transition-colors h-8 w-8 p-0"
-                            onClick={() => setEditingUser(user)}
+                            onClick={ () => setEditingUser(user) }
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -383,61 +383,60 @@ const Page = () => {
                             size="sm"
                             variant="ghost"
                             className="hover:bg-red-100 text-red-600 hover:text-red-700 rounded-lg transition-colors h-8 w-8 p-0"
-                            onClick={() => handleDelete(user.id)}
+                            onClick={ () => handleDelete(user.id) }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) }
                 </TableBody>
               </Table>
 
               <div className="px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-100 bg-gray-50/50">
                 <div className="text-sm text-gray-500">
-                  Showing{" "}
+                  Showing{ " " }
                   <span className="font-medium">
-                    {(currentPage - 1) * usersPerPage + 1}
-                  </span>{" "}
-                  to{" "}
+                    { (currentPage - 1) * usersPerPage + 1 }
+                  </span>{ " " }
+                  to{ " " }
                   <span className="font-medium">
-                    {Math.min(currentPage * usersPerPage, filteredUsers.length)}
-                  </span>{" "}
-                  of <span className="font-medium">{filteredUsers.length}</span>{" "}
+                    { Math.min(currentPage * usersPerPage, filteredUsers.length) }
+                  </span>{ " " }
+                  of <span className="font-medium">{ filteredUsers.length }</span>{ " " }
                   users
                 </div>
                 <div className="flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={ currentPage === 1 }
+                    onClick={ () => setCurrentPage((prev) => prev - 1) }
                     className="px-3 py-1 rounded-lg border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     <span>Previous</span>
                   </Button>
-                  {Array.from({ length: totalPages }, (_, i) => (
+                  { Array.from({ length: totalPages }, (_, i) => (
                     <Button
-                      key={`page-${i}`}
-                      variant={i + 1 === currentPage ? "default" : "outline"}
+                      key={ `page-${i}` }
+                      variant={ i + 1 === currentPage ? "default" : "outline" }
                       size="sm"
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-3 py-1 rounded-lg min-w-[40px] ${
-                        i + 1 === currentPage
+                      onClick={ () => setCurrentPage(i + 1) }
+                      className={ `px-3 py-1 rounded-lg min-w-[40px] ${i + 1 === currentPage
                           ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
                           : "border-gray-300 hover:bg-gray-100"
-                      } transition-colors`}
+                        } transition-colors` }
                     >
-                      {i + 1}
+                      { i + 1 }
                     </Button>
-                  ))}
+                  )) }
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={ currentPage === totalPages }
+                    onClick={ () => setCurrentPage((prev) => prev + 1) }
                     className="px-3 py-1 rounded-lg border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1"
                   >
                     <span>Next</span>
@@ -446,31 +445,31 @@ const Page = () => {
                 </div>
               </div>
             </>
-          )}
+          ) }
         </div>
       </div>
 
-      {editingUser && (
+      { editingUser && (
         <EditUserForm
-          user={editingUser}
-          onClose={() => setEditingUser(null)}
-          onUpdate={handleUserUpdate}
+          user={ editingUser }
+          onClose={ () => setEditingUser(null) }
+          onUpdate={ handleUserUpdate }
         />
-      )}
+      ) }
 
-      {showTransfer && (
+      { showTransfer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
             <button
-              onClick={() => setShowTransfer(false)}
+              onClick={ () => setShowTransfer(false) }
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             >
               <XCircle className="h-6 w-6" />
             </button>
-            <TransferProducts onClose={() => setShowTransfer(false)} />
+            <TransferProducts onClose={ () => setShowTransfer(false) } />
           </div>
         </div>
-      )}
+      ) }
     </div>
   );
 };

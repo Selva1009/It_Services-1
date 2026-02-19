@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { VendorAddUser } from "@/app/Components/auth/VendorAddUser";
 import { PasswordSection } from "@/app/Components/auth/PasswordSection";
 import { useState, useEffect } from "react";
@@ -48,7 +49,7 @@ const Page = () => {
           setAdminId(vendorData.id);
 
           const response = await fetch(
-            `/api/auth/vendor/company-name/${vendorData.id}`
+            `${API_BASE_URL}/api/vendor-users/company-name/${vendorData.id}`
           );
 
           if (response.ok) {
@@ -122,9 +123,9 @@ const Page = () => {
         vendorAdminId: adminId,
       };
 
-      const response = await fetch("/api/auth/vendor/add-user", {
+      const response = await fetch(`${API_BASE_URL}/api/vendor-users/add-user`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem('vendorToken')}`
         },
@@ -169,7 +170,7 @@ const Page = () => {
           <div className="flex items-center justify-between px-6 py-4 border-b">
             <div className="flex items-center gap-3">
               <div className="bg-blue-100 p-2 rounded-md">
-                <UserPlus className="text-blue-600" size={22} />
+                <UserPlus className="text-blue-600" size={ 22 } />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-800">Create New Vendor User</h2>
@@ -178,27 +179,27 @@ const Page = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+          <form onSubmit={ handleSubmit } className="px-6 py-6 space-y-6">
             <div>
               <div className="text-sm font-medium text-gray-700 bg-blue-50 rounded-md px-3 py-1 inline-block mb-3">
                 Basic Information
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <VendorAddUser
-                  formValues={formValues}
-                  handleInputChange={handleInputChange}
-                  errors={errors}
+                  formValues={ formValues }
+                  handleInputChange={ handleInputChange }
+                  errors={ errors }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2"> 
+              <div className="grid grid-cols-2 gap-2">
                 <PasswordSection
-                  formValues={formValues}
-                  handleInputChange={handleInputChange}
-                  errors={errors}
-                  showPassword={showPassword}
-                  togglePasswordVisibility={togglePasswordVisibility}
-                  showConfirmPassword={showConfirmPassword}
-                  toggleConfirmPasswordVisibility={toggleConfirmPasswordVisibility}
+                  formValues={ formValues }
+                  handleInputChange={ handleInputChange }
+                  errors={ errors }
+                  showPassword={ showPassword }
+                  togglePasswordVisibility={ togglePasswordVisibility }
+                  showConfirmPassword={ showConfirmPassword }
+                  toggleConfirmPasswordVisibility={ toggleConfirmPasswordVisibility }
                 />
               </div>
             </div>
@@ -208,16 +209,16 @@ const Page = () => {
                 type="button"
                 variant="outline"
                 className="text-sm text-gray-700 px-4 py-2 border-gray-300 hover:bg-gray-50"
-                onClick={() => window.history.back()}
+                onClick={ () => window.history.back() }
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="text-sm px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={isSubmitting}
+                disabled={ isSubmitting }
               >
-                {isSubmitting ? "Creating..." : "Create User"}
+                { isSubmitting ? "Creating..." : "Create User" }
               </Button>
             </div>
           </form>

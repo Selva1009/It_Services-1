@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FaSearch } from "react-icons/fa";
+import { resolveProductImageUrl } from "@/lib/api/config";
+import { getProducts } from "@/lib/api/products";
 
 export default function EcommercePage() {
-  const router = useRouter();
   const [vendorUserId, setVendorUserId] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,8 +13,8 @@ export default function EcommercePage() {
   const [search, setSearch] = useState("");
   const itemsPerPage = 20;
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
-  // ✅ Fixed: Correct key from localStorage
   useEffect(() => {
     const idFromStorage = localStorage.getItem("vendorUserId");
     if (idFromStorage) {
@@ -28,53 +28,42 @@ export default function EcommercePage() {
   useEffect(() => {
     if (!vendorUserId) return;
 
-    let isMounted = true;
+    const controller = new AbortController();
     const fetchProducts = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(
-          `/api/auth/products/get-products/${vendorUserId}`
-        );
-        if (!response.ok) {
-          throw new Error(`Failed to fetch products: ${response.statusText}`);
+        const data = await getProducts({
+          page: currentPage,
+          pageSize: itemsPerPage,
+          search: search.trim(),
+          vendorUserId,
+        }, { signal: controller.signal });
+
+        const nextTotalPages = data.pagination?.totalPages || 0;
+
+        if (nextTotalPages > 0 && currentPage > nextTotalPages) {
+          setCurrentPage(nextTotalPages);
+          return;
         }
-        const data = await response.json();
-        if (isMounted) {
-          setProducts(data.products);
-        }
+
+        setProducts(data.products || []);
+        setTotalPages(nextTotalPages);
       } catch (err) {
-        if (isMounted) setError(err.message);
+        if (err.name === "AbortError") return;
+        setError(err.message);
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     fetchProducts();
 
-    return () => {
-      isMounted = false;
-    };
-  }, [vendorUserId]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) =>
-      product.productName.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [products, search]);
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-
-  const selectedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredProducts, currentPage]);
+    return () => controller.abort();
+  }, [vendorUserId, currentPage, search]);
 
   return (
     <div className="min-h-screen border border-gray-200">
-      {/* Navbar */}
+      {/* Navbar */ }
       <nav className="bg-white shadow-md py-4 px-6 flex flex-col md:flex-row justify-between items-center border-b border-gray-300">
         <h1 className="text-2xl font-semibold text-gray-900">Product Spot</h1>
         <div className="flex gap-4 items-center mt-2 md:mt-0">
@@ -82,8 +71,11 @@ export default function EcommercePage() {
             <input
               type="text"
               placeholder="Search products"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={ search }
+              onChange={ (e) => {
+                setCurrentPage(1);
+                setSearch(e.target.value);
+              } }
               className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <FaSearch className="absolute right-3 top-3 text-gray-600" />
@@ -91,34 +83,35 @@ export default function EcommercePage() {
         </div>
       </nav>
 
-      {/* Main Content */}
+      {/* Main Content */ }
       <div className="p-6 bg-gray-50">
-        {error && <div className="text-red-500">{error}</div>}
+        { error && <div className="text-red-500">{ error }</div> }
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {selectedProducts.length > 0
-            ? selectedProducts.map((product) => (
+          { products.length > 0
+            ? products.map((product) => (
               <div
-                key={product.id}
+                key={ product.id }
                 className="bg-gray-50 rounded-xl shadow-md overflow-hidden p-4 border border-gray-300 transition-all duration-300 transform hover:scale-105 cursor-pointer"
               >
                 <div className="relative">
-                  {product.productImage && (
+                  { product.productImage && (
                     <img
-                      src={`/api/uploads/${product.productImage}`}
-                      alt={product.productName}
+                      src={ resolveProductImageUrl(product) }
+                      alt={ product.productName }
                       className="w-full h-40 object-cover rounded-lg"
+                      loading="lazy"
+                      decoding="async"
+                      onError={ (e) => { e.currentTarget.src = "/placeholder-product.svg"; } }
                     />
-                  )}
+                  ) }
                 </div>
                 <div className="mt-4 text-left">
                   <h3 className="text-lg text-gray-700 hover:text-blue-700 font-bold truncate">
-                    {product.productName}
+                    { product.productName }
                   </h3>
-                  <p className="text-md text-gray-600">{product.brand}</p>
-                  <p className="text-xl font-bold text-black mt-2">
-                    ₹{product.price}
-                  </p>
+                  <p className="text-md text-gray-600">{ product.brand }</p>
+                  <p className="text-xl font-bold text-black mt-2">Rs. { product.price }</p>
                 </div>
               </div>
             ))
@@ -126,21 +119,21 @@ export default function EcommercePage() {
               <p className="text-gray-600 text-center col-span-full">
                 No products available.
               </p>
-            )}
+            ) }
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+        {/* Pagination */ }
+        { totalPages > 1 && (
           <div className="flex flex-wrap justify-center items-center mt-6 space-x-2">
             <Button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
+              onClick={ () => setCurrentPage((prev) => Math.max(prev - 1, 1)) }
+              disabled={ currentPage === 1 }
               className="bg-blue-500 text-white hover:bg-blue-700 px-4 py-2"
             >
               Previous
             </Button>
 
-            {(() => {
+            { (() => {
               const rangeSize = 5;
               const halfRange = Math.floor(rangeSize / 2);
               let startPage = Math.max(1, currentPage - halfRange);
@@ -155,29 +148,29 @@ export default function EcommercePage() {
                 (_, index) => startPage + index
               ).map((page) => (
                 <Button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-4 py-2 ${page === currentPage
-                      ? "bg-blue-500 text-white hover:bg-blue-700"
-                      : "bg-white text-black hover:bg-blue-700 hover:text-white border border-gray-300"
-                    }`}
+                  key={ page }
+                  onClick={ () => setCurrentPage(page) }
+                  className={ `px-4 py-2 ${page === currentPage
+                    ? "bg-blue-500 text-white hover:bg-blue-700"
+                    : "bg-white text-black hover:bg-blue-700 hover:text-white border border-gray-300"
+                    }` }
                 >
-                  {page}
+                  { page }
                 </Button>
               ));
-            })()}
+            })() }
 
             <Button
-              onClick={() =>
+              onClick={ () =>
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
               }
-              disabled={currentPage === totalPages}
+              disabled={ currentPage === totalPages }
               className="bg-blue-500 text-white hover:bg-blue-700 px-4 py-2"
             >
               Next
             </Button>
           </div>
-        )}
+        ) }
       </div>
     </div>
   );

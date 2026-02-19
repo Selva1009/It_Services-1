@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -52,7 +53,7 @@ export default function ResetPassword() {
 
     try {
       const response = await fetch(
-        "/api/forgotpassword/reset-password",
+        `${API_BASE_URL}/api/password/reset-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -96,13 +97,13 @@ export default function ResetPassword() {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-full">
-      {/* Left Side - Image Slider (hidden on mobile) */}
+      {/* Left Side - Image Slider (hidden on mobile) */ }
       <div className="hidden lg:block lg:w-1/2 h-full overflow-hidden">
         <ImageSlider />
       </div>
 
-      {/* Right Side - Reset Password Form */}
-      {/* Right Side - Reset Password Form */}
+      {/* Right Side - Reset Password Form */ }
+      {/* Right Side - Reset Password Form */ }
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-100 px-6 py-10 2xl:py-16">
         <Card className="w-full max-w-md 2xl:max-w-lg shadow-lg p-6 2xl:p-8 bg-white rounded-lg">
           <CardHeader>
@@ -126,10 +127,10 @@ export default function ResetPassword() {
             </p>
 
             <form
-              onSubmit={handleSubmit(onSubmit)}
+              onSubmit={ handleSubmit(onSubmit) }
               className="space-y-4 2xl:space-y-6"
             >
-              {/* New Password */}
+              {/* New Password */ }
               <div>
                 <label
                   htmlFor="newPassword"
@@ -140,31 +141,31 @@ export default function ResetPassword() {
                 <div className="relative mt-1">
                   <Input
                     id="newPassword"
-                    type={showNewPassword ? "text" : "password"}
+                    type={ showNewPassword ? "text" : "password" }
                     placeholder="Enter new password"
-                    {...register("newPassword")}
+                    { ...register("newPassword") }
                     className="2xl:h-12 2xl:text-base"
                   />
                   <button
                     type="button"
-                    onClick={toggleNewPasswordVisibility}
+                    onClick={ toggleNewPasswordVisibility }
                     className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
                   >
-                    {showNewPassword ? (
-                      <EyeOff size={20} className="2xl:w-6 2xl:h-6" />
+                    { showNewPassword ? (
+                      <EyeOff size={ 20 } className="2xl:w-6 2xl:h-6" />
                     ) : (
-                      <Eye size={20} className="2xl:w-6 2xl:h-6" />
-                    )}
+                      <Eye size={ 20 } className="2xl:w-6 2xl:h-6" />
+                    ) }
                   </button>
                 </div>
-                {errors.newPassword && (
+                { errors.newPassword && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.newPassword.message}
+                    { errors.newPassword.message }
                   </p>
-                )}
+                ) }
               </div>
 
-              {/* Confirm Password */}
+              {/* Confirm Password */ }
               <div>
                 <label
                   htmlFor="confirmPassword"
@@ -175,48 +176,48 @@ export default function ResetPassword() {
                 <div className="relative mt-1">
                   <Input
                     id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
+                    type={ showConfirmPassword ? "text" : "password" }
                     placeholder="Confirm new password"
-                    {...register("confirmPassword")}
+                    { ...register("confirmPassword") }
                     className="2xl:h-12 2xl:text-base"
                   />
                   <button
                     type="button"
-                    onClick={toggleConfirmPasswordVisibility}
+                    onClick={ toggleConfirmPasswordVisibility }
                     className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff size={20} className="2xl:w-6 2xl:h-6" />
+                    { showConfirmPassword ? (
+                      <EyeOff size={ 20 } className="2xl:w-6 2xl:h-6" />
                     ) : (
-                      <Eye size={20} className="2xl:w-6 2xl:h-6" />
-                    )}
+                      <Eye size={ 20 } className="2xl:w-6 2xl:h-6" />
+                    ) }
                   </button>
                 </div>
-                {errors.confirmPassword && (
+                { errors.confirmPassword && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.confirmPassword.message}
+                    { errors.confirmPassword.message }
                   </p>
-                )}
+                ) }
               </div>
 
-              {/* Reset Button */}
+              {/* Reset Button */ }
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={ loading }
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 2xl:py-3 rounded-md disabled:bg-gray-400 flex items-center justify-center text-base 2xl:text-lg"
               >
-                {loading ? (
+                { loading ? (
                   <>
-                    <Loader2 className="animate-spin mr-2" size={20} />
+                    <Loader2 className="animate-spin mr-2" size={ 20 } />
                     Resetting...
                   </>
                 ) : (
                   "Reset Password"
-                )}
+                ) }
               </Button>
             </form>
 
-            {/* Back to Sign In */}
+            {/* Back to Sign In */ }
             <div className="mt-4 2xl:mt-6 text-sm 2xl:text-base">
               <Link
                 href="/SignIn"

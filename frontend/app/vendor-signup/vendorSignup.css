@@ -1,0 +1,677 @@
+.signupContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #667eea15 0%, #764ba215 100%);
+  padding: 24px;
+}
+
+.signupCard {
+  width: 100%;
+  max-width: 1200px;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden;
+}
+
+/* Header Styles */
+.cardHeader {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 32px 40px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardHeader::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.headerTitle {
+  font-weight: 700 !important;
+  font-size: 2.2rem !important;
+  margin-bottom: 8px !important;
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+.headerSubtitle {
+  font-size: 1rem !important;
+  opacity: 0.9;
+  font-weight: 400 !important;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px !important;
+}
+
+.headerSteps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.stepChip {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  font-weight: 500 !important;
+}
+
+.stepChip.active {
+  background-color: white !important;
+  color: black !important;
+}
+
+.stepArrow {
+  font-size: 16px !important;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Form Sections */
+.formSection {
+  margin: 20px !important;
+  border-radius: 16px !important;
+  border: 1px solid #e9ecef !important;
+  transition: all 0.3s ease;
+}
+
+.formSection:hover {
+  box-shadow: 0 10px 30px -15px rgba(102, 126, 234, 0.3) !important;
+}
+
+.detailsOverallBox {
+  margin: 20px;
+  border: 1px solid #dbe3ef;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f8fbff 0%, #ffffff 100%);
+  padding: 8px 0 12px;
+}
+
+.servicesSection {
+  background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%) !important;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+ 
+}
+
+.sectionIcon {
+  color: #667eea;
+  font-size: 28px !important;
+  background: #eef2ff;
+  padding: 8px;
+  border-radius: 12px;
+  /* margin-left: 30px; */
+}
+
+.sectionTitle {
+  color: #1e293b !important;
+  font-weight: 650 !important;
+  font-size: 1.7rem !important;
+  flex: 1;
+  margin-left: 10px!important
+  
+}
+
+.sectionIcon1 {
+  color: #667eea;
+  font-size: 30px !important;
+  background: #eef2ff;
+  /* padding: 2px; */
+  border-radius: 15px;
+  margin-left: 30px;
+}
+
+.sectionTitle1 {
+  color: #1e293b !important;
+  font-weight: 650 !important;
+  font-size: 1.7rem !important;
+  flex: 1;
+  margin-left: 10px!important
+  
+}
+
+.requiredChip {
+  background-color: #eef2ff !important;
+  color: #667eea !important;
+  border: 1px solid #667eea !important;
+  font-weight: 500 !important;
+}
+
+.requiredChip .MuiChip-icon {
+  color: #667eea !important;
+}
+
+/* Form Fields */
+.formField {
+  margin-bottom: 0 !important;
+}
+
+.formField .MuiInputBase-input,
+.formField .MuiSelect-select,
+.formField textarea {
+  font-family: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 0.94rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.005em;
+}
+
+.formField .MuiOutlinedInput-root {
+  background-color: #f8fafc;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.formField .MuiOutlinedInput-root:hover {
+  background-color: #f1f5f9;
+}
+
+.formField .MuiOutlinedInput-root.Mui-focused {
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.formField .MuiOutlinedInput-notchedOutline {
+  border-color: #d1d5db;
+}
+
+.formField .MuiOutlinedInput-root.Mui-disabled {
+  background-color: #fbfcfe;
+  box-shadow: none;
+}
+
+.formField .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-notchedOutline {
+  border-color: #edf2f7;
+}
+
+.formField .MuiInputLabel-root.Mui-disabled {
+  color: #b5c0cf;
+}
+
+.formField .MuiInputBase-input.Mui-disabled,
+.formField .MuiSelect-select.Mui-disabled {
+  color: #b5c0cf !important;
+  -webkit-text-fill-color: #b5c0cf !important;
+}
+
+.formField .MuiOutlinedInput-root.Mui-disabled .MuiSvgIcon-root {
+  color: #d9e1eb;
+}
+
+.formField .MuiInputLabel-root {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.formField .MuiInputLabel-root.MuiInputLabel-shrink {
+  background-color: #ffffff;
+  padding: 0 6px;
+}
+
+/* Keep select labels floating to avoid overlap with placeholder text */
+.formField:has(.MuiSelect-select) .MuiInputLabel-root {
+  transform: translate(14px, -9px) scale(0.75) !important;
+  background-color: #ffffff;
+  padding: 0 6px;
+}
+
+.formField:has(.MuiSelect-select) .MuiSelect-select {
+  display: flex;
+  align-items: center;
+  min-height: 1.4375em !important;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+.formField:has(.MuiSelect-select) em {
+  color: #94a3b8;
+  font-style: normal;
+}
+
+/* Service dropdowns use .serviceSelect (not .formField) */
+.serviceSelect .MuiOutlinedInput-root {
+  background-color: #f8fafc;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.serviceSelect .MuiOutlinedInput-notchedOutline {
+  border-color: #d1d5db;
+}
+
+.serviceSelect .MuiInputLabel-root {
+  transform: translate(14px, -9px) scale(0.75) !important;
+  background-color: #ffffff;
+  padding: 0 6px;
+  color: #64748b;
+}
+
+.serviceSelect .MuiSelect-select {
+  display: flex;
+  align-items: center;
+  min-height: 1.4375em !important;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+/* Remove browser autofill yellow/blue background */
+.formField input:-webkit-autofill,
+.formField input:-webkit-autofill:hover,
+.formField input:-webkit-autofill:focus,
+.formField textarea:-webkit-autofill,
+.formField textarea:-webkit-autofill:hover,
+.formField textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  caret-color: #0f172a;
+  border-radius: 12px;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+
+.fieldIcon {
+  color: #94a3b8;
+  font-size: 20px !important;
+}
+
+/* OTP Button */
+.otpBtn {
+  height: 56px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  font-weight: 500 !important;
+  font-size: 1rem !important;
+  text-transform: none !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.otpBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -10px #667eea !important;
+}
+
+.otpBtn.Mui-disabled {
+  background: linear-gradient(135deg, #c7d2fe 0%, #ddd6fe 100%) !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+.otpBtn.Mui-disabled .MuiButton-startIcon {
+  color: #64748b !important;
+}
+
+.otpBtn.Mui-disabled:hover {
+  transform: none;
+  box-shadow: none !important;
+}
+
+.otpLabel {
+  margin: 0 !important;
+  color: #334155;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.otpGridItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.otpInputContainer {
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  gap: 8px;
+}
+
+.otpDigitField {
+  width: 42px;
+  height: 56px;
+}
+
+.otpDigitField .MuiOutlinedInput-root {
+  width: 42px;
+  height: 56px;
+  border-radius: 10px;
+  background-color: #f8fafc;
+}
+
+.otpDigitField .MuiOutlinedInput-input {
+  text-align: center;
+  height: 100% !important;
+  padding: 0 !important;
+  font-family: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 0.94rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  line-height: 56px;
+}
+
+.otpDigitFieldError .MuiOutlinedInput-notchedOutline {
+  border-color: #d32f2f !important;
+}
+
+.otpHelperText {
+  margin-left: 0 !important;
+  margin-top: 8px !important;
+}
+
+/* Password Strength */
+.passwordStrength {
+  margin-top: 8px;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+}
+
+.strengthBar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.strengthText {
+  position: static !important;
+  display: block;
+  text-align: right;
+  margin-top: 8px;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  line-height: 1.2;
+}
+
+/* Services Section */
+.serviceList {
+  margin: 20px 0;
+}
+
+.serviceItem {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.serviceItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+}
+
+.addServiceBtn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  border-radius: 30px !important;
+  padding: 6px 16px !important;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3) !important;
+}
+
+.addServiceBtn:hover {
+  transform: scale(1.05);
+}
+
+.emptyServices {
+  text-align: center;
+  padding: 40px 20px;
+  background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 16px;
+  border: 2px dashed #cbd5e1;
+}
+
+.emptyIcon {
+  font-size: 48px !important;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.emptyText {
+  color: #475569;
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+}
+
+.emptySubtext {
+  color: #94a3b8 !important;
+}
+
+/* Service Suggestions */
+.serviceSuggestions {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #f1f5f9;
+  border-radius: 12px;
+}
+
+.suggestionsTitle {
+  color: #475569;
+  margin-bottom: 12px !important;
+  font-weight: 600 !important;
+}
+
+.suggestionChips {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.suggestionChip {
+  background-color: white !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  transition: all 0.2s ease !important;
+}
+
+.suggestionChip:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border-color: transparent !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.3) !important;
+}
+
+.levelOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Form Actions - Centered */
+.formActions {
+  padding: 24px 40px 32px;
+  text-align: center;
+  background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
+  border-top: 1px solid #e9ecef;
+}
+
+.submitBtn {
+  min-width: 300px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 1.1rem !important;
+  padding: 14px 40px !important;
+  text-transform: none !important;
+  border-radius: 40px !important;
+  box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4) !important;
+  margin-bottom: 16px !important;
+  transition: all 0.3s ease !important;
+}
+
+.submitBtn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 20px 30px -8px rgba(102, 126, 234, 0.5) !important;
+}
+
+.requiredNote {
+  display: block;
+  color: #64748b;
+  font-size: 0.875rem !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .signupContainer {
+    padding: 16px;
+  }
+  
+  .cardHeader {
+    padding: 24px 20px;
+  }
+  
+  .headerTitle {
+    font-size: 1.8rem !important;
+  }
+  
+  .headerSteps {
+    gap: 4px;
+  }
+  
+  .formSection {
+    margin: 12px !important;
+  }
+
+  .detailsOverallBox {
+    margin: 12px;
+  }
+  
+  /* .sectionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-right: 10px !important
+  } */
+  
+  .addServiceBtn {
+    width: 100%;
+  }
+  
+  .formActions {
+    padding: 20px;
+  }
+  
+  .submitBtn {
+    min-width: 100%;
+  }
+
+  .otpGridItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .otpLabel {
+    height: auto;
+    margin-bottom: 0 !important;
+  }
+
+  .otpInputContainer {
+    height: 48px;
+  }
+
+  .otpDigitField {
+    height: 48px;
+  }
+
+  .otpDigitField .MuiOutlinedInput-root {
+    height: 48px;
+  }
+
+  .otpDigitField .MuiOutlinedInput-input {
+    line-height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signupContainer {
+    padding: 12px;
+  }
+  
+  .cardHeader {
+    padding: 20px 16px;
+  }
+  
+  .headerTitle {
+    font-size: 1.5rem !important;
+  }
+  
+  .serviceItem {
+    padding: 16px;
+  }
+  
+  .suggestionChips {
+    justify-content: center;
+  }
+
+  .otpInputContainer {
+    gap: 6px;
+  }
+
+  .otpDigitField {
+    width: 36px;
+    height: 44px;
+  }
+
+  .otpDigitField .MuiOutlinedInput-root {
+    width: 36px;
+    height: 44px;
+  }
+
+  .otpDigitField .MuiOutlinedInput-input {
+    line-height: 44px;
+    font-size: 0.95rem !important;
+  }
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.serviceItem {
+  animation: slideIn 0.3s ease forwards;
+}

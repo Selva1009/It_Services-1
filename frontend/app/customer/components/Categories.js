@@ -559,8 +559,7 @@ const CategoryMenu = ({ setCategoryFilter }) => {
           {/* Categories scroll container */}
           <div
             ref={scrollContainerRef}
-            className="flex space-x-4 overflow-x-auto scrollbar-hide px-2"
-            style={{ scrollbarWidth: "none" }}
+            className="flex space-x-4 overflow-x-auto no-scrollbar px-2"
           >
             {categories.map((category, index) => (
               <div key={index} className="flex-shrink-0">

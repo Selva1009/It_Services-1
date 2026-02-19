@@ -1,11 +1,13 @@
 "use client";
 
+import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { IoCreateOutline } from "react-icons/io5";
 
-const API_BASE_URL = "/api";
+const PRODUCTS_ENDPOINT_BASE = `${API_BASE_URL}/api/v1/products`;
+const UPLOADS_BASE_URL = `${API_BASE_URL}/uploads`;
 
 export default function EditVendorAdminProduct() {
   const router = useRouter();
@@ -29,7 +31,7 @@ export default function EditVendorAdminProduct() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/products/get-product/${id}`);
+        const res = await fetch(`${PRODUCTS_ENDPOINT_BASE}/${id}`);
         if (!res.ok) throw new Error("Failed to fetch product");
 
         const data = await res.json();
@@ -43,8 +45,10 @@ export default function EditVendorAdminProduct() {
           seller: data.product.seller || "",
         });
 
-        if (data.product.productImage) {
-          setPreviewImage(`${API_BASE_URL}/uploads/${data.product.productImage}`);
+        if (data.product.productImagePath) {
+          setPreviewImage(`${API_BASE_URL}${data.product.productImagePath}`);
+        } else if (data.product.productImage) {
+          setPreviewImage(`${UPLOADS_BASE_URL}/${data.product.productImage}`);
         }
       } catch (error) {
         console.error("Fetch error:", error);
@@ -80,7 +84,7 @@ export default function EditVendorAdminProduct() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/products/update-product/${id}`, {
+      const res = await fetch(`${PRODUCTS_ENDPOINT_BASE}/${id}`, {
         method: "PUT",
         body: formDataToSend,
       });

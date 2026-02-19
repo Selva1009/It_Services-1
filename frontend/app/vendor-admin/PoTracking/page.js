@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -22,9 +23,9 @@ import { FaSearch } from "react-icons/fa";
 
 const DetailField = ({ label, value }) => (
   <div>
-    <p className="text-xs text-gray-500 mb-1">{label}</p>
+    <p className="text-xs text-gray-500 mb-1">{ label }</p>
     <p className="text-sm font-medium text-gray-900 break-words">
-      {value || "N/A"}
+      { value || "N/A" }
     </p>
   </div>
 );
@@ -78,7 +79,7 @@ const VendorPOAutomationPage = () => {
         console.log("Using vendor ID:", vendorId);
 
         const response = await fetch(
-          `/api/PoVendorUser/vendor/admin/${vendorId}`
+          `${API_BASE_URL}/api/purchase-orders-vendor/vendor/admin/${vendorId}`
         );
 
         console.log("Response status:", response.status);
@@ -133,7 +134,7 @@ const VendorPOAutomationPage = () => {
     setDownloading((prev) => ({ ...prev, [poId]: true }));
     try {
       const response = await fetch(
-        `/api/po/generate-pdf/${poId}`,
+        `${API_BASE_URL}/api/purchase-orders/generate-pdf/${poId}`,
         {
           method: "POST",
           headers: {
@@ -184,7 +185,7 @@ const VendorPOAutomationPage = () => {
   const handleSaveChanges = async () => {
     try {
       const response = await fetch(
-        `/api/PoVendorUser/update/${selectedPO.id}`,
+        `${API_BASE_URL}/api/purchase-orders-vendor/update/${selectedPO.id}`,
         {
           method: "PUT",
           headers: {
@@ -201,9 +202,9 @@ const VendorPOAutomationPage = () => {
           prev.map((po) =>
             po.id === selectedPO.id
               ? {
-                  ...po,
-                  status: editData.status,
-                }
+                ...po,
+                status: editData.status,
+              }
               : po
           )
         );
@@ -237,7 +238,7 @@ const VendorPOAutomationPage = () => {
 
       try {
         const res = await fetch(
-          `/api/po/${selectedPO.id}/delivery-notes`
+          `${API_BASE_URL}/api/purchase-orders/${selectedPO.id}/delivery-notes`
         );
         const data = await res.json();
 
@@ -265,22 +266,22 @@ const VendorPOAutomationPage = () => {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <ToastContainer position="bottom-right" autoClose={3000} />
+        <ToastContainer position="bottom-right" autoClose={ 3000 } />
 
-        {/* Main Content */}
-        {selectedPO ? (
+        {/* Main Content */ }
+        { selectedPO ? (
           <div className="p-6 md:p-8 max-w-7xl mx-auto">
             <div className="flex justify-between mt-6">
               <Button
-                onClick={() => setSelectedPO(null)}
+                onClick={ () => setSelectedPO(null) }
                 variant="outline"
                 className="flex items-center gap-2"
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft size={ 16 } />
                 Back to All POs
               </Button>
             </div>
-            {/* PO Header */}
+            {/* PO Header */ }
             <div className="text-center mb-8">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">
                 PURCHASE ORDER
@@ -292,29 +293,29 @@ const VendorPOAutomationPage = () => {
                       PO Number:
                     </span>
                     <span className="font-semibold text-blue-600">
-                      {selectedPO.po_number}
+                      { selectedPO.po_number }
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-700">Date:</span>
                     <span className="font-semibold">
-                      {new Date(selectedPO.order_date).toLocaleDateString(
+                      { new Date(selectedPO.order_date).toLocaleDateString(
                         "en-IN",
                         {
                           day: "2-digit",
                           month: "short",
                           year: "numeric",
                         }
-                      )}
+                      ) }
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Three Column Layout */}
+            {/* Three Column Layout */ }
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              {/* Vendor Card */}
+              {/* Vendor Card */ }
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
                   <Building2 className="h-5 w-5 text-blue-600" />
@@ -325,44 +326,44 @@ const VendorPOAutomationPage = () => {
                 <div className="space-y-3">
                   <DetailField
                     label="Name"
-                    value={selectedPO.items[0]?.vendor_name}
+                    value={ selectedPO.items[0]?.vendor_name }
                   />
                   <DetailField
                     label="Company"
-                    value={selectedPO.items[0]?.vendor_company}
+                    value={ selectedPO.items[0]?.vendor_company }
                   />
                   <DetailField
                     label="Email"
-                    value={selectedPO.items[0]?.vendor_email}
+                    value={ selectedPO.items[0]?.vendor_email }
                   />
                   <DetailField
                     label="Address"
-                    value={selectedPO.items[0]?.vendor_address}
+                    value={ selectedPO.items[0]?.vendor_address }
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <DetailField
                       label="City"
-                      value={selectedPO.items[0]?.vendor_city}
+                      value={ selectedPO.items[0]?.vendor_city }
                     />
                     <DetailField
                       label="State"
-                      value={selectedPO.items[0]?.vendor_state}
+                      value={ selectedPO.items[0]?.vendor_state }
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <DetailField
                       label="Country"
-                      value={selectedPO.items[0]?.vendor_country}
+                      value={ selectedPO.items[0]?.vendor_country }
                     />
                     <DetailField
                       label="Postal Code"
-                      value={selectedPO.items[0]?.vendor_postal_code}
+                      value={ selectedPO.items[0]?.vendor_postal_code }
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Customer Card */}
+              {/* Customer Card */ }
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
                   <User className="h-5 w-5 text-blue-600" />
@@ -371,43 +372,43 @@ const VendorPOAutomationPage = () => {
                   </h3>
                 </div>
                 <div className="space-y-3">
-                  <DetailField label="Name" value={selectedPO.customer_name} />
+                  <DetailField label="Name" value={ selectedPO.customer_name } />
                   <DetailField
                     label="Company"
-                    value={selectedPO.customer_company}
+                    value={ selectedPO.customer_company }
                   />
                   <DetailField
                     label="Email"
-                    value={selectedPO.customer_email}
+                    value={ selectedPO.customer_email }
                   />
                   <DetailField
                     label="Address"
-                    value={selectedPO.customer_address}
+                    value={ selectedPO.customer_address }
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <DetailField
                       label="City"
-                      value={selectedPO.customer_city}
+                      value={ selectedPO.customer_city }
                     />
                     <DetailField
                       label="State"
-                      value={selectedPO.customer_state}
+                      value={ selectedPO.customer_state }
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <DetailField
                       label="Country"
-                      value={selectedPO.customer_country}
+                      value={ selectedPO.customer_country }
                     />
                     <DetailField
                       label="Postal Code"
-                      value={selectedPO.customer_postal_code}
+                      value={ selectedPO.customer_postal_code }
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Shipping Card */}
+              {/* Shipping Card */ }
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
                   <div className="flex items-center gap-3">
@@ -419,10 +420,10 @@ const VendorPOAutomationPage = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <DetailField label="Name" value={selectedPO.customer_name} />
+                  <DetailField label="Name" value={ selectedPO.customer_name } />
                   <DetailField
                     label="Company"
-                    value={selectedPO.customer_company}
+                    value={ selectedPO.customer_company }
                   />
                   <DetailField
                     label="Address"
@@ -464,7 +465,7 @@ const VendorPOAutomationPage = () => {
               </div>
             </div>
 
-            {/* Items Section */}
+            {/* Items Section */ }
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <ListOrdered className="h-5 w-5 text-blue-600" />
@@ -495,44 +496,44 @@ const VendorPOAutomationPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {selectedPO.items.map((item, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
+                    { selectedPO.items.map((item, index) => (
+                      <tr key={ index } className="hover:bg-gray-50">
                         <td className="px-5 py-4 whitespace-nowrap max-w-xs relative group">
                           <div className="text-sm text-gray-900 truncate">
-                            {item.product_name}
+                            { item.product_name }
                           </div>
                         </td>
 
                         <td className="px-5 py-4 whitespace-nowrap max-w-xs relative group">
                           <div className="text-sm text-gray-900 truncate">
-                            {item.description || "-"}
+                            { item.description || "-" }
                           </div>
-                          {item.description && (
+                          { item.description && (
                             <div className="absolute max-w-lg left-0 top-full mt-1 z-50 hidden group-hover:block w-64 bg-white text-gray-800 text-xs p-2 rounded shadow-lg border border-gray-300">
-                              {item.description}
+                              { item.description }
                             </div>
-                          )}
+                          ) }
                         </td>
 
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.quantity}
+                          { item.quantity }
                         </td>
 
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ₹{item.unit_price.toLocaleString()}
+                          ₹{ item.unit_price.toLocaleString() }
                         </td>
 
                         <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ₹{(item.unit_price * item.quantity).toLocaleString()}
+                          ₹{ (item.unit_price * item.quantity).toLocaleString() }
                         </td>
                       </tr>
-                    ))}
+                    )) }
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* Totals Section */}
+            {/* Totals Section */ }
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -542,19 +543,19 @@ const VendorPOAutomationPage = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal:</span>
                     <span className="font-medium">
-                      ₹{selectedPO.total_amount.toLocaleString()}
+                      ₹{ selectedPO.total_amount.toLocaleString() }
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">CGST (9%):</span>
                     <span className="font-medium">
-                      ₹{(selectedPO.total_amount * 0.09).toLocaleString()}
+                      ₹{ (selectedPO.total_amount * 0.09).toLocaleString() }
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">SGST (9%):</span>
                     <span className="font-medium">
-                      ₹{(selectedPO.total_amount * 0.09).toLocaleString()}
+                      ₹{ (selectedPO.total_amount * 0.09).toLocaleString() }
                     </span>
                   </div>
                   <div className="flex justify-between pt-3 border-t border-gray-200">
@@ -562,61 +563,61 @@ const VendorPOAutomationPage = () => {
                       Grand Total:
                     </span>
                     <span className="text-blue-600 font-bold">
-                      ₹{(selectedPO.total_amount * 1.18).toLocaleString()}
+                      ₹{ (selectedPO.total_amount * 1.18).toLocaleString() }
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Status and Notes */}
+              {/* Status and Notes */ }
               <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">
                     Order Status
                   </h3>
-                  {editing ? (
+                  { editing ? (
                     <div className="flex gap-2">
                       <Button
-                        onClick={handleSaveChanges}
+                        onClick={ handleSaveChanges }
                         size="sm"
                         className="h-8"
                       >
-                        <Check size={14} className="mr-1" />
+                        <Check size={ 14 } className="mr-1" />
                         Save
                       </Button>
                       <Button
-                        onClick={handleCancelEdit}
+                        onClick={ handleCancelEdit }
                         variant="outline"
                         size="sm"
                         className="h-8"
                       >
-                        <X size={14} className="mr-1" />
+                        <X size={ 14 } className="mr-1" />
                         Cancel
                       </Button>
                     </div>
                   ) : (
                     <Button
-                      onClick={() => handleEditClick(selectedPO)}
+                      onClick={ () => handleEditClick(selectedPO) }
                       variant="ghost"
                       size="sm"
                       className="h-8"
                     >
-                      <Edit size={14} className="mr-1" />
+                      <Edit size={ 14 } className="mr-1" />
                       Edit
                     </Button>
-                  )}
+                  ) }
                 </div>
 
                 <div className="space-y-3">
-                  {editing ? (
+                  { editing ? (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         New Status
                       </label>
                       <select
                         name="status"
-                        value={editData.status}
-                        onChange={handleEditChange}
+                        value={ editData.status }
+                        onChange={ handleEditChange }
                         className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
                       >
                         <option value="">Select new status</option>
@@ -631,23 +632,22 @@ const VendorPOAutomationPage = () => {
                     </div>
                   ) : (
                     <div
-                      className={`px-3 py-2 rounded-md inline-block ${
-                        selectedPO.status === "Pending"
+                      className={ `px-3 py-2 rounded-md inline-block ${selectedPO.status === "Pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : selectedPO.status === "PO-Acknowledgement"
-                          ? "bg-blue-100 text-blue-800"
-                          : selectedPO.status === "Delivered"
-                          ? "bg-green-100 text-green-800"
-                          : selectedPO.status === "Cancelled"
-                          ? "bg-red-100 text-red-800"
-                          : selectedPO.status === "Payment Success"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                            ? "bg-blue-100 text-blue-800"
+                            : selectedPO.status === "Delivered"
+                              ? "bg-green-100 text-green-800"
+                              : selectedPO.status === "Cancelled"
+                                ? "bg-red-100 text-red-800"
+                                : selectedPO.status === "Payment Success"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-gray-100 text-gray-800"
+                        }` }
                     >
-                      {selectedPO.status || "PENDING"}
+                      { selectedPO.status || "PENDING" }
                     </div>
-                  )}
+                  ) }
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-lg font-semibold text-gray-800">
@@ -655,11 +655,11 @@ const VendorPOAutomationPage = () => {
                       </h3>
                     </div>
                     <textarea
-                      value={deliveryNotes}
+                      value={ deliveryNotes }
                       readOnly
                       placeholder="Add any special delivery instructions..."
                       className="w-full px-3 py-2 border rounded-md text-sm bg-gray-100 cursor-not-allowed"
-                      rows={3}
+                      rows={ 3 }
                     />
                   </div>
                 </div>
@@ -668,18 +668,17 @@ const VendorPOAutomationPage = () => {
           </div>
         ) : (
           <div className="p-6 md:p-8 max-w-7xl mx-auto">
-            {/* Hero Section - Only shown when not viewing a specific PO */}
+            {/* Hero Section - Only shown when not viewing a specific PO */ }
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Vendor Purchase Orders
               </h1>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <p className="text-gray-600">
-                  {filteredPOs.length > 0
-                    ? `Showing ${filteredPOs.length} purchase ${
-                        filteredPOs.length === 1 ? "order" : "orders"
-                      }`
-                    : "No purchase orders found"}
+                  { filteredPOs.length > 0
+                    ? `Showing ${filteredPOs.length} purchase ${filteredPOs.length === 1 ? "order" : "orders"
+                    }`
+                    : "No purchase orders found" }
                 </p>
                 <div className="relative w-full md:w-64">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -688,11 +687,11 @@ const VendorPOAutomationPage = () => {
                   <input
                     type="text"
                     placeholder="Search POs..."
-                    value={searchTerm}
-                    onChange={(e) => {
+                    value={ searchTerm }
+                    onChange={ (e) => {
                       setSearchTerm(e.target.value);
                       setCurrentPage(1); // Reset to first page when searching
-                    }}
+                    } }
                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   />
                 </div>
@@ -734,80 +733,79 @@ const VendorPOAutomationPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {currentItems.length > 0 ? (
+                    { currentItems.length > 0 ? (
                       currentItems.map((po) => (
-                        <tr key={po.id} className="hover:bg-gray-50">
+                        <tr key={ po.id } className="hover:bg-gray-50">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm font-medium text-blue-600">
-                              {po.po_number}
+                              { po.po_number }
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              {new Date(po.order_date).toLocaleDateString()}
+                              { new Date(po.order_date).toLocaleDateString() }
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              {po.customer_name}
+                              { po.customer_name }
                             </div>
                             <div className="text-sm text-gray-500">
-                              {po.customer_company}
+                              { po.customer_company }
                             </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="text-sm text-gray-900">
-                              {po.items?.[0]?.product_name}
+                              { po.items?.[0]?.product_name }
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-gray-900 relative group w-max max-w-[200px]">
                               <span className="truncate block">
-                                {(po.items?.[0]?.description || "")
+                                { (po.items?.[0]?.description || "")
                                   .split(" ")
                                   .slice(0, 3)
-                                  .join(" ") + "..."}
+                                  .join(" ") + "..." }
                               </span>
-                              {po.items?.[0]?.description && (
+                              { po.items?.[0]?.description && (
                                 <div className="absolute z-10 hidden group-hover:block bg-white border border-gray-300 text-gray-900 text-xs p-2 rounded shadow-md w-64 top-full mt-1">
-                                  {po.items[0].description}
+                                  { po.items[0].description }
                                 </div>
-                              )}
+                              ) }
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              ₹{po.total_amount.toLocaleString()}
+                              ₹{ po.total_amount.toLocaleString() }
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              {po.items?.[0]?.quantity}
+                              { po.items?.[0]?.quantity }
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                po.status === "Pending"
+                              className={ `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${po.status === "Pending"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : po.status === "PO-Acknowledgement"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : po.status === "Delivered"
-                                  ? "bg-green-100 text-green-800"
-                                  : po.status === "Cancelled"
-                                  ? "bg-red-100 text-red-800"
-                                  : po.status === "Payment Success"
-                                  ? "bg-purple-100 text-purple-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
+                                    ? "bg-blue-100 text-blue-800"
+                                    : po.status === "Delivered"
+                                      ? "bg-green-100 text-green-800"
+                                      : po.status === "Cancelled"
+                                        ? "bg-red-100 text-red-800"
+                                        : po.status === "Payment Success"
+                                          ? "bg-purple-100 text-purple-800"
+                                          : "bg-gray-100 text-gray-800"
+                                }` }
                             >
-                              {po.status}
+                              { po.status }
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                             <div className="flex items-center gap-2">
                               <Button
-                                onClick={() => setSelectedPO(po)}
+                                onClick={ () => setSelectedPO(po) }
                                 variant="ghost"
                                 size="sm"
                                 className="text-blue-600 hover:text-blue-900"
@@ -816,17 +814,17 @@ const VendorPOAutomationPage = () => {
                                 View
                               </Button>
                               <Button
-                                onClick={() => handleDownloadPDF(po.id)}
-                                disabled={downloading[po.id]}
+                                onClick={ () => handleDownloadPDF(po.id) }
+                                disabled={ downloading[po.id] }
                                 variant="ghost"
                                 size="sm"
                                 className="text-green-600 hover:text-green-900"
                               >
-                                {downloading[po.id] ? (
+                                { downloading[po.id] ? (
                                   <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                 ) : (
                                   <Download className="h-4 w-4 mr-1" />
-                                )}
+                                ) }
                                 PDF
                               </Button>
                             </div>
@@ -842,30 +840,30 @@ const VendorPOAutomationPage = () => {
                           No purchase orders found
                         </td>
                       </tr>
-                    )}
+                    ) }
                   </tbody>
                 </table>
               </div>
 
-              {/* Pagination */}
-              {filteredPOs.length > 0 && (
+              {/* Pagination */ }
+              { filteredPOs.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                   <div className="flex-1 flex justify-between sm:hidden">
                     <Button
-                      onClick={() =>
+                      onClick={ () =>
                         setCurrentPage((prev) => Math.max(prev - 1, 1))
                       }
-                      disabled={currentPage === 1}
+                      disabled={ currentPage === 1 }
                       variant="outline"
                       size="sm"
                     >
                       Previous
                     </Button>
                     <Button
-                      onClick={() =>
+                      onClick={ () =>
                         setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                       }
-                      disabled={currentPage === totalPages}
+                      disabled={ currentPage === totalPages }
                       variant="outline"
                       size="sm"
                       className="ml-3"
@@ -876,19 +874,19 @@ const VendorPOAutomationPage = () => {
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        Showing{" "}
+                        Showing{ " " }
                         <span className="font-medium">
-                          {(currentPage - 1) * itemsPerPage + 1}
-                        </span>{" "}
-                        to{" "}
+                          { (currentPage - 1) * itemsPerPage + 1 }
+                        </span>{ " " }
+                        to{ " " }
                         <span className="font-medium">
-                          {Math.min(
+                          { Math.min(
                             currentPage * itemsPerPage,
                             filteredPOs.length
-                          )}
-                        </span>{" "}
-                        of{" "}
-                        <span className="font-medium">{filteredPOs.length}</span>{" "}
+                          ) }
+                        </span>{ " " }
+                        of{ " " }
+                        <span className="font-medium">{ filteredPOs.length }</span>{ " " }
                         results
                       </p>
                     </div>
@@ -898,24 +896,24 @@ const VendorPOAutomationPage = () => {
                         aria-label="Pagination"
                       >
                         <button
-                          onClick={() => setCurrentPage(1)}
-                          disabled={currentPage === 1}
+                          onClick={ () => setCurrentPage(1) }
+                          disabled={ currentPage === 1 }
                           className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">First</span>
                           &laquo;
                         </button>
                         <button
-                          onClick={() =>
+                          onClick={ () =>
                             setCurrentPage((prev) => Math.max(prev - 1, 1))
                           }
-                          disabled={currentPage === 1}
+                          disabled={ currentPage === 1 }
                           className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">Previous</span>
                           &lsaquo;
                         </button>
-                        {Array.from(
+                        { Array.from(
                           { length: Math.min(5, totalPages) },
                           (_, i) => {
                             let pageNum;
@@ -930,34 +928,33 @@ const VendorPOAutomationPage = () => {
                             }
                             return (
                               <button
-                                key={pageNum}
-                                onClick={() => setCurrentPage(pageNum)}
-                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                  currentPage === pageNum
+                                key={ pageNum }
+                                onClick={ () => setCurrentPage(pageNum) }
+                                className={ `relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === pageNum
                                     ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
                                     : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                }`}
+                                  }` }
                               >
-                                {pageNum}
+                                { pageNum }
                               </button>
                             );
                           }
-                        )}
+                        ) }
                         <button
-                          onClick={() =>
+                          onClick={ () =>
                             setCurrentPage((prev) =>
                               Math.min(prev + 1, totalPages)
                             )
                           }
-                          disabled={currentPage === totalPages}
+                          disabled={ currentPage === totalPages }
                           className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">Next</span>
                           &rsaquo;
                         </button>
                         <button
-                          onClick={() => setCurrentPage(totalPages)}
-                          disabled={currentPage === totalPages}
+                          onClick={ () => setCurrentPage(totalPages) }
+                          disabled={ currentPage === totalPages }
                           className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">Last</span>
@@ -967,10 +964,10 @@ const VendorPOAutomationPage = () => {
                     </div>
                   </div>
                 </div>
-              )}
+              ) }
             </div>
           </div>
-        )}
+        ) }
       </div>
     </>
   );

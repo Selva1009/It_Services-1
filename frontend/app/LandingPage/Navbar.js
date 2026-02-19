@@ -239,7 +239,7 @@ export default function Navbar() {
                   Welcome!
                 </h2>
                 <p className="text-xs sm:text-sm md:text-base text-gray-500">
-                  Choose how you'd like to join us
+                  Choose how you&apos;d like to join us
                 </p>
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Navbar() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm sm:text-base md:text-[1.05rem] text-gray-900">
-                        Customer-Admin
+                        IT User Admin
                       </h3>
                       <p className="text-xs sm:text-sm md:text-sm text-gray-500 mt-0.5 sm:mt-1">
                         Discover amazing products tailored for you
@@ -314,7 +314,7 @@ export default function Navbar() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm sm:text-base md:text-[1.05rem] text-gray-900">
-                        Vendor-Admin
+                        Vendor Engineer Admin
                       </h3>
                       <p className="text-xs sm:text-sm md:text-sm text-gray-500 mt-0.5 sm:mt-1">
                         Grow your business with our marketplace

@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import { CustomerAddUser } from "@/app/Components/auth/CustomerAddUser";
 import { PasswordSection } from "@/app/Components/auth/PasswordSection";
@@ -14,12 +15,12 @@ const Page = () => {
   const { validateForm } = useUserFormValidation();
   const [adminID, setAdminId] = useState(null);
   const [formValues, setFormValues] = useState({
-   
+
     personName: "",
     contactNumber: "",
     Email: "",
     password: "",
-    confirmPassword:"",
+    confirmPassword: "",
     adminID: null,
   });
 
@@ -71,7 +72,7 @@ const Page = () => {
 
     try {
       const response = await fetch(
-        "/api/auth/customerUserSignUp/customerUser",
+        `${API_BASE_URL}/api/customer-users/customerUser`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,7 +81,7 @@ const Page = () => {
       );
 
       const result = await response.json();
-      
+
       if (response.ok) {
         Swal.fire({
           title: "Success!",
@@ -118,12 +119,12 @@ const Page = () => {
         try {
           const customerData = JSON.parse(storedCustomer);
           setAdminId(customerData.id);
-          
+
           // Fetch admin's company details
           const response = await fetch(
-            `/api/auth/customerUserSignUp/company-name/${customerData.id}`
+            `${API_BASE_URL}/api/customer-users/company-name/${customerData.id}`
           );
-          
+
           if (response.ok) {
             const data = await response.json();
             setFormValues((prev) => ({
@@ -167,75 +168,75 @@ const Page = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-    <CustomerAdminNavbar />
-    <main className="flex-1 flex items-center justify-center py-10 px-4">
-      <div className="w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-200">
-        {/* Form Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-md">
-              <UserPlus className="text-blue-600" size={22} />
+      <CustomerAdminNavbar />
+      <main className="flex-1 flex items-center justify-center py-10 px-4">
+        <div className="w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-200">
+          {/* Form Header */ }
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 p-2 rounded-md">
+                <UserPlus className="text-blue-600" size={ 22 } />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Create New User</h2>
+                <p className="text-sm text-gray-500">Add a user to your organization</p>
+              </div>
             </div>
+          </div>
+
+          <form onSubmit={ handleSubmit } className="px-6 py-6 space-y-6">
+            {/* Basic Info Section */ }
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">Create New User</h2>
-              <p className="text-sm text-gray-500">Add a user to your organization</p>
+              <div className="text-sm font-medium text-gray-700 bg-blue-50 rounded-md px-3 py-1 inline-block mb-3">
+                Basic Information
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <CustomerAddUser
+                  formValues={ formValues }
+                  handleInputChange={ handleInputChange }
+                  errors={ errors }
+
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <PasswordSection
+                  formValues={ formValues }
+                  handleInputChange={ handleInputChange }
+                  errors={ errors }
+                  showPassword={ showPassword }
+                  togglePasswordVisibility={ togglePasswordVisibility }
+                  showConfirmPassword={ showConfirmPassword }
+                  toggleConfirmPasswordVisibility={ toggleConfirmPasswordVisibility }
+                />
+              </div>
             </div>
-          </div>
+
+
+
+            {/* Action Buttons */ }
+            <div className="flex justify-end gap-4 border-t pt-5">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-sm text-gray-700 px-4 py-2 border-gray-300 hover:bg-gray-50"
+                onClick={ () => window.history.back() }
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="text-sm px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={ isSubmitting }
+              >
+                { isSubmitting ? "Creating..." : "Create" }
+              </Button>
+            </div>
+          </form>
         </div>
+      </main>
+    </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
-          {/* Basic Info Section */}
-          <div>
-            <div className="text-sm font-medium text-gray-700 bg-blue-50 rounded-md px-3 py-1 inline-block mb-3">
-              Basic Information
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <CustomerAddUser
-                formValues={formValues}
-                handleInputChange={handleInputChange}
-                errors={errors}
-              
-              />
-            </div>
-         
-            <div className="grid grid-cols-2 gap-2">
-              <PasswordSection
-                formValues={formValues}
-                handleInputChange={handleInputChange}
-                errors={errors}
-                showPassword={showPassword}
-                togglePasswordVisibility={togglePasswordVisibility}
-                showConfirmPassword={showConfirmPassword}
-                toggleConfirmPasswordVisibility={toggleConfirmPasswordVisibility}
-              />
-            </div>
-          </div>
-  
-
-  
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4 border-t pt-5">
-            <Button
-              type="button"
-              variant="outline"
-              className="text-sm text-gray-700 px-4 py-2 border-gray-300 hover:bg-gray-50"
-              onClick={() => window.history.back()}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="text-sm px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Creating..." : "Create"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </main>
-  </div>
-  
   );
 };
 

@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import {
   Mail,
@@ -33,7 +34,7 @@ export default function ContactSection() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/contact/contactus", {
+      const response = await fetch(`${API_BASE_URL}/api/support/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -96,12 +97,12 @@ export default function ContactSection() {
       className="bg-gradient-to-br from-gray-50 to-blue-50 py-20 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-7xl -mt-6 font-[Inter] mx-auto">
-        {/* Section Header */}
+        {/* Section Header */ }
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          initial={ { opacity: 0, y: 20 } }
+          whileInView={ { opacity: 1, y: 0 } }
+          transition={ { duration: 0.5 } }
+          viewport={ { once: true } }
           className="text-center mb-16"
         >
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
@@ -109,25 +110,25 @@ export default function ContactSection() {
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Have questions or want to discuss a project? Reach out to our team -
-            we're here to help!
+            we&apos;re here to help!
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* Contact Information */}
+          {/* Contact Information */ }
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            viewport={{ once: true }}
+            initial={ { opacity: 0, x: -20 } }
+            whileInView={ { opacity: 1, x: 0 } }
+            transition={ { duration: 0.5, delay: 0.2 } }
+            viewport={ { once: true } }
             className="space-y-8"
           >
-            {/* Contact Cards */}
+            {/* Contact Cards */ }
             <div className="space-y-14">
               <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
-                    <Mail size={24} />
+                    <Mail size={ 24 } />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
@@ -147,7 +148,7 @@ export default function ContactSection() {
               <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-green-100 rounded-lg text-green-600">
-                    <Phone size={24} />
+                    <Phone size={ 24 } />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
@@ -167,7 +168,7 @@ export default function ContactSection() {
               <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-purple-100 rounded-lg text-purple-600">
-                    <MapPin size={24} />
+                    <MapPin size={ 24 } />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
@@ -194,22 +195,22 @@ export default function ContactSection() {
             </div>
           </motion.div>
 
-          {/* Contact Form */}
+          {/* Contact Form */ }
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            viewport={{ once: true }}
+            initial={ { opacity: 0, x: 20 } }
+            whileInView={ { opacity: 1, x: 0 } }
+            transition={ { duration: 0.5, delay: 0.2 } }
+            viewport={ { once: true } }
             className="bg-white p-8 rounded-3xl shadow-xl border border-gray-200"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
               Send us a message
             </h3>
             <p className="text-gray-600 mb-6">
-              Fill out the form below and we'll get back to you soon
+              Fill out the form below and we&apos;ll get back to you soon
             </p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={ handleSubmit(onSubmit) } className="space-y-6">
               <div>
                 <label
                   htmlFor="name"
@@ -224,16 +225,16 @@ export default function ContactSection() {
                   <Input
                     id="name"
                     type="text"
-                    {...register("name", { required: "Name is required" })}
+                    { ...register("name", { required: "Name is required" }) }
                     className="pl-10 w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="John Doe"
                   />
                 </div>
-                {errors.name && (
+                { errors.name && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.name.message}
+                    { errors.name.message }
                   </p>
-                )}
+                ) }
               </div>
 
               <div>
@@ -250,22 +251,22 @@ export default function ContactSection() {
                   <Input
                     id="email"
                     type="email"
-                    {...register("email", {
+                    { ...register("email", {
                       required: "Email is required",
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                         message: "Invalid email address",
                       },
-                    })}
+                    }) }
                     className="pl-10 w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="your@email.com"
                   />
                 </div>
-                {errors.email && (
+                { errors.email && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.email.message}
+                    { errors.email.message }
                   </p>
-                )}
+                ) }
               </div>
 
               <div>
@@ -281,62 +282,62 @@ export default function ContactSection() {
                   </div>
                   <Textarea
                     id="comment"
-                    {...register("comment", {
+                    { ...register("comment", {
                       required: "Message is required",
                       minLength: {
                         value: 10,
                         message: "Message must be at least 10 characters",
                       },
-                    })}
+                    }) }
                     className="pl-10 w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[130px]"
                     placeholder="How can we help you?"
                   />
                 </div>
-                {errors.comment && (
+                { errors.comment && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.comment.message}
+                    { errors.comment.message }
                   </p>
-                )}
+                ) }
               </div>
 
               <div className="pt-2">
 
                 <div className="flex justify-center">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-1/2  py-3 px-6 bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                >
-               
-                
-                  {loading ? (
-                    <span className="flex items-center justify-center">
-                      <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Sending...
-                    </span>
-                  ) : (
-                    "Send Message"
-                  )}
-                </Button>
+                  <Button
+                    type="submit"
+                    disabled={ loading }
+                    className="w-1/2  py-3 px-6 bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                  >
+
+
+                    { loading ? (
+                      <span className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Sending...
+                      </span>
+                    ) : (
+                      "Send Message"
+                    ) }
+                  </Button>
                 </div>
               </div>
             </form>
