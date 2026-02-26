@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import Swal from "sweetalert2";
 
@@ -13,14 +14,25 @@ export const useOtp = () => {
       return;
     }
     setLoading(true);
-    setOtpError(""); 
+    setOtpError("");
     try {
+      const otpRouteByEndpoint = {
+        customer: "/api/customers/auth/otp",
+        vendor: "/api/vendors/auth/otp",
+      };
+
+      const otpRoute = otpRouteByEndpoint[endpoint];
+      if (!otpRoute) {
+        setOtpError("Invalid OTP endpoint.");
+        return;
+      }
+
       const response = await fetch(
-        `/api/auth/${endpoint}/${endpoint}-sendotp`,
+        `${API_BASE_URL}${otpRoute}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({email}),
+          body: JSON.stringify({ email }),
         }
       );
       const result = await response.json();
@@ -44,5 +56,5 @@ export const useOtp = () => {
     }
   };
 
-  return { otpMessage, otpSent, setOtpError, otpError,loading, handleOtpRequest};
+  return { otpMessage, otpSent, setOtpError, otpError, loading, handleOtpRequest };
 };

@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,71 +22,71 @@ export default function TransferProducts({ onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  if (!oldUsername || !newUsername) {
-    Swal.fire("Error", "Please enter both old and new user names", "error");
-    setIsSubmitting(false);
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      "/api/auth/products/transfer-products",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ oldUsername, newUsername }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      if (data.newUserId) {
-        // ✅ Update both keys so other pages get the correct ID
-        localStorage.setItem("vendor_user_id", data.newUserId);
-        localStorage.setItem("userId", data.newUserId); // <-- Critical for products page
-      }
-
-      Swal.fire({
-        title: "Success",
-        text: data.message || "Products transferred successfully",
-        icon: "success",
-      }).then(() => {
-        setOldUsername("");
-        setNewUsername("");
-        if (onClose) onClose(); // close modal
-        window.location.reload(); // ✅ Reload everything with updated ID
-      });
-    } else {
-      Swal.fire("Error", data.message || "Transfer failed", "error");
+    if (!oldUsername || !newUsername) {
+      Swal.fire("Error", "Please enter both old and new user names", "error");
+      setIsSubmitting(false);
+      return;
     }
-  } catch (error) {
-    console.error("Transfer error:", error);
-    Swal.fire("Error", "Server error occurred", "error");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/products/transfer-products`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ oldUsername, newUsername }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.newUserId) {
+          // ✅ Update both keys so other pages get the correct ID
+          localStorage.setItem("vendor_user_id", data.newUserId);
+          localStorage.setItem("userId", data.newUserId); // <-- Critical for products page
+        }
+
+        Swal.fire({
+          title: "Success",
+          text: data.message || "Products transferred successfully",
+          icon: "success",
+        }).then(() => {
+          setOldUsername("");
+          setNewUsername("");
+          if (onClose) onClose(); // close modal
+          window.location.reload(); // ✅ Reload everything with updated ID
+        });
+      } else {
+        Swal.fire("Error", data.message || "Transfer failed", "error");
+      }
+    } catch (error) {
+      console.error("Transfer error:", error);
+      Swal.fire("Error", "Server error occurred", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={ { opacity: 0 } }
+        animate={ { opacity: 1 } }
+        exit={ { opacity: 0 } }
         className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       >
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 20, opacity: 0 }}
-          transition={{ type: "spring", damping: 30 }}
+          initial={ { y: 20, opacity: 0 } }
+          animate={ { y: 0, opacity: 1 } }
+          exit={ { y: 20, opacity: 0 } }
+          transition={ { type: "spring", damping: 30 } }
           className="w-full max-w-md"
         >
           <Card className="shadow-2xl rounded-xl border-0 relative overflow-hidden">
@@ -105,7 +106,7 @@ export default function TransferProducts({ onClose }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={onClose}
+                  onClick={ onClose }
                   className="rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 >
                   <X className="w-4 h-4" />
@@ -113,7 +114,7 @@ export default function TransferProducts({ onClose }) {
               </div>
             </CardHeader>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={ handleSubmit }>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="oldUsername" className="text-sm font-medium text-gray-700">
@@ -121,8 +122,8 @@ export default function TransferProducts({ onClose }) {
                   </Label>
                   <Input
                     id="oldUsername"
-                    value={oldUsername}
-                    onChange={(e) => setOldUsername(e.target.value)}
+                    value={ oldUsername }
+                    onChange={ (e) => setOldUsername(e.target.value) }
                     placeholder="Enter old username"
                     className="focus-visible:ring-2 focus-visible:ring-blue-500"
                     required
@@ -135,8 +136,8 @@ export default function TransferProducts({ onClose }) {
                   </Label>
                   <Input
                     id="newUsername"
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
+                    value={ newUsername }
+                    onChange={ (e) => setNewUsername(e.target.value) }
                     placeholder="Enter new username"
                     className="focus-visible:ring-2 focus-visible:ring-blue-500"
                     required
@@ -148,10 +149,10 @@ export default function TransferProducts({ onClose }) {
                 <Button
                   variant="outline"
                   type="button"
-                  onClick={() => {
+                  onClick={ () => {
                     setOldUsername("");
                     setNewUsername("");
-                  }}
+                  } }
                   className="border-gray-300 hover:bg-gray-100"
                 >
                   Clear
@@ -159,16 +160,16 @@ export default function TransferProducts({ onClose }) {
                 <Button
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                  disabled={isSubmitting}
+                  disabled={ isSubmitting }
                 >
-                  {isSubmitting ? (
+                  { isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Transferring...
                     </>
                   ) : (
                     "Transfer Products"
-                  )}
+                  ) }
                 </Button>
               </CardFooter>
             </form>

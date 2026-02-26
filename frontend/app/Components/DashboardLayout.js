@@ -1,7 +1,9 @@
-"use client";
+﻿"use client";
 
+import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { FaClipboardList } from "react-icons/fa";
+import Link from "next/link";
 import {
   User,
   BellRing,
@@ -14,26 +16,26 @@ import {
   FileText,
   Menu,
 } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import Footer from "../LandingPage/Footer";
 
 export default function DashboardLayout({ id, children }) {
+  const NOTIFICATION_LIMIT = 50;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [vendorUser, setVendorUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [fadeIn, setFadeIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("all");
   const [readNotifications, setReadNotifications] = useState(new Set());
   const [message, setMessage] = useState("");
-  
+
 
   const router = useRouter();
-  const pathname = usePathname();
+  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "short",
@@ -53,11 +55,16 @@ export default function DashboardLayout({ id, children }) {
           return;
         }
 
-        const { id } = JSON.parse(storedVendorUser);
+        const authToken = getAuthToken();
 
         const response = await fetch(
-          `/api/auth/vendor/get-user/${id}`,
-          { signal }
+          `${API_BASE_URL}/api/vendor-users/profile`,
+          {
+            signal,
+            headers: authToken
+              ? { Authorization: `Bearer ${authToken}` }
+              : undefined,
+          }
         );
 
         if (!response.ok) {
@@ -92,10 +99,13 @@ export default function DashboardLayout({ id, children }) {
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!id) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
 
       try {
         const response = await fetch(
-          `/api/notification/${id}`
+          `${API_BASE_URL}/api/notifications/${id}?limit=${NOTIFICATION_LIMIT}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch notifications");
@@ -135,7 +145,7 @@ export default function DashboardLayout({ id, children }) {
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000);
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [id]);
 
@@ -152,7 +162,7 @@ export default function DashboardLayout({ id, children }) {
 
     try {
       const response = await fetch(
-        `/api/notification/read/${notifId}`,
+        `${API_BASE_URL}/api/notifications/read/${notifId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -173,50 +183,45 @@ export default function DashboardLayout({ id, children }) {
     }
   };
 
-   // Handle mark all as read
- const markAllAsRead = async () => {
-  const storedVendorUser = localStorage.getItem("vendorUser");
+  // Handle mark all as read
+  const markAllAsRead = async () => {
+    const storedVendorUser = localStorage.getItem("vendorUser");
 
-  if (!storedVendorUser) {
-    console.error("Vendor user not found in localStorage.");
-    setMessage("Vendor user not found. Please log in again.");
-    return;
-  }
-
-  const vendorUser = JSON.parse(storedVendorUser);
-  const vendorId = vendorUser.id; // assuming the object has an 'id' field
-
-  try {
-    const response = await fetch(`/api/notification/read-all/${vendorId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      setMessage(data.message || "All notifications marked as read.");
-      setNotifications((prevNotifications) =>
-        prevNotifications.map((notification) => ({
-          ...notification,
-          status: "read",
-          read: true, // optional, if you use this flag
-        }))
-      );
-    } else {
-      const errorData = await response.json();
-      console.error("Failed to mark all as read:", errorData.message);
-      setMessage(errorData.message || "Failed to mark notifications as read.");
+    if (!storedVendorUser) {
+      console.error("Vendor user not found in localStorage.");
+      setMessage("Vendor user not found. Please log in again.");
+      return;
     }
-  } catch (error) {
-    console.error("Error marking all notifications as read:", error);
-    setMessage("An error occurred while marking notifications as read.");
-  }
-};
 
-  useEffect(() => {
-    setFadeIn(false);
-    setTimeout(() => setFadeIn(true), 100);
-  }, [pathname]);
+    const vendorUser = JSON.parse(storedVendorUser);
+    const vendorId = vendorUser.id; // assuming the object has an 'id' field
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/read-all/${vendorId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessage(data.message || "All notifications marked as read.");
+        setNotifications((prevNotifications) =>
+          prevNotifications.map((notification) => ({
+            ...notification,
+            status: "read",
+            read: true, // optional, if you use this flag
+          }))
+        );
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to mark all as read:", errorData.message);
+        setMessage(errorData.message || "Failed to mark notifications as read.");
+      }
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      setMessage("An error occurred while marking notifications as read.");
+    }
+  };
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
   const toggleNotification = () => {
@@ -270,13 +275,12 @@ export default function DashboardLayout({ id, children }) {
 
   return (
     <div className="flex flex-col h-20 min-h-screen bg-gray-100">
-      {/* Desktop Header */}
+      {/* Desktop Header */ }
       <div className="hidden sm:flex bg-white shadow px-6 py-2 justify-between items-center border-b fixed top-0 left-0 right-0 z-10">
-        {/* Left Section - Logo and Navigation */}
+        {/* Left Section - Logo and Navigation */ }
         <div className="flex items-center space-x-6">
-          {/* Logo */}
-          {/* Logo */}
-          <Link href="/vendorUser" passHref>
+          {/* Logo */ }
+          <Link href="/vendorUser" >
             <div className="cursor-pointer w-16 h-16 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
               <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
                 <img
@@ -288,107 +292,107 @@ export default function DashboardLayout({ id, children }) {
             </div>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Navigation Links */ }
           <nav className="flex space-x-6">
             <button
-              onClick={() => router.push(`/vendorUser/productcards`)}
+              onClick={ () => router.push(`/vendorUser/productcards`) }
               className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
             >
-              <ShoppingCart size={18} /> Product Portal
+              <ShoppingCart size={ 18 } /> Product Portal
             </button>
 
             <button
-              onClick={() => router.push(`/vendorUser/addproducts`)}
+              onClick={ () => router.push(`/vendorUser/addproducts`) }
               className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
             >
-              <PackagePlus size={18} /> Add Product
+              <PackagePlus size={ 18 } /> Add Product
             </button>
 
             <button
-              onClick={() => router.push(`/vendorUser/productdetails`)}
+              onClick={ () => router.push(`/vendorUser/productdetails`) }
               className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
             >
-              <FileText size={18} /> Product Details
+              <FileText size={ 18 } /> Product Details
             </button>
             <button
-              onClick={() => router.push(`/vendorUser/PoTracking`)}
+              onClick={ () => router.push(`/vendorUser/PoTracking`) }
               className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
             >
-              <FileText size={18} /> Po Tracking
+              <FileText size={ 18 } /> Po Tracking
             </button>
           </nav>
         </div>
 
-        {/* Right Section - Calendar, Notification, User Profile */}
+        {/* Right Section - Calendar, Notification, User Profile */ }
         <div className="flex items-center space-x-6">
-          {/* Date */}
+          {/* Date */ }
           <div className="flex items-center">
             <Calendar className="text-black-900" />
-            <span className="ml-2">{currentDate}</span>
+            <span className="ml-2">{ currentDate }</span>
           </div>
           <div className="w-[1px] h-10 bg-gray-200"></div>
 
-          {/* Notifications */}
+          {/* Notifications */ }
           <div className="relative">
             <button
               className="relative cursor-pointer"
-              onClick={toggleNotification}
+              onClick={ toggleNotification }
             >
               <BellRing className="text-black-900 mt-1 w-6 h-6" />
-              {notifications.length > 0 && (
+              { notifications.length > 0 && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                  {notifications.length}
+                  { notifications.length }
                 </span>
-              )}
+              ) }
             </button>
           </div>
 
-          {/* Divider */}
+          {/* Divider */ }
           <div className="w-[1px] h-10 bg-gray-200"></div>
 
-          {/* User Dropdown */}
+          {/* User Dropdown */ }
           <div
             className="relative flex items-center cursor-pointer"
-            onClick={toggleDropdown}
+            onClick={ toggleDropdown }
           >
-            <User size={32} className="text-black-900" />
+            <User size={ 32 } className="text-black-900" />
             <div className="ml-2 text-[14px]">
-              {loading && <span>Loading...</span>}
-              {error && <span className="text-red-500">{error}</span>}
-              {vendorUser && <span>{vendorUser.personName}</span>} <br />{" "}
+              { loading && <span>Loading...</span> }
+              { error && <span className="text-red-500">{ error }</span> }
+              { vendorUser && <span>{ vendorUser.personName }</span> } <br />{ " " }
               <span className="text-[12px] text-[#999999]">Vendor User</span>
             </div>
           </div>
 
-          {dropdownOpen && (
+          { dropdownOpen && (
             <div className="absolute right-[-38] top-[80px] w-56 bg-white shadow-xl rounded-xl z-50 border border-gray-200">
               <ul className="py-2 text-sm text-gray-700 font-medium">
                 <li
-                  onClick={() => {
+                  onClick={ () => {
                     router.push(`/vendorUser/myprofile`);
                     setDropdownOpen(false);
-                  }}
+                  } }
                   className="px-4 py-3 hover:bg-gray-100 cursor-pointer flex items-center gap-3 transition-colors"
                 >
-                  <UserRoundPen className="text-gray-600" size={20} />
+                  <UserRoundPen className="text-gray-600" size={ 20 } />
                   <span>My Profile</span>
                 </li>
                 <li
-                  onClick={handleLogout}
+                  onClick={ handleLogout }
                   className="px-4 py-3 hover:bg-red-50 text-red-600 cursor-pointer flex items-center gap-3 transition-colors"
                 >
-                  <LogOut className="text-red-500" size={20} />
+                  <LogOut className="text-red-500" size={ 20 } />
                   <span>Logout</span>
                 </li>
               </ul>
             </div>
-          )}
+          ) }
         </div>
       </div>
 
-      {/* Mobile Header */}
+      {/* Mobile Header */ }
       <div className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        {/* Left: Brand Name and Mobile Menu Button */}
+        {/* Left: Brand Name and Mobile Menu Button */ }
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
             <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
@@ -402,120 +406,120 @@ export default function DashboardLayout({ id, children }) {
           <span className="font-medium text-sm">Vendor User</span>
         </div>
 
-        {/* Right: Menu Button */}
+        {/* Right: Menu Button */ }
         <button
           className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-          onClick={toggleMobileMenu}
+          onClick={ toggleMobileMenu }
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          { mobileMenuOpen ? <X size={ 24 } /> : <Menu size={ 24 } /> }
         </button>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
+        {/* Mobile Menu */ }
+        { mobileMenuOpen && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
-            onClick={toggleMobileMenu}
+            onClick={ toggleMobileMenu }
           >
             <div
               className="absolute right-0 top-0 h-full w-72 bg-white shadow-xl"
-              onClick={(e) => e.stopPropagation()}
+              onClick={ (e) => e.stopPropagation() }
             >
-              {/* Profile Info */}
+              {/* Profile Info */ }
               <div className="flex items-center gap-4 p-4 border-b">
                 <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <User size={24} className="text-gray-600" />
+                  <User size={ 24 } className="text-gray-600" />
                 </div>
                 <div>
                   <p className="font-medium">
-                    {vendorUser?.personName || "Vendor User"}
+                    { vendorUser?.personName || "Vendor User" }
                   </p>
                   <p className="text-sm text-gray-500">Vendor User</p>
                 </div>
               </div>
 
-              {/* Navigation Links */}
+              {/* Navigation Links */ }
               <div className="p-4 space-y-2">
                 <button
-                  onClick={() => {
+                  onClick={ () => {
                     router.push(`/vendorUser/productcards`);
                     toggleMobileMenu();
-                  }}
+                  } }
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
                 >
-                  <ShoppingCart size={20} />
+                  <ShoppingCart size={ 20 } />
                   <span>Product Portal</span>
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={ () => {
                     router.push(`/vendorUser/addproducts`);
                     toggleMobileMenu();
-                  }}
+                  } }
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
                 >
-                  <PackagePlus size={20} />
+                  <PackagePlus size={ 20 } />
                   <span>Add Product</span>
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={ () => {
                     router.push(`/vendorUser/productdetails`);
                     toggleMobileMenu();
-                  }}
+                  } }
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
                 >
-                  <FileText size={20} />
+                  <FileText size={ 20 } />
                   <span>Product Details</span>
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={ () => {
                     router.push(`/vendorUser/PoTracking`);
                     toggleMobileMenu();
-                  }}
+                  } }
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
                 >
-                  <FileText size={20} />
+                  <FileText size={ 20 } />
                   <span>Po Tracking</span>
                 </button>
               </div>
 
-              {/* Bottom Section */}
+              {/* Bottom Section */ }
               <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
                 <div className="space-y-2">
                   <button
-                    onClick={() => {
+                    onClick={ () => {
                       router.push(`/vendorUser/myprofile`);
                       toggleMobileMenu();
-                    }}
+                    } }
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
                   >
-                    <UserRoundPen size={20} />
+                    <UserRoundPen size={ 20 } />
                     <span>My Profile</span>
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={ () => {
                       toggleMobileMenu();
                       handleLogout();
-                    }}
+                    } }
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
                   >
-                    <LogOut size={20} />
+                    <LogOut size={ 20 } />
                     <span>Logout</span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        ) }
       </div>
 
-      {/* Notification Sidebar */}
-      {notificationOpen && (
+      {/* Notification Sidebar */ }
+      { notificationOpen && (
         <div className="fixed top-0 right-0 w-full sm:w-[400px] h-full bg-white shadow-lg p-4 border-l z-50 overflow-y-auto transition-transform duration-300 ease-in-out transform translate-x-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">Notifications</h2>
             <X
-              size={24}
+              size={ 24 }
               className="cursor-pointer"
-              onClick={toggleNotification}
+              onClick={ toggleNotification }
             />
           </div>
 
@@ -525,8 +529,8 @@ export default function DashboardLayout({ id, children }) {
             <div className="flex items-center gap-2">
               <select
                 className="p-2 border rounded-md"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+                value={ filter }
+                onChange={ (e) => setFilter(e.target.value) }
               >
                 <option value="all">All</option>
                 <option value="unread">Unread</option>
@@ -535,7 +539,7 @@ export default function DashboardLayout({ id, children }) {
             </div>
             <button
               className="bg-[#06436B] text-white p-2 rounded-md"
-              onClick={markAllAsRead}
+              onClick={ markAllAsRead }
             >
               Mark all as read
             </button>
@@ -543,33 +547,32 @@ export default function DashboardLayout({ id, children }) {
 
           <hr className="mb-4" />
 
-          {filteredNotifications.length === 0 ? (
+          { filteredNotifications.length === 0 ? (
             <p className="text-gray-500 text-center">No new notifications</p>
           ) : (
             <ul>
-              {filteredNotifications.map((notif, index) => (
+              { filteredNotifications.map((notif, index) => (
                 <li
-                  key={notif.id || index}
-                  className={`p-3 mb-2 rounded-md cursor-pointer ${
-                    notif.read
-                      ? "bg-gray-100 text-gray-600"
-                      : "bg-gray-300 text-black"
-                  }`}
+                  key={ notif.id || index }
+                  className={ `p-3 mb-2 rounded-md cursor-pointer ${notif.read
+                    ? "bg-gray-100 text-gray-600"
+                    : "bg-gray-300 text-black"
+                    }` }
                 >
                   <div>
-                    <p className="text-sm font-semibold">{notif.message}</p>
+                    <p className="text-sm font-semibold">{ notif.message }</p>
                   </div>
                   <div className="mt-4 text-xs text-gray-500">
                     <div className="inline-block bg-[#EFF3F5] rounded-md">
-                      {notif.time}
+                      { notif.time }
                     </div>
                   </div>
                   <div className="flex justify-between -mt-4">
                     <button
-                      onClick={(e) => {
+                      onClick={ (e) => {
                         e.stopPropagation();
                         markAsRead(notif.id);
-                      }}
+                      } }
                       className="text-blue-500 text-sm ml-[230px]"
                     >
                       Mark as Read
@@ -577,21 +580,18 @@ export default function DashboardLayout({ id, children }) {
                   </div>
                   <hr className="my-2" />
                 </li>
-              ))}
+              )) }
             </ul>
-          )}
+          ) }
         </div>
-      )}
+      ) }
 
-      {/* Page Content */}
-      <div
-        className={`p-6 sm:p-8 bg-gray-50 flex-1 mt-16 sm:mt-20 transition-opacity duration-500 ${
-          fadeIn ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        {children}
+      {/* Page Content */ }
+      <div className="p-6 sm:p-8 bg-gray-50 flex-1 mt-16 sm:mt-20">
+        { children }
       </div>
       <Footer />
     </div>
   );
 }
+

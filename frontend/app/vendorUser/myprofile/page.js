@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowBigLeftDash, DiscAlbum } from "lucide-react";
@@ -23,40 +24,94 @@ const VendorUserProfilePage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
   useEffect(() => {
-    const loadUserData = () => {
-      const storedUser = localStorage.getItem("vendorUser");
-      if (!storedUser) {
-        router.push("/vendorLogin");
+    let isMounted = true;
+
+    const loadUserData = async () => {
+      const authToken = getAuthToken();
+      if (!authToken) {
+        router.push("/SignIn");
         return;
       }
 
-      try {
-        const userData = JSON.parse(storedUser);
-        setVendorUser(userData);
-        setFormData({
-          companyName: userData.companyName || "",
-          personName: userData.personName || "",
-          phoneNumber: userData.phoneNumber || "",
-          Email: userData.Email || "",
-          status:userData.status||"",
-          id: userData.id || ""
-        });
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        router.push("/vendorLogin");
+      let cachedUser = null;
+      const storedUser = localStorage.getItem("vendorUser");
+      if (storedUser) {
+        try {
+          cachedUser = JSON.parse(storedUser);
+        } catch {
+          cachedUser = null;
+        }
       }
+
+      try {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/api/vendor-users/profile`,
+            {
+              cache: "no-store",
+              headers: authToken
+                ? { Authorization: `Bearer ${authToken}` }
+                : undefined,
+            }
+          );
+
+          if (response.ok) {
+            const latestUser = await response.json();
+            const mergedUser = {
+              ...(cachedUser || {}),
+              ...latestUser,
+            };
+            if (isMounted) {
+              setVendorUser(mergedUser);
+              setFormData({
+                companyName: mergedUser.companyName || "",
+                personName: mergedUser.personName || "",
+                phoneNumber: mergedUser.phoneNumber || "",
+                Email: mergedUser.Email || "",
+                status: mergedUser.status || "",
+                id: mergedUser.id || ""
+              });
+            }
+            return;
+          }
+        } catch (fetchError) {
+          console.error("Error fetching latest vendor user profile:", fetchError);
+        }
+
+        if (isMounted && cachedUser) {
+          setVendorUser(cachedUser);
+          setFormData({
+            companyName: cachedUser.companyName || "",
+            personName: cachedUser.personName || "",
+            phoneNumber: cachedUser.phoneNumber || "",
+            Email: cachedUser.Email || "",
+            status: cachedUser.status || "",
+            id: cachedUser.id || ""
+          });
+          return;
+        }
+
+        router.push("/SignIn");
+      } catch (error) {
+        console.error("Error loading vendor profile:", error);
+        router.push("/SignIn");
+      } 
     };
 
-    loadUserData();
+    void loadUserData();
 
     const handleStorageChange = () => {
-      loadUserData();
+      void loadUserData();
     };
 
     window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, [router]);
 
   const handleChange = (e) => {
@@ -71,14 +126,16 @@ const VendorUserProfilePage = () => {
     e.preventDefault();
     if (isLoading) return;
     setIsLoading(true);
-  
+
     try {
+      const authToken = getAuthToken();
       const response = await fetch(
-        `/api/auth/vendor/update-user/${formData.id}`,
+        `${API_BASE_URL}/api/vendor-users/profile`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           },
           body: JSON.stringify({
             companyName: formData.companyName,
@@ -89,9 +146,9 @@ const VendorUserProfilePage = () => {
           }),
         }
       );
-  
+
       const result = await response.json();
-  
+
       if (!response.ok) {
         Swal.fire({
           icon: "error",
@@ -104,10 +161,8 @@ const VendorUserProfilePage = () => {
           title: "Success",
           text: "Profile updated successfully!",
         });
-  
-        localStorage.setItem("vendorUser", JSON.stringify(result.user)); // ✅ Use result.user
-        setVendorUser(result.user); // ✅ Use result.user
-        setFormData(result.user);   // ✅ Update formData too
+        setVendorUser(result.user);
+        setFormData(result.user);
         setIsEditing(false);
       }
     } catch (error) {
@@ -121,7 +176,7 @@ const VendorUserProfilePage = () => {
       setIsLoading(false);
     }
   };
-  
+
   if (!vendorUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -131,21 +186,21 @@ const VendorUserProfilePage = () => {
   }
 
   const profileFields = [
-    { label: "Company Name", name: "companyName", type: "text" , disabled: true },
+    { label: "Company Name", name: "companyName", type: "text", disabled: true },
     { label: "Contact Person", name: "personName", type: "text" },
     { label: "Phone Number", name: "phoneNumber", type: "tel" },
     { label: "Email", name: "Email", type: "email", disabled: true },
-    { label : "Status", name:"status", disabled: true}
+    { label: "Status", name: "status", disabled: true }
   ];
 
   return (
     <>
- 
+
       <div className="bg-gray-50 min-h-screen pt-5 pb-12">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center mb-8">
             <button
-              onClick={() => router.push("/vendorUser")}
+              onClick={ () => router.push("/vendorUser") }
               className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Back to products"
             >
@@ -162,99 +217,99 @@ const VendorUserProfilePage = () => {
                   alt="Profile"
                   className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-md"
                 />
-                {isEditing && (
+                { isEditing && (
                   <div className="absolute bottom-0 right-0 bg-blue-100 p-1.5 rounded-full border-2 border-white">
                     <FiEdit2 className="text-blue-600 h-4 w-4" />
                   </div>
-                )}
+                ) }
               </div>
               <div className="ml-5">
                 <h2 className="text-xl font-semibold text-gray-800">
-                  {vendorUser.personName}
+                  { vendorUser.personName }
                 </h2>
                 <p className="text-sm text-gray-600">Vendor Account</p>
               </div>
             </div>
 
             <div className="p-6">
-              {!isEditing ? (
+              { !isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {profileFields.map(({ label, name }) => (
-                    <div key={name} className="space-y-1">
+                  { profileFields.map(({ label, name }) => (
+                    <div key={ name } className="space-y-1">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {label}
+                        { label }
                       </p>
                       <p className="text-base font-medium text-gray-800 break-words">
-                        {vendorUser[name] || (
+                        { vendorUser[name] || (
                           <span className="text-gray-400 italic">Not provided</span>
-                        )}
+                        ) }
                       </p>
                     </div>
-                  ))}
+                  )) }
                 </div>
               ) : (
-                <form onSubmit={handleSave} className="space-y-6">
+                <form onSubmit={ handleSave } className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {profileFields.map(({ label, name, type, disabled }) => (
-                      <div key={name} className="space-y-2">
-                        <Label htmlFor={name} className="text-gray-700">
-                          {label}
+                    { profileFields.map(({ label, name, type, disabled }) => (
+                      <div key={ name } className="space-y-2">
+                        <Label htmlFor={ name } className="text-gray-700">
+                          { label }
                         </Label>
                         <Input
-                          id={name}
-                          name={name}
-                          type={type}
-                          value={formData[name] || ""}
-                          onChange={handleChange}
-                          required={!disabled}
+                          id={ name }
+                          name={ name }
+                          type={ type }
+                          value={ formData[name] || "" }
+                          onChange={ handleChange }
+                          required={ !disabled }
                           className="focus:ring-2 focus:ring-blue-500"
-                          disabled={disabled}
+                          disabled={ disabled }
                         />
                       </div>
-                    ))}
+                    )) }
                   </div>
 
                   <div className="flex justify-end space-x-3 pt-4">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
+                      onClick={ () => {
                         setFormData(vendorUser);
                         setIsEditing(false);
-                      }}
-                      disabled={isLoading}
+                      } }
+                      disabled={ isLoading }
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? (
+                    <Button type="submit" disabled={ isLoading }>
+                      { isLoading ? (
                         <span className="flex items-center">
                           <AiOutlineLoading3Quarters className="animate-spin mr-2 h-4 w-4" />
                           Saving...
                         </span>
                       ) : (
                         "Save Changes"
-                      )}
+                      ) }
                     </Button>
                   </div>
                 </form>
-              )}
+              ) }
 
-              {!isEditing && (
+              { !isEditing && (
                 <div className="flex justify-end mt-8">
                   <Button
-                    onClick={() => setIsEditing(true)}
+                    onClick={ () => setIsEditing(true) }
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     Edit Profile
                   </Button>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </div>
       </div>
-      
+
     </>
   );
 };

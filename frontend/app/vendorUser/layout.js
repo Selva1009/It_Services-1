@@ -4,6 +4,30 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/app/Components/DashboardLayout";
 
+const normalizeRole = (role) => String(role || "").toLowerCase().replace(/-/g, "_");
+
+const readAuthValue = (key) => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(key) || sessionStorage.getItem(key);
+};
+
+const decodeJwtPayload = (token) => {
+  if (!token) return null;
+
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const normalized = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "="
+    );
+    return JSON.parse(atob(normalized));
+  } catch {
+    return null;
+  }
+};
+
 export default function VendorDashboardLayout({ children }) {
   const router = useRouter();
   const [vendorUserId, setVendorUserId] = useState(null);
@@ -12,20 +36,35 @@ export default function VendorDashboardLayout({ children }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedVendorUser = localStorage.getItem("vendorUser");
-
-    if (!storedVendorUser) {
-      console.warn("Vendor user not found in localStorage. Redirecting to SignIn...");
+    const role = normalizeRole(readAuthValue("role"));
+    if (role && role !== "vendor_user") {
       router.replace("/SignIn");
+      setIsLoading(false);
       return;
     }
 
-    const parsedVendorUser = JSON.parse(storedVendorUser);
-    setVendorUserId(parsedVendorUser.id); // or parsedVendorUser.vendorId if you store that separately
+    let storedVendorUserId = readAuthValue("vendorUserId");
+
+    if (!storedVendorUserId) {
+      const authToken = readAuthValue("authToken");
+      const payload = decodeJwtPayload(authToken);
+      storedVendorUserId = payload?.id ? String(payload.id) : null;
+    }
+
+    if (!storedVendorUserId) {
+      localStorage.removeItem("vendorUserId");
+      sessionStorage.removeItem("vendorUserId");
+      router.replace("/SignIn");
+      setIsLoading(false);
+      return;
+    }
+
+    localStorage.setItem("vendorUserId", String(storedVendorUserId));
+    setVendorUserId(storedVendorUserId);
     setIsLoading(false);
   }, [router]);
 
-  if (isLoading) {
+  if (isLoading || !vendorUserId) {
     return <p className="text-center text-gray-600 mt-10">Loading...</p>;
   }
 

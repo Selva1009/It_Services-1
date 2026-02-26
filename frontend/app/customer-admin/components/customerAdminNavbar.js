@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -19,6 +20,8 @@ import {
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 
+const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+
 export default function CustomerAdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -27,13 +30,83 @@ export default function CustomerAdminNavbar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
   useEffect(() => {
-    // Load customer data from localStorage
-    const customerData = localStorage.getItem("customer");
-    if (customerData) {
-      setCustomer(JSON.parse(customerData));
-    }
+    let isMounted = true;
+
+    const loadCustomer = async () => {
+      setLoading(true);
+      setError("");
+
+      const customerData = localStorage.getItem("customer");
+      if (!customerData) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const parsedCustomer = JSON.parse(customerData);
+        if (isMounted) {
+          setCustomer(parsedCustomer);
+        }
+
+        if (!parsedCustomer?.id) {
+          setLoading(false);
+          return;
+        }
+
+        const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
+        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
+
+        if (shouldSync) {
+          try {
+            const authToken = getAuthToken();
+            const response = await fetch(
+              `${API_BASE_URL}/api/customers/profile`,
+              {
+                cache: "no-store",
+                headers: authToken
+                  ? { Authorization: `Bearer ${authToken}` }
+                  : undefined,
+              }
+            );
+
+            if (response.ok) {
+              const payload = await response.json();
+              const latestCustomer = payload.customer || payload;
+              if (isMounted) {
+                setCustomer(latestCustomer);
+                localStorage.setItem("customer", JSON.stringify(latestCustomer));
+                sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
+              }
+            }
+          } catch (fetchError) {
+            console.error("Failed to fetch latest customer admin details:", fetchError);
+          }
+        }
+      } catch (parseError) {
+        console.error("Invalid customer data in localStorage:", parseError);
+        setError("Failed to load customer profile");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadCustomer();
+
+    const handleStorage = () => {
+      void loadCustomer();
+    };
+
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const isActive = (path) => pathname === path;

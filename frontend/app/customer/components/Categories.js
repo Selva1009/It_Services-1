@@ -6,636 +6,675 @@ import { ChevronLeft,  ChevronRight } from "lucide-react";
 
 const categories = [
   {
-    name: "IT Consumables",
+    name: "Hardware Support",
     subcategories: [
       {
-        name: "Printing Consumables",
+        name: "L1 - Basic Troubleshooting",
         items: [
-          "Ink Cartridges",
-          "Toner Cartridges Monochrome Color",
-          "Toner Cartridges Color",
-          "Printer Ribbons Impact Printers",
-          "Maintenance Kits Fuser Kits",
-          "Maintenance Kits Roller Kits",
-          "Drum Units",
-          "Printer Paper",
-          "Label Paper",
-          "Label Marker",
-          "Fax Paper",
-          "Photographic Paper",
-        ],
+          "Device not powering ON",
+          "Battery charging issues",
+          "System slow performance",
+          "External monitor not detected",
+          "Speaker or microphone not working",
+          "Keyboard or mouse not working",
+          "USB device not detected",
+          "Printer offline",
+          "Scanner not detected"
+        ]
       },
       {
-        name: "Storage Media",
+        name: "L2 - Core Failures",
         items: [
-          "USB Flash Drives",
-          "External Hard Drives HDDs",
-          "External Hard Drives SSDs",
-          "Memory Cards SD",
-          "Memory Card",
-          "Memory Cards MicroSD",
-          "Memory Cards CompactFlash",
-          "Backup Tapes LTO",
-          "Backup Tapes DAT",
-          "Backup Tapes DLT",
-          "Optical Media Blank Discs",
-          "Optical Media"
-        ],
+          "Motherboard failure",
+          "POST failure",
+          "BIOS corruption",
+          "System board replacement",
+          "SSD/HDD failure",
+          "RAM failure",
+          "CPU hardware failure",
+          "Power supply failure",
+          "LCD panel replacement",
+          "Fan failure",
+          "USB port failure",
+          "Printer hardware failure"
+        ]
       },
       {
-        name: "Batteries",
+        name: "L3 - Manufacturer Support",
         items: [
-          "Rechargeable Batteries ",
-          "Laptop Batteries",
-          "UPS Batteries",
-          "CMOS Batteries",
-        ],
-      },
-      {
-        name: "Cables & Adapters",
-        items: [
-          "Ethernet Cables",
-          "USB Cables",
-          "HDMI Cables",
-          "DisplayPort Cables",
-          "VGA Cables",
-          "Power Cables ",
-          "Audio Cables ",
-          "Phone Cables ",
-          "Adapters ",
-          "Charging Cables",
-          "HDMI Cables Standard",
-          "HDMI Cables Mini",
-        ],
-      },
-    ],
+          "Hardware design defects",
+          "Recurring component failures",
+          "Firmware-level hardware faults",
+          "OEM engineering diagnostics",
+          "Product recall cases"
+        ]
+      }
+    ]
   },
+
   {
-    name: "IT Peripherals",
+    name: "Operating System Support",
     subcategories: [
       {
-        name: "Input Devices",
+        name: "L1 - Basic",
         items: [
-          "Keyboards Wired",
-          "Keyboards Wireless",
-          "Keyboards Ergonomic",
-          "Keyboards Gaming",
-          "Mouse",
-          "Mouse Gaming",
-          "Mouse Wired",
-          "Mouse Wireless",
-          "Mouse Optical",
-          "Mouse Laser",
-          "Trackballs",
-          "Graphic Tablets",
-          "Graphic Styluses",
-          "Touchpads",
-          "Barcode Scanners Wired",
-          "Barcode Scanners Wireless",
-          "Barcode Scanners Handheld",
-        ],
+          "Login failure",
+          "Account lockout",
+          "Slow OS response",
+          "Startup application issues",
+          "Display settings issues",
+          "Pending update troubleshooting",
+          "Driver reinstall assistance"
+        ]
       },
       {
-        name: "Output Devices",
+        name: "L2 - Advanced",
         items: [
-
-          "Monitors Standard",
-          "Monitors 4K",
-          "Monitor",
-          "Monitors Curved",
-          "Printers Inkjet",
-          "Printers",
-          "Printers Laser",
-          "Printer Paper",
-          "Printers Dot Matrix",
-          "Scanners Flatbed",
-          "Scanners Document",
-          "Scanners Barcode",
-          "Label Printers",
-          "Projectors",
-          "Projectors Portable",
-          "Projectors Office",
-          "Projectors Home Theater",
-          "Speakers",
-          "Speakers Desktop",
-          "Speakers Bluetooth",
-          "Speakers USB",
-          "Headsets",
-          "Headsets Wired",
-          "Headsets Wireless",
-          "Headsets Noise-Cancelling",
-          "Webcams",
-          "Webcams Standard",
-          "Webcams HD",
-          "Webcams 4K",
-          "Microphones",
-          "Microphones Desktop",
-          "Microphones USB",
-          "Microphones XLR",
+          "OS corruption",
+          "Blue screen errors",
+          "Kernel crashes",
+          "OS reinstallation",
+          "System image restoration",
+          "Bootloader repair"
         ]
-
       },
       {
-        name: "Networking Peripherals",
+        name: "L3 - Vendor Support",
         items: [
-          "Routers",
-          "Routers Wireless",
-          "Routers Enterprise",
-          "Routers Home",
-          "Switches",
-          "Switches Unmanaged",
-          "Switches Managed",
-          "Switches PoE",
-          "Wi-Fi Extenders",
-          "Wireless Antennas",
-          "Wireless Access Points",
-          "Wireless Access Points Wi-Fi 6",
-          "Wireless Access Points Mesh System",
-          "Wireless Controllers",
-          "Access Points Indoor",
-          "Access Points Outdoor",
-          "Access Points Mesh",
-          "Network Adapters",
-          "Network Adapters Wi-Fi",
-          "Network Adapters Bluetooth",
-          "Network Adapters Ethernet",
-          "USB Hubs Standard",
-          "USB Hubs Powered",
-          "KVM Switches Keyboard",
-          "KVM Switches Video",
-          "KVM Switches Mouse",
-          "Modems",
-          "Modems DSL",
-          "Modems Cable",
-          "Modems Fiber",
+          "OS kernel defects",
+          "Persistent crashes",
+          "OS vulnerabilities",
+          "Vendor bug fixes",
+          "Patch engineering escalation"
         ]
-
-      },
-    ],
+      }
+    ]
   },
+
   {
-    name: "IT Accessories",
+    name: "Networking Support",
     subcategories: [
       {
-        name: "Computer Accessories",
+        name: "L1 - User Level",
         items: [
-          "Laptop Bags",
-          "Laptop Sleeves",
-          "Laptop Stand",
-          "Laptop Cooling Pads",
-          "Mouse Pads",
-          "Wrist Rest",
-          "USB Hubs",
-          "Monitor Mounts",
-          "Monitor Stands",
-        ],
+          "WiFi connectivity issues",
+          "LAN connectivity issues",
+          "IP renewal",
+          "Slow internet",
+          "VPN assistance",
+          "Proxy configuration checks"
+        ]
       },
       {
-        name: "Office Accessories",
+        name: "L2 - Technical",
         items: [
-          "Surge Protectors",
-          "Power Strips",
-          "Extension Cords",
-          "Desk Organizers",
-          "Label Makers",
-          "Label Tapes",
-        ],
+          "Switch port failure",
+          "Router malfunction",
+          "Firewall issues",
+          "VLAN configuration",
+          "DHCP failure",
+          "DNS issues",
+          "Packet loss investigation"
+        ]
       },
       {
-        name: "Mobile Accessories",
-        items: ["Power Banks", "Bluetooth Headsets", "Headphones", "Mobile Charging Cables "],
-      },
-    ],
+        name: "L3 - Vendor Support",
+        items: [
+          "Network firmware defects",
+          "Routing protocol defects",
+          "Vendor TAC escalation",
+          "Advanced packet analysis"
+        ]
+      }
+    ]
   },
+
   {
-    name: "Hardware",
+    name: "Audio & Video Conferencing Support",
     subcategories: [
       {
-        name: "Desktops & Laptops",
+        name: "L1 - Basic",
         items: [
-          "Desktop",
-          "Desktops Basic",
-          "Desktops High-Performance",
-          "Desktops All-in-One",
-          "Laptop",
-          "Laptop Business",
-          "Laptop Gaming",
-          "Laptop Ultrabooks",
-          "Workstations Engineering",
-          "Workstations Graphic Design",
-          "Workstations Video Editing",
-          "Thin Clients",
-          "Chromebooks",
-          "Tablets iPads",
-          "Tablets Android",
-          "Tablets Windows",
+          "No audio in meetings",
+          "Microphone not detected",
+          "Camera not working",
+          "Screen sharing issues",
+          "Headset configuration"
         ]
-
-      },
-
-      {
-        name: "Servers & Storage",
-        items: [
-          "Servers ",
-          "NAS (Network Attached Storage)",
-          "SAN (Storage Area Network)",
-          "DAS (Direct Attached Storage)",
-          "SSDs (SATA, NVMe)",
-          "HDDs (Enterprise, Consumer)",
-        ],
       },
       {
-        name: "Mobile Devices",
+        name: "L2 - Technical",
         items: [
-          "Smartphones iOS",
-          "Smartphones Android",
-          "E-Readers Kindle",
-          "E-Readers Kobo",
-          "Wearables Smartwatches",
-          "Wearables Fitness Trackers",
-          "Tablets",
+          "Conference hardware failure",
+          "Camera replacement",
+          "Speaker failure",
+          "Codec configuration issues"
         ]
-
       },
       {
-        name: "Audio & Video Equipment",
+        name: "L3 - Vendor Support",
         items: [
-          "Cameras DSLR",
-          "Cameras Mirrorless",
-          "Cameras Action",
-          "Cameras Security",
-          "Camcorders",
-          "Video Conferencing Systems",
-          "AV Receivers",
-          "Projector Screens",
+          "Firmware defects",
+          "Codec compatibility issues",
+          "Integration defects"
         ]
-
-      },
-    ],
+      }
+    ]
   },
+
   {
-    name: "Software",
+    name: "Antivirus & Malware Support",
     subcategories: [
       {
-        name: "Operating Systems",
+        name: "L1 - Basic",
         items: [
-          "Windows Home",
-          "Windows Pro",
-          "Windows Enterprise",
-          "macOS",
-          "Linux Distributions Ubuntu",
-          "Linux Distributions CentOS",
-          "Linux Distributions Red Hat",
-          "Linux Distributions Fedora",
+          "Antivirus not updating",
+          "Scan not running",
+          "Endpoint agent disconnected",
+          "Basic malware scan"
         ]
-
       },
       {
-        name: "Productivity Software",
+        name: "L2 - Advanced",
         items: [
-          "Office Suites Microsoft Office",
-          "Office Suites Google Workspace",
-          "Office Suites LibreOffice",
-          "Project Management Tools Asana",
-          "Project Management Tools Trello",
-          "Project Management Tools Microsoft Project",
-          "Collaboration Tools Slack",
-          "Collaboration Tools Microsoft Teams",
-          "Collaboration Tools Zoom",
-          "Email Clients Outlook",
-          "Email Clients Thunderbird",
+          "Malware removal",
+          "Ransomware containment",
+          "Endpoint isolation",
+          "Threat remediation"
         ]
-
       },
       {
-        name: "Security Software",
+        name: "L3 - Vendor Support",
         items: [
-          "Antivirus & Anti-malware Norton",
-          "Antivirus & Anti-malware McAfee",
-          "Antivirus & Anti-malware Bitdefender",
-          "Firewalls ZoneAlarm",  
-          "Firewalls Comodo",
-          "VPN Software NordVPN",
-
-          "VPN Software ExpressVPN",
-          "VPN Software OpenVPN",
-          "Encryption Tools VeraCrypt",
-          "Encryption Tools BitLocker",
-          "Endpoint Security CrowdStrike",
-          "Endpoint Security Symantec",
+          "Zero-day investigation",
+          "Security engine failures",
+          "Signature defects"
         ]
-
-      },
-      {
-        name: "Graphics & Design Software",
-        items: [
-          "Graphic Design Adobe Photoshop",
-          // "Graphic Design Illustrator",
-          "Graphic Design CorelDRAW",
-          "Video Editing Adobe Premiere Pro",
-          "Video Editing Final Cut Pro",
-          "Video Editing DaVinci Resolve",
-          "3D Modeling AutoCAD",
-          "3D Modeling Blender",
-          "3D Modeling SketchUp",
-          "Animation Maya",
-          "Animation After Effects",
-          "Animation Toon Boom",
-          "CAD/CAM Software SolidWorks",
-          "CAD/CAM Software AutoCAD",
-          "CAD/CAM Software Fusion 360",
-        ]
-
-      },
-    ],
+      }
+    ]
   },
+
   {
-    name: "Networking",
+    name: "Identity & Access Support",
     subcategories: [
       {
-        name: "Network Infrastructure",
+        name: "L1 - Basic",
         items: [
-          "Routers",
-          "Routers Enterprise",
-          "Routers Home",
-          "Routers Wireless",
-          "Switches",
-          "Switches Core",
-          "Switches Distribution",
-          "Switches Access",
-          "Switches PoE",
-          "Network Cabling Ethernet",
-          "Network Cabling Fiber Optic",
-          "Network Cabling Coaxial",
-          "Network Interface Cards NICs",
+          "Domain login issues",
+          "Password reset",
+          "MFA failures",
+          "Account lockouts"
         ]
-
       },
       {
-        name: "Wireless Networking",
+        name: "L2 - Advanced",
         items: [
-          "Wireless Access Points Wi-Fi 6",
-          "Wireless Access Points Mesh Systems",
-          "Wireless Controllers",
-          "Wi-Fi Extenders",
-          "Wireless Antennas",
+          "Domain trust issues",
+          "Certificate failures",
+          "Policy sync failures"
         ]
-      }, 
-    ],
+      },
+      {
+        name: "L3 - Specialist",
+        items: [
+          "Directory corruption",
+          "Authentication failures",
+          "Federation issues"
+        ]
+      }
+    ]
   },
+
+  {
+    name: "Backup & Data Protection",
+    subcategories: [
+      {
+        name: "L1 - Basic",
+        items: [
+          "Backup alerts",
+          "Backup agent not running",
+          "Restore request"
+        ]
+      },
+      {
+        name: "L2 - Advanced",
+        items: [
+          "Backup corruption",
+          "Restore failure",
+          "Storage failure"
+        ]
+      },
+      {
+        name: "L3 - Vendor Support",
+        items: [
+          "Backup engine defects",
+          "Data recovery engineering"
+        ]
+      }
+    ]
+  },
+
+  {
+    name: "Collaboration Tools Support",
+    subcategories: [
+      {
+        name: "L1 - Basic",
+        items: [
+          "Email sync issues",
+          "Calendar sync issues",
+          "Meeting plugin issues",
+          "Notification issues"
+        ]
+      },
+      {
+        name: "L2 - Advanced",
+        items: [
+          "Persistent sync failures",
+          "Client integration issues",
+          "Policy configuration failures"
+        ]
+      },
+      {
+        name: "L3 - Vendor Support",
+        items: [
+          "Service-side defects",
+          "API failures",
+          "Vendor outages"
+        ]
+      }
+    ]
+  }
+  ,
+
+  {
+  name: "Patch & Update Management",
+  subcategories: [
+    {
+      name: "L1 - Basic",
+      items: [
+        "Update installation assistance",
+        "Restart scheduling issues",
+        "Update pending notifications"
+      ]
+    },
+    {
+      name: "L2 - Advanced",
+      items: [
+        "Patch instability issues",
+        "Update rollback",
+        "Firmware compatibility conflicts"
+      ]
+    },
+    {
+      name: "L3 - Vendor Support",
+      items: [
+        "OS patch engineering escalation",
+        "Vendor patch defects"
+      ]
+    }
+  ]
+},
+
+{
+  name: "Asset Lifecycle Support",
+  subcategories: [
+    {
+      name: "L1 - Basic",
+      items: [
+        "Asset allocation assistance",
+        "Device handover support",
+        "Asset tagging verification",
+        "Asset record update request"
+      ]
+    },
+    {
+      name: "L2 - Advanced",
+      items: [
+        "Asset repair coordination",
+        "Warranty lifecycle tracking",
+        "Device replacement planning"
+      ]
+    },
+    {
+      name: "L3 - Vendor Support",
+      items: [
+        "OEM asset replacement escalation",
+        "Vendor lifecycle disputes"
+      ]
+    }
+  ]
+},
+
+{
+  name: "Environmental & Infrastructure Support",
+  subcategories: [
+    {
+      name: "L1 - Basic",
+      items: [
+        "Overheating complaints",
+        "Power fluctuation issues",
+        "Workspace setup concerns"
+      ]
+    },
+    {
+      name: "L2 - Advanced",
+      items: [
+        "Electrical grounding issues",
+        "Rack cooling failure",
+        "UPS load imbalance"
+      ]
+    },
+    {
+      name: "L3 - Engineering Support",
+      items: [
+        "Infrastructure design issues",
+        "Capacity architecture failures",
+        "Environmental engineering defects"
+      ]
+    }
+  ]
+},
+
+{
+  name: "Software–Hardware Compatibility Support",
+  subcategories: [
+    {
+      name: "L1 - Basic",
+      items: [
+        "Driver compatibility issues",
+        "Software not detecting hardware",
+        "Peripheral compatibility issues"
+      ]
+    },
+    {
+      name: "L2 - Advanced",
+      items: [
+        "Driver conflicts causing crashes",
+        "Hardware capacity mismatch",
+        "Upgrade recommendations"
+      ]
+    },
+    {
+      name: "L3 - Engineering Escalation",
+      items: [
+        "Driver engineering defects",
+        "Firmware conflicts",
+        "Vendor compatibility updates"
+      ]
+    }
+  ]
+}
+
 ];
+
+
+
+
+
 
 const CategoryMenu = ({ setCategoryFilter }) => {
   const [activeCategory, setActiveCategory] = useState(null);
   const [activeSubcategory, setActiveSubcategory] = useState(null);
-  const [dropdownPosition, setDropdownPosition] = useState("left-0");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [timeoutId, setTimeoutId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  
+
+  const [dropdownCoords, setDropdownCoords] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  const [submenuCoords, setSubmenuCoords] = useState({
+    top: 0,
+    left: 0,
+  });
+
   const categoryRefs = useRef({});
   const scrollContainerRef = useRef(null);
 
+  /* -------------------- SCREEN SIZE -------------------- */
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 640); // sm breakpoint
+      setIsMobile(window.innerWidth < 640);
     };
-    
+
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleMouseEnterCategory = (categoryName, index) => {
+  /* -------------------- DESKTOP EVENTS -------------------- */
+  const handleMouseEnterCategory = (name, index) => {
     if (isMobile) return;
-    
+
     clearTimeout(timeoutId);
-    setActiveCategory(categoryName);
+
+    setActiveCategory(name);
     setActiveSubcategory(null);
 
-    if (categoryRefs.current[index]) {
-      const rect = categoryRefs.current[index].getBoundingClientRect();
-      const windowWidth = window.innerWidth;
+    const rect =
+      categoryRefs.current[index]?.getBoundingClientRect();
 
-      if (rect.right + 260 > windowWidth) {
-        setDropdownPosition("right-0");
-      } else {
-        setDropdownPosition("left-0");
-      }
+    if (rect) {
+      setDropdownCoords({
+        top: rect.bottom + 6,
+        left: rect.left,
+      });
     }
+
     setDropdownVisible(true);
   };
 
   const handleMouseLeaveCategory = () => {
     if (isMobile) return;
-    
-    const newTimeoutId = setTimeout(() => {
+
+    const id = setTimeout(() => {
       setDropdownVisible(false);
+      setActiveSubcategory(null);
     }, 200);
-    setTimeoutId(newTimeoutId);
+
+    setTimeoutId(id);
   };
 
-  const handleMouseEnterDropdown = () => {
-    if (isMobile) return;
+  const handleMouseEnterDropdown = () =>
     clearTimeout(timeoutId);
-  };
 
   const handleMouseLeaveDropdown = () => {
-    if (isMobile) return;
-    
-    const newTimeoutId = setTimeout(() => {
+    const id = setTimeout(() => {
       setDropdownVisible(false);
+      setActiveSubcategory(null);
     }, 200);
-    setTimeoutId(newTimeoutId);
+
+    setTimeoutId(id);
   };
 
+  /* -------------------- MOBILE EVENTS -------------------- */
+  const handleMobileCategoryClick = (name) => {
+    setActiveCategory(activeCategory === name ? null : name);
+    setActiveSubcategory(null);
+  };
+
+  const handleMobileSubcategoryClick = (name) => {
+    setActiveSubcategory(
+      activeSubcategory === name ? null : name
+    );
+  };
+
+  /* -------------------- MOBILE SCROLL -------------------- */
   const handleScroll = (direction) => {
     const container = scrollContainerRef.current;
-    if (container) {
-      const scrollAmount = direction === "left" ? -200 : 200;
-      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
-    }
-  };
+    if (!container) return;
 
-  const handleMobileCategoryClick = (categoryName) => {
-    if (!isMobile) return;
-    
-    if (activeCategory === categoryName) {
-      setActiveCategory(null);
-      setActiveSubcategory(null);
-    } else {
-      setActiveCategory(categoryName);
-      setActiveSubcategory(null);
-    }
-  };
-
-  const handleMobileSubcategoryClick = (subcategoryName) => {
-    if (!isMobile) return;
-    
-    if (activeSubcategory === subcategoryName) {
-      setActiveSubcategory(null);
-    } else {
-      setActiveSubcategory(subcategoryName);
-    }
+    container.scrollBy({
+      left: direction === "left" ? -200 : 200,
+      behavior: "smooth",
+    });
   };
 
   return (
-    <div className="relative w-full bg-gray-50 shadow-md font-sans">
-      {/* Desktop View */}
-      <div className="hidden sm:block">
-        <nav className="flex flex-wrap justify-between sm:space-x-8 px-6 py-4 text-gray-800 font-semibold">
-          {categories.map((category, index) => (
-            <div
-              key={index}
-              ref={(el) => (categoryRefs.current[index] = el)}
-              className="relative group sm:mr-4 mb-4 sm:mb-0 w-full sm:w-auto"
-              onMouseEnter={() => handleMouseEnterCategory(category.name, index)}
-              onMouseLeave={handleMouseLeaveCategory}
-            >
-              <button className="w-full sm:w-auto text-left text-base">
-                {category.name}
-              </button>
-
-              {dropdownVisible && activeCategory === category.name && (
-                <div
-                  className={`absolute top-full mt-4 w-44 bg-white border rounded-md shadow-lg z-10 ${dropdownPosition}`}
-                  onMouseEnter={handleMouseEnterDropdown}
-                  onMouseLeave={handleMouseLeaveDropdown}
-                >
-                  <ul className="py-2 text-sm">
-                    {category.subcategories.map((sub, subIndex) => (
-                      <li
-                        key={subIndex}
-                        className="relative"
-                        onMouseEnter={() => setActiveSubcategory(sub.name)}
-                      >
-                        <button className="w-full text-left px-4 py-2 hover:bg-gray-100">
-                          {sub.name}
-                        </button>
-
-                        {activeSubcategory === sub.name && sub.items.length > 0 && (
-                          <div
-                            className={`absolute top-0 mt-0 w-44 bg-white border rounded-md shadow-lg z-10 ${
-                              dropdownPosition === "right-0" ? "right-full mr-0" : "left-full ml-0"
-                            } max-h-[300px] overflow-y-auto`}
-                          >
-                            <ul className="py-2 text-md text-left">
-                              {sub.items.map((item, itemIndex) => (
-                                <li key={itemIndex} className="pl-2">
-                                  <button
-                                    onClick={() => setCategoryFilter(item)}
-                                    className="block w-full text-left px-2 py-2 hover:bg-gray-100"
-                                  >
-                                    {item}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-      </div>
-
-      {/* Mobile View */}
-      <div className="sm:hidden">
-        <div className="relative px-4 py-3">
-          {/* Scroll left button */}
-          <button
-            onClick={() => handleScroll("left")}
-            className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-gray-50 to-transparent flex items-center justify-center z-10"
-            disabled={scrollPosition === 0}
-          >
-            <ChevronLeft className="text-gray-600" size={20} />
-          </button>
-
-          {/* Categories scroll container */}
-          <div
-            ref={scrollContainerRef}
-            className="flex space-x-4 overflow-x-auto scrollbar-hide px-2"
-            style={{ scrollbarWidth: "none" }}
-          >
+    <div className="relative w-full bg-white shadow-sm font-sans border-b">
+      {/* ===================== DESKTOP ===================== */}
+      <div className="hidden sm:block relative">
+        <div className="overflow-x-auto whitespace-nowrap py-3 px-6 no-scrollbar">
+          <div className="flex space-x-8 font-semibold text-gray-800">
             {categories.map((category, index) => (
-              <div key={index} className="flex-shrink-0">
+              <div
+                key={index}
+                ref={(el) =>
+                  (categoryRefs.current[index] = el)
+                }
+                className="relative inline-block"
+                onMouseEnter={() =>
+                  handleMouseEnterCategory(
+                    category.name,
+                    index
+                  )
+                }
+                onMouseLeave={handleMouseLeaveCategory}
+              >
                 <button
-                  onClick={() => handleMobileCategoryClick(category.name)}
-                  className={`px-4 py-2 rounded-lg ${
-                    activeCategory === category.name
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-white text-gray-800"
-                  } font-semibold shadow-sm`}
+                  className="text-sm hover:text-blue-600 transition"
+                  onClick={() =>
+                    setCategoryFilter(category.name)
+                  }
                 >
                   {category.name}
                 </button>
+
+                {dropdownVisible &&
+                  activeCategory === category.name && (
+                    <div
+                      className="fixed bg-white border rounded-lg shadow-xl z-[999999] min-w-[260px] max-h-[400px] overflow-y-auto"
+                      style={{
+                        top: dropdownCoords.top,
+                        left: dropdownCoords.left,
+                      }}
+                      onMouseEnter={
+                        handleMouseEnterDropdown
+                      }
+                      onMouseLeave={
+                        handleMouseLeaveDropdown
+                      }
+                    >
+                      <ul className="py-2 text-sm">
+                        {category.subcategories.map(
+                          (sub, subIndex) => (
+                            <li
+                              key={subIndex}
+                              className="relative"
+                            >
+                              <button
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 hover:text-blue-600 transition"
+                                onMouseEnter={(e) => {
+                                  setActiveSubcategory(
+                                    sub.name
+                                  );
+
+                                  const rect =
+                                    e.currentTarget.getBoundingClientRect();
+
+                                  setSubmenuCoords({
+                                    top: rect.top,
+                                    left: rect.right + 4,
+                                  });
+                                }}
+                              >
+                                {sub.name}
+                              </button>
+
+                              {activeSubcategory ===
+                                sub.name && (
+                                <div
+                                  className="fixed bg-white border rounded-lg shadow-xl z-[999999] min-w-[280px] max-h-[400px] overflow-y-auto"
+                                  style={{
+                                    top: submenuCoords.top,
+                                    left:
+                                      submenuCoords.left,
+                                  }}
+                                >
+                                  <ul className="py-2 text-sm">
+                                    {sub.items.map(
+                                      (
+                                        item,
+                                        itemIndex
+                                      ) => (
+                                        <li
+                                          key={
+                                            itemIndex
+                                          }
+                                        >
+                                          <button
+                                            onClick={() =>
+                                              setCategoryFilter(
+                                                item
+                                              )
+                                            }
+                                            className="block w-full text-left px-4 py-2 hover:bg-blue-50 hover:text-blue-600 transition"
+                                          >
+                                            {item}
+                                          </button>
+                                        </li>
+                                      )
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
               </div>
             ))}
           </div>
+        </div>
+      </div>
 
-          {/* Scroll right button */}
+      {/* ===================== MOBILE ===================== */}
+      <div className="sm:hidden">
+        <div className="relative px-4 py-3">
+          <button
+            onClick={() => handleScroll("left")}
+            className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center bg-gradient-to-r from-white to-transparent z-10"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <div
+            ref={scrollContainerRef}
+            className="flex space-x-3 overflow-x-auto scrollbar-hide px-4"
+          >
+            {categories.map((category, index) => (
+              <button
+                key={index}
+                onClick={() =>
+                  handleMobileCategoryClick(
+                    category.name
+                  )
+                }
+                className={`px-3 py-2 rounded-md text-sm whitespace-nowrap shadow-sm ${
+                  activeCategory === category.name
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-800"
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={() => handleScroll("right")}
-            className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-50 to-transparent flex items-center justify-center z-10"
+            className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center bg-gradient-to-l from-white to-transparent"
           >
-            <ChevronRight className="text-gray-600" size={20} />
+            <ChevronRight size={20} />
           </button>
         </div>
-
-        {/* Mobile dropdown content */}
-        {activeCategory && (
-          <div className="px-4 pb-3">
-            <div className="bg-white rounded-lg shadow-sm p-3">
-              <h3 className="font-semibold text-gray-800 mb-2">
-                {activeCategory}
-              </h3>
-              <div className="space-y-2">
-                {categories
-                  .find((cat) => cat.name === activeCategory)
-                  ?.subcategories.map((sub, subIndex) => (
-                    <div key={subIndex}>
-                      <button
-                        onClick={() => handleMobileSubcategoryClick(sub.name)}
-                        className={`w-full text-left px-3 py-2 rounded ${
-                          activeSubcategory === sub.name
-                            ? "bg-blue-50 text-blue-700"
-                            : "hover:bg-gray-100"
-                        }`}
-                      >
-                        {sub.name}
-                      </button>
-
-                      {activeSubcategory === sub.name && (
-                        <div className="mt-1 ml-4">
-                          {sub.items.map((item, itemIndex) => (
-                            <button
-                              key={itemIndex}
-                              onClick={() => {
-                                setCategoryFilter(item);
-                                setActiveCategory(null);
-                                setActiveSubcategory(null);
-                              }}
-                              className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 rounded"
-                            >
-                              {item}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
 export default CategoryMenu;
+

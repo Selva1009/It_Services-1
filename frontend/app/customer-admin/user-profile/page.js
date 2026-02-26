@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { API_BASE_URL } from "@/lib/api/config";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import { Input } from "@/components/ui/input";
 import { EditUserForm } from "../components/editUserProfile";
@@ -63,7 +64,7 @@ const Page = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          "/api/auth/customerUserSignUp/user-profile",
+          `${API_BASE_URL}/api/customer-users/user-profile`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -102,7 +103,7 @@ const Page = () => {
 
       if (result.isConfirmed) {
         const response = await fetch(
-          `/api/auth/customerUserSignUp/users/${userId}`,
+          `${API_BASE_URL}/api/customer-users/profile/${userId}`,
           { method: "DELETE" }
         );
 
@@ -123,7 +124,7 @@ const Page = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        "/api/auth/customerUserSignUp/user-profile",
+        `${API_BASE_URL}/api/customer-users/user-profile`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -160,12 +161,12 @@ const Page = () => {
       <CustomerAdminNavbar />
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header Section */}
+        {/* Header Section */ }
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-xl">
-                <UserCog className="text-blue-600" size={28} />
+                <UserCog className="text-blue-600" size={ 28 } />
               </div>
               <span className="pt-1">User Management</span>
             </h1>
@@ -181,21 +182,21 @@ const Page = () => {
                 className="pl-10 pr-4 py-2 rounded-xl bg-white shadow-sm border border-gray-300 
                hover:border-blue-500 focus:border-blue-500 focus:ring-0 focus:outline-none transition-all"
                 placeholder="Search by name, email, or company"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={ searchTerm }
+                onChange={ (e) => setSearchTerm(e.target.value) }
               />
             </div>
 
             <ExportMenu
-              users={filteredUsers}
+              users={ filteredUsers }
               dataType="users"
             />
           </div>
         </div>
 
-        {/* Table Section */}
+        {/* Table Section */ }
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          {loading ? (
+          { loading ? (
             <div className="p-12 flex flex-col items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-3" />
               <p className="text-gray-500">Loading user data...</p>
@@ -207,9 +208,9 @@ const Page = () => {
                 No users found
               </h3>
               <p className="text-gray-500 mt-1">
-                {searchTerm
+                { searchTerm
                   ? "Try a different search term"
-                  : "Create your first user"}
+                  : "Create your first user" }
               </p>
             </div>
           ) : (
@@ -238,11 +239,11 @@ const Page = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentUsers.map((user, idx) => (
+                  { currentUsers.map((user, idx) => (
                     <TableRow
-                      key={user.id}
-                      className={`border-t border-gray-100 transition-colors hover:bg-blue-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                        }`}
+                      key={ user.id }
+                      className={ `border-t border-gray-100 transition-colors hover:bg-blue-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        }` }
                     >
                       <TableCell className="pl-6 py-4 font-medium text-gray-800">
                         <div className="flex items-center">
@@ -251,7 +252,7 @@ const Page = () => {
                           </div>
                           <div>
                             <div className="font-medium">
-                              {user.companyName}
+                              { user.companyName }
                             </div>
                           </div>
                         </div>
@@ -261,39 +262,39 @@ const Page = () => {
                           <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
                             <User className="h-4 w-4 text-gray-600" />
                           </div>
-                          {user.personName}
+                          { user.personName }
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex items-center gap-1">
                           <Phone className="h-4 w-4 text-gray-400" />
-                          {user.contactNumber}
+                          { user.contactNumber }
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
                         <a
-                          href={`mailto:${user.Email}`}
+                          href={ `mailto:${user.Email}` }
                           className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
                         >
                           <Mail className="h-4 w-4" />
                           <span className="truncate max-w-[180px]">
-                            {user.Email}
+                            { user.Email }
                           </span>
                         </a>
                       </TableCell>
                       <TableCell className="py-4">
                         <Badge
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === "Active"
-                              ? "bg-green-50 text-green-700 border border-green-100"
-                              : "bg-red-50 text-red-700 border border-red-100"
-                            } flex items-center gap-1`}
+                          className={ `px-3 py-1 rounded-full text-xs font-medium ${user.status === "Active"
+                            ? "bg-green-50 text-green-700 border border-green-100"
+                            : "bg-red-50 text-red-700 border border-red-100"
+                            } flex items-center gap-1` }
                         >
-                          {user.status === "Active" ? (
+                          { user.status === "Active" ? (
                             <CheckCircle2 className="h-3 w-3" />
                           ) : (
                             <XCircle className="h-3 w-3" />
-                          )}
-                          {user.status}
+                          ) }
+                          { user.status }
                         </Badge>
                       </TableCell>
                       <TableCell className="pr-6 py-4">
@@ -302,7 +303,7 @@ const Page = () => {
                             size="sm"
                             variant="ghost"
                             className="hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded-lg transition-colors h-8 w-8 p-0"
-                            onClick={() => setEditingUser(user)}
+                            onClick={ () => setEditingUser(user) }
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -310,61 +311,61 @@ const Page = () => {
                             size="sm"
                             variant="ghost"
                             className="hover:bg-red-100 text-red-600 hover:text-red-700 rounded-lg transition-colors h-8 w-8 p-0"
-                            onClick={() => handleDelete(user.id)}
+                            onClick={ () => handleDelete(user.id) }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) }
                 </TableBody>
               </Table>
 
-              {/* Pagination */}
+              {/* Pagination */ }
               <div className="px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-100 bg-gray-50/50">
                 <div className="text-sm text-gray-500">
-                  Showing{" "}
+                  Showing{ " " }
                   <span className="font-medium">
-                    {(currentPage - 1) * usersPerPage + 1}
-                  </span>{" "}
-                  to{" "}
+                    { (currentPage - 1) * usersPerPage + 1 }
+                  </span>{ " " }
+                  to{ " " }
                   <span className="font-medium">
-                    {Math.min(currentPage * usersPerPage, filteredUsers.length)}
-                  </span>{" "}
-                  of <span className="font-medium">{filteredUsers.length}</span>{" "}
+                    { Math.min(currentPage * usersPerPage, filteredUsers.length) }
+                  </span>{ " " }
+                  of <span className="font-medium">{ filteredUsers.length }</span>{ " " }
                   users
                 </div>
                 <div className="flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={ currentPage === 1 }
+                    onClick={ () => setCurrentPage((prev) => prev - 1) }
                     className="px-3 py-1 rounded-lg border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     <span>Previous</span>
                   </Button>
-                  {Array.from({ length: totalPages }, (_, i) => (
+                  { Array.from({ length: totalPages }, (_, i) => (
                     <Button
-                      key={i}
-                      variant={i + 1 === currentPage ? "default" : "outline"}
+                      key={ i }
+                      variant={ i + 1 === currentPage ? "default" : "outline" }
                       size="sm"
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-3 py-1 rounded-lg min-w-[40px] ${i + 1 === currentPage
-                          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
-                          : "border-gray-300 hover:bg-gray-100"
-                        } transition-colors`}
+                      onClick={ () => setCurrentPage(i + 1) }
+                      className={ `px-3 py-1 rounded-lg min-w-[40px] ${i + 1 === currentPage
+                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                        : "border-gray-300 hover:bg-gray-100"
+                        } transition-colors` }
                     >
-                      {i + 1}
+                      { i + 1 }
                     </Button>
-                  ))}
+                  )) }
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={ currentPage === totalPages }
+                    onClick={ () => setCurrentPage((prev) => prev + 1) }
                     className="px-3 py-1 rounded-lg border-gray-300 hover:bg-gray-100 transition-colors flex items-center gap-1"
                   >
                     <span>Next</span>
@@ -373,17 +374,17 @@ const Page = () => {
                 </div>
               </div>
             </>
-          )}
+          ) }
         </div>
       </div>
 
-      {editingUser && (
+      { editingUser && (
         <EditUserForm
-          user={editingUser}
-          onClose={() => setEditingUser(null)}
-          onUpdate={handleUserUpdate}
+          user={ editingUser }
+          onClose={ () => setEditingUser(null) }
+          onUpdate={ handleUserUpdate }
         />
-      )}
+      ) }
     </div>
   );
 };

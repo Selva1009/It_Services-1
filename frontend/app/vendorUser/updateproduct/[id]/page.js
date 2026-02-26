@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
@@ -39,15 +40,17 @@ export default function UpdateProduct() {
 
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/auth/products/get-product/${id}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/products/${id}`);
         if (!response.ok) {
           throw new Error("Failed to fetch product");
         }
         const data = await response.json();
         console.log("Fetched data:", data);
         setFormData(data.product);
-        if (data.product.productImage) {
-          setPreviewImage(`/api/uploads/${data.product.productImage}`);
+        if (data.product.productImagePath) {
+          setPreviewImage(`${API_BASE_URL}${data.product.productImagePath}`);
+        } else if (data.product.productImage) {
+          setPreviewImage(`${API_BASE_URL}/uploads/${data.product.productImage}`);
         }
       } catch (error) {
         console.error("Error fetching:", error.message);
@@ -85,7 +88,7 @@ export default function UpdateProduct() {
 
     try {
       const response = await fetch(
-        `/api/auth/products/update-product/${id}`,
+        `${API_BASE_URL}/api/v1/products/${id}`,
         {
           method: "PUT",
           body: formDataToSend,
@@ -127,20 +130,20 @@ export default function UpdateProduct() {
   return (
     <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg mt-8 font-sans">
       <h2 className="text-lg font-bold text-black mb-4 text-left flex items-center gap-2">
-        <IoCreateOutline size={25} /> Update Product
+        <IoCreateOutline size={ 25 } /> Update Product
       </h2>
 
       <form
         className="grid grid-cols-2 gap-6 text-sm text-black"
-        onSubmit={handleSubmit}
+        onSubmit={ handleSubmit }
       >
         <div>
           <label className="block font-medium mb-2">Category</label>
           <input
             type="text"
             name="category"
-            value={formData.category}
-            onChange={handleInputChange}
+            value={ formData.category }
+            onChange={ handleInputChange }
             className="w-full p-2 border rounded-md"
             required
           />
@@ -151,8 +154,8 @@ export default function UpdateProduct() {
           <input
             type="text"
             name="brand"
-            value={formData.brand}
-            onChange={handleInputChange}
+            value={ formData.brand }
+            onChange={ handleInputChange }
             className="w-full p-2 border rounded-md"
             required
           />
@@ -163,8 +166,8 @@ export default function UpdateProduct() {
           <input
             type="text"
             name="productName"
-            value={formData.productName}
-            onChange={handleInputChange}
+            value={ formData.productName }
+            onChange={ handleInputChange }
             className="w-full p-2 border rounded-md"
             required
           />
@@ -175,50 +178,50 @@ export default function UpdateProduct() {
           <input
             type="number"
             name="price"
-            value={formData.price}
-            onChange={handleInputChange}
+            value={ formData.price }
+            onChange={ handleInputChange }
             className="w-full p-2 border rounded-md"
             required
           />
         </div>
 
-       <div>
-            <label className="block font-medium mb-2">Seller</label>
-            <input
-              type="text"
-              name="seller"
-              value={formData.seller}
-              disabled
-              className="w-full p-2 border rounded-md font-sans bg-gray-100 cursor-not-allowed"
-              placeholder="Seller Name"
-            />
-          </div>
+        <div>
+          <label className="block font-medium mb-2">Seller</label>
+          <input
+            type="text"
+            name="seller"
+            value={ formData.seller }
+            disabled
+            className="w-full p-2 border rounded-md font-sans bg-gray-100 cursor-not-allowed"
+            placeholder="Seller Name"
+          />
+        </div>
 
         <div>
           <label className="block font-medium mb-2">Image</label>
           <input
             type="file"
-            onChange={handleImageChange}
+            onChange={ handleImageChange }
             className="w-full p-2 border rounded-md"
           />
         </div>
 
-        {previewImage && (
+        { previewImage && (
           <div className="col-span-2 flex justify-center">
             <img
-              src={previewImage}
+              src={ previewImage }
               alt="Product Preview"
               className="w-40 h-40 object-cover rounded-lg border"
             />
           </div>
-        )}
+        ) }
 
         <div className="col-span-2">
           <label className="block font-medium mb-2">Description</label>
           <textarea
             name="description"
-            value={formData.description}
-            onChange={handleInputChange}
+            value={ formData.description }
+            onChange={ handleInputChange }
             className="w-full p-2 border rounded-md h-24"
             required
           />
@@ -228,12 +231,13 @@ export default function UpdateProduct() {
           <button
             type="submit"
             className="bg-blue-500 text-white px-6 py-2 rounded-sm hover:bg-blue-600 transition"
-            disabled={updating}
+            disabled={ updating }
           >
-            {updating ? "Updating..." : "Update Product"}
+            { updating ? "Updating..." : "Update Product" }
           </button>
         </div>
       </form>
     </div>
   );
 }
+
