@@ -1,4 +1,4 @@
-const vendorService = require("../services/vendors.service");
+const vendorService = require("../services/vendorsAdmin.service");
 
 //signup
 exports.signup = async (req, res) => {

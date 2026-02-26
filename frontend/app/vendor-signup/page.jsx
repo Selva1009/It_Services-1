@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import "./vendorSignup.css";
 import { useCountriesStatesCities } from "../hooks/useCountriesStatesCities";
 
@@ -98,18 +98,10 @@ export default function VendorSignup() {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
   const otpInputRefs = useRef([]);
-  const { countries, states, cities, fetchStates, fetchCities } = useCountriesStatesCities(
+  const { countries, states, cities } = useCountriesStatesCities(
     form.country,
     form.state
   );
-
-  useEffect(() => {
-    fetchStates();
-  }, [form.country, fetchStates]);
-
-  useEffect(() => {
-    fetchCities();
-  }, [form.state, fetchCities]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -250,7 +242,7 @@ export default function VendorSignup() {
     setShowOtpInput(true);
     setOtpLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/vendor/send-otp", {
+      const res = await fetch("http://localhost:5000/api/vendor-admin/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail }),
@@ -329,7 +321,7 @@ export default function VendorSignup() {
     const payload = { ...form, services };
 
     try {
-      const res = await fetch("http://localhost:5000/api/vendor/signup", {
+      const res = await fetch("http://localhost:5000/api/vendor-admin/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

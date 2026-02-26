@@ -30,22 +30,24 @@ const VendorUserProfilePage = () => {
     let isMounted = true;
 
     const loadUserData = async () => {
-      const storedUser = localStorage.getItem("vendorUser");
-      if (!storedUser) {
+      const authToken = getAuthToken();
+      if (!authToken) {
         router.push("/SignIn");
         return;
       }
 
-      try {
-        const userData = JSON.parse(storedUser);
-
-        if (!userData?.id) {
-          router.push("/SignIn");
-          return;
-        }
-
+      let cachedUser = null;
+      const storedUser = localStorage.getItem("vendorUser");
+      if (storedUser) {
         try {
-          const authToken = getAuthToken();
+          cachedUser = JSON.parse(storedUser);
+        } catch {
+          cachedUser = null;
+        }
+      }
+
+      try {
+        try {
           const response = await fetch(
             `${API_BASE_URL}/api/vendor-users/profile`,
             {
@@ -59,7 +61,7 @@ const VendorUserProfilePage = () => {
           if (response.ok) {
             const latestUser = await response.json();
             const mergedUser = {
-              ...userData,
+              ...(cachedUser || {}),
               ...latestUser,
             };
             if (isMounted) {
@@ -72,7 +74,6 @@ const VendorUserProfilePage = () => {
                 status: mergedUser.status || "",
                 id: mergedUser.id || ""
               });
-              localStorage.setItem("vendorUser", JSON.stringify(mergedUser));
             }
             return;
           }
@@ -80,21 +81,24 @@ const VendorUserProfilePage = () => {
           console.error("Error fetching latest vendor user profile:", fetchError);
         }
 
-        if (isMounted) {
-          setVendorUser(userData);
+        if (isMounted && cachedUser) {
+          setVendorUser(cachedUser);
           setFormData({
-            companyName: userData.companyName || "",
-            personName: userData.personName || "",
-            phoneNumber: userData.phoneNumber || "",
-            Email: userData.Email || "",
-            status: userData.status || "",
-            id: userData.id || ""
+            companyName: cachedUser.companyName || "",
+            personName: cachedUser.personName || "",
+            phoneNumber: cachedUser.phoneNumber || "",
+            Email: cachedUser.Email || "",
+            status: cachedUser.status || "",
+            id: cachedUser.id || ""
           });
+          return;
         }
-      } catch (error) {
-        console.error("Error parsing user data:", error);
+
         router.push("/SignIn");
-      }
+      } catch (error) {
+        console.error("Error loading vendor profile:", error);
+        router.push("/SignIn");
+      } 
     };
 
     void loadUserData();
@@ -157,10 +161,8 @@ const VendorUserProfilePage = () => {
           title: "Success",
           text: "Profile updated successfully!",
         });
-
-        localStorage.setItem("vendorUser", JSON.stringify(result.user)); // ✅ Use result.user
-        setVendorUser(result.user); // ✅ Use result.user
-        setFormData(result.user);   // ✅ Update formData too
+        setVendorUser(result.user);
+        setFormData(result.user);
         setIsEditing(false);
       }
     } catch (error) {

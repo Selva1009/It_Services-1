@@ -16,7 +16,7 @@ import {
   FileText,
   Menu,
 } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import Footer from "../LandingPage/Footer";
 
@@ -27,7 +27,6 @@ export default function DashboardLayout({ id, children }) {
   const [vendorUser, setVendorUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [fadeIn, setFadeIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -36,7 +35,6 @@ export default function DashboardLayout({ id, children }) {
 
 
   const router = useRouter();
-  const pathname = usePathname();
   const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -224,11 +222,6 @@ export default function DashboardLayout({ id, children }) {
       setMessage("An error occurred while marking notifications as read.");
     }
   };
-
-  useEffect(() => {
-    setFadeIn(false);
-    setTimeout(() => setFadeIn(true), 100);
-  }, [pathname]);
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
   const toggleNotification = () => {
@@ -594,10 +587,7 @@ export default function DashboardLayout({ id, children }) {
       ) }
 
       {/* Page Content */ }
-      <div
-        className={ `p-6 sm:p-8 bg-gray-50 flex-1 mt-16 sm:mt-20 transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
-          }` }
-      >
+      <div className="p-6 sm:p-8 bg-gray-50 flex-1 mt-16 sm:mt-20">
         { children }
       </div>
       <Footer />

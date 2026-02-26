@@ -4,6 +4,7 @@ const db = require("../../db");
 const { generateOtp, getOtpExpiry } = require("../utils/otp");
 require("dotenv").config();
 
+const crypto=require("crypto")
 const JWT_SECRET = process.env.JWT_SECRET;
 
 exports.signup = async (data) => {
@@ -31,7 +32,7 @@ exports.signup = async (data) => {
 
   /* Check existing user */
   const [existing] = await db.query(
-    "SELECT id FROM it_users_signup WHERE email=?",
+    "SELECT id FROM it_user_admin_signup WHERE email=?",
     [email]
   );
 
@@ -52,13 +53,13 @@ exports.signup = async (data) => {
 
   /* Hash password */
   const hashedPassword = await bcrypt.hash(password, 10);
-
+   const userToken = crypto.randomBytes(32).toString("hex");
   /* Insert user */
   const [result] = await db.query(
-    `INSERT INTO it_users_signup
+    `INSERT INTO it_user_admin_signup
      (company_name, registration_number, company_website,
-      gst_number, first_name, last_name, phone, email, password)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      gst_number, first_name, last_name, phone, email, password,user_token)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
     [
       companyName,
       registrationNumber,
@@ -68,7 +69,8 @@ exports.signup = async (data) => {
       lastName,
       phone,
       email,
-      hashedPassword
+      hashedPassword,
+      userToken
     ]
   );
 
@@ -98,7 +100,8 @@ exports.signup = async (data) => {
   return {
     message: "Signup successful",
     authToken: token,
-    userId
+    userId,
+    userToken
   };
 };
 

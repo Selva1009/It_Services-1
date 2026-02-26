@@ -20,6 +20,8 @@ import {
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 
+const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+
 export default function CustomerAdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -54,28 +56,34 @@ export default function CustomerAdminNavbar() {
           return;
         }
 
-        try {
-          const authToken = getAuthToken();
-          const response = await fetch(
-            `${API_BASE_URL}/api/customers/profile`,
-            {
-              cache: "no-store",
-              headers: authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : undefined,
-            }
-          );
+        const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
+        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
 
-          if (response.ok) {
-            const payload = await response.json();
-            const latestCustomer = payload.customer || payload;
-            if (isMounted) {
-              setCustomer(latestCustomer);
-              localStorage.setItem("customer", JSON.stringify(latestCustomer));
+        if (shouldSync) {
+          try {
+            const authToken = getAuthToken();
+            const response = await fetch(
+              `${API_BASE_URL}/api/customers/profile`,
+              {
+                cache: "no-store",
+                headers: authToken
+                  ? { Authorization: `Bearer ${authToken}` }
+                  : undefined,
+              }
+            );
+
+            if (response.ok) {
+              const payload = await response.json();
+              const latestCustomer = payload.customer || payload;
+              if (isMounted) {
+                setCustomer(latestCustomer);
+                localStorage.setItem("customer", JSON.stringify(latestCustomer));
+                sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
+              }
             }
+          } catch (fetchError) {
+            console.error("Failed to fetch latest customer admin details:", fetchError);
           }
-        } catch (fetchError) {
-          console.error("Failed to fetch latest customer admin details:", fetchError);
         }
       } catch (parseError) {
         console.error("Invalid customer data in localStorage:", parseError);

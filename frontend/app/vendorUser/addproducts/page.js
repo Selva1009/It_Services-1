@@ -23,26 +23,69 @@ export default function AddProduct() {
   const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
-    const storedVendor = localStorage.getItem("vendorUser");
-    if (storedVendor) {
-      const parsedVendor = JSON.parse(storedVendor);
+    let isMounted = true;
 
-      // ✅ Set vendorUserId as a number (ID only)
-      setVendorUserId(parsedVendor.id);
+    const loadVendorContext = async () => {
+      const storedVendorId =
+        localStorage.getItem("vendorUserId") || sessionStorage.getItem("vendorUserId");
+      const authToken = localStorage.getItem("token") || sessionStorage.getItem("token");
 
-      // ✅ Set full vendor user object for things like companyName
-      setVendorUser(parsedVendor);
-    } else {
-      Swal.fire({
-        title: "Vendor Not Logged In!",
-        text: "Please log in again to continue adding products.",
-        icon: "warning",
-        confirmButtonColor: "#d33",
-        confirmButtonText: "OK",
-      }).then(() => {
-        window.location.href = "/SignIn";
-      });
-    }
+      if (storedVendorId && isMounted) {
+        setVendorUserId(Number(storedVendorId));
+      }
+
+      if (!authToken) {
+        Swal.fire({
+          title: "Vendor Not Logged In!",
+          text: "Please log in again to continue adding products.",
+          icon: "warning",
+          confirmButtonColor: "#d33",
+          confirmButtonText: "OK",
+        }).then(() => {
+          window.location.href = "/SignIn";
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/vendor-users/profile`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load vendor profile");
+        }
+
+        const profile = await response.json();
+        if (!isMounted) return;
+
+        const resolvedId = profile?.id || Number(storedVendorId);
+        if (resolvedId) {
+          setVendorUserId(Number(resolvedId));
+          localStorage.setItem("vendorUserId", String(resolvedId));
+        }
+
+        setVendorUser(profile);
+      } catch (error) {
+        if (!storedVendorId) {
+          Swal.fire({
+            title: "Session Expired!",
+            text: "Please log in again.",
+            icon: "warning",
+            confirmButtonColor: "#d33",
+            confirmButtonText: "OK",
+          }).then(() => {
+            window.location.href = "/SignIn";
+          });
+        }
+      }
+    };
+
+    void loadVendorContext();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
 

@@ -165,7 +165,7 @@ const VendorDashboard = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('vendorToken')}`
+          "Authorization": `Bearer ${localStorage.getItem("token") || sessionStorage.getItem("token") || localStorage.getItem("vendorToken") || ""}`
         },
         body: JSON.stringify({ vendorAdminID: vendorID, limit: NOTIFICATION_LIMIT }),
       });
@@ -400,12 +400,16 @@ const VendorDashboard = () => {
         const vendorData = JSON.parse(storedVendor);
         if (vendorData?.id) {
           setVendorID(vendorData.id);
+          return;
         }
       } catch (err) {
         console.error("Error parsing vendor data:", err);
       }
     }
-  }, []);
+
+    setLoading(false);
+    router.replace("/SignIn");
+  }, [router]);
 
   useEffect(() => {
     const fetchVendors = async () => {

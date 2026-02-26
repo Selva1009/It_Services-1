@@ -21,6 +21,8 @@ import {
   CUSTOMER_USER_UPDATED_EVENT,
 } from "@/lib/events";
 
+const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+
 const Navbar = ({
   setSearchQuery,
   setCategoryFilter,
@@ -127,13 +129,17 @@ const Navbar = ({
     const fetchLatestCustomer = async () => {
       const currentUser = readCustomerUser();
       if (!currentUser?.id) return;
+      const lastSync = Number(
+        sessionStorage.getItem("customerUserProfileLastSync") || 0
+      );
+      const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
+      if (!shouldSync) return;
 
       try {
         const authToken = getAuthToken();
         const response = await fetch(
           `${API_BASE_URL}/api/customer-users/profile`,
           {
-            cache: "no-store",
             headers: authToken
               ? { Authorization: `Bearer ${authToken}` }
               : undefined,
@@ -152,6 +158,10 @@ const Navbar = ({
 
         setCustomerUser(mergedUser);
         localStorage.setItem("customerUser", JSON.stringify(mergedUser));
+        sessionStorage.setItem(
+          "customerUserProfileLastSync",
+          String(Date.now())
+        );
       } catch (error) {
         console.error("Failed to fetch latest customer profile for navbar:", error);
       }

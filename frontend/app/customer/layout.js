@@ -1,24 +1,31 @@
-"use client"; // Ensure it's a client component
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const normalizeRole = (role) => String(role || "").toLowerCase().replace(/-/g, "_");
+
+const readAuthValue = (key) => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(key) || sessionStorage.getItem(key);
+};
 
 export default function CustomerLayout({ children }) {
   const router = useRouter();
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    const storedCustomer = localStorage.getItem("customerUser");
+    const role = normalizeRole(readAuthValue("role"));
+    const token = readAuthValue("token");
 
-    if (!storedCustomer) {
-      // console.warn("Customer not found in local storage. Redirecting...");
-      router.replace("/SignIn"); // Redirect to SignIn page
-    } else {
-      setIsVerified(true); // Allow rendering if customer exists
+    if (role !== "it_user" || !token) {
+      router.replace("/SignIn");
+      return;
     }
-  }, []);
 
-  // Show nothing until verification is complete
+    setIsVerified(true);
+  }, [router]);
+
   if (!isVerified) {
     return null;
   }

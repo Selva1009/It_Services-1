@@ -23,6 +23,8 @@ import {
 import Swal from "sweetalert2";
 import { Badge } from "@/components/ui/badge";
 
+const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+
 export default function Navbar() {
   const NOTIFICATION_LIMIT = 50;
   const [vendor, setVendor] = useState(null);
@@ -64,29 +66,35 @@ export default function Navbar() {
           return;
         }
 
-        try {
-          const authToken = getAuthToken();
-          const response = await fetch(
-            `${API_BASE_URL}/api/vendors/profile`,
-            {
-              cache: "no-store",
-              headers: authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : undefined,
-            }
-          );
+        const lastSync = Number(sessionStorage.getItem("vendorProfileLastSync") || 0);
+        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
 
-          if (response.ok) {
-            const payload = await response.json();
-            const latestVendor = payload.vendor || payload;
-            if (isMounted) {
-              setVendor(latestVendor);
-              setVendorAdminID(latestVendor.id);
-              localStorage.setItem("vendor", JSON.stringify(latestVendor));
+        if (shouldSync) {
+          try {
+            const authToken = getAuthToken();
+            const response = await fetch(
+              `${API_BASE_URL}/api/vendors/profile`,
+              {
+                cache: "no-store",
+                headers: authToken
+                  ? { Authorization: `Bearer ${authToken}` }
+                  : undefined,
+              }
+            );
+
+            if (response.ok) {
+              const payload = await response.json();
+              const latestVendor = payload.vendor || payload;
+              if (isMounted) {
+                setVendor(latestVendor);
+                setVendorAdminID(latestVendor.id);
+                localStorage.setItem("vendor", JSON.stringify(latestVendor));
+                sessionStorage.setItem("vendorProfileLastSync", String(Date.now()));
+              }
             }
+          } catch (fetchError) {
+            console.error("Failed to fetch latest vendor details:", fetchError);
           }
-        } catch (fetchError) {
-          console.error("Failed to fetch latest vendor details:", fetchError);
         }
       } catch (err) {
         setError("Failed to load vendor details");
@@ -122,7 +130,7 @@ export default function Navbar() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("vendorToken")}`,
+            Authorization: `Bearer ${getAuthToken() || localStorage.getItem("vendorToken") || ""}`,
           },
           body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
         }

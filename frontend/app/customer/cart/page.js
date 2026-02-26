@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ShoppingCart,
   Sparkle,
@@ -237,13 +238,13 @@ const CartPage = () => {
               <p className="text-gray-500 mb-8 text-lg">
                 Discover exceptional products to begin your collection
               </p>
-              <a
+              <Link
                 href="/customer/products"
                 className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold text-lg shadow-md inline-flex items-center gap-2"
               >
                 <Sparkle size={ 20 } />
                 Explore Marketplace
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">

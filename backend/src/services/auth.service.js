@@ -9,62 +9,61 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 
 exports.login = async ({ email, password }) => {
- console.log("email",email)
   if (!email || !password)
     throw { status: 400, message: "Missing credentials" };
 
-  /* Check vendor */
-  const [vendors] = await db.query(
-    "SELECT * FROM vendor_engineers_signup WHERE email=?",
-    [email]
-  );
-  console.log([vendors])
-  if (vendors.length) {
-    const vendor = vendors[0];
-    console.log(vendor)
-   const valid = await bcrypt.compare(password, vendor.password);
-   console.log(valid)
-    if (!valid)
-      throw { status: 400, message: "Invalid password" };
+  const tables = [
+    { table: "vendor_engineers_signup", role: "vendor_admin", parentField: null, token: "vendor_token" },
+    { table: "it_user_admin_signup", role: "it_admin", parentField: null, token: "user_token" },
+    { table: "vendor_users", role: "vendor_user", parentField: "vendor_id", token: "token" },
+    { table: "it_users_employee", role: "it_user", parentField: "user_id", token: "token" },
+  ];
 
-    const token = jwt.sign(
-      { id: vendor.id, role: "vendor" },
-      JWT_SECRET,
-      { expiresIn: "7d" }
+  let foundUser = null;
+  let foundTable = null;
+
+  // 🔍 First find user by email
+  for (const t of tables) {
+    const [rows] = await db.query(
+      `SELECT * FROM ${t.table} WHERE email=?`,
+      [email]
     );
 
-    return {
-      message: "Login successful",
-      role: "vendor Admin",
-      authToken: token
-    };
+    if (rows.length) {
+      foundUser = rows[0];
+      foundTable = t;
+      break;
+    }
   }
 
-  /* Check buyer */
-  const [buyers] = await db.query(
-    "SELECT * FROM it_users_signup WHERE email=?",
-    [email]
-  );
-   console.log([buyers],"buyer")
-  if (!buyers.length)
+  // ❌ If no user found
+  if (!foundUser)
     throw { status: 404, message: "User not found" };
 
-  const buyer = buyers[0];
-
-  const valid = await bcrypt.compare(password, buyer.password);
+  // 🔐 Check password
+  const valid = await bcrypt.compare(password, foundUser.password);
 
   if (!valid)
-    throw { status: 400, message: "Invalid password" };
+    throw { status: 401, message: "Invalid email or password" };
 
-  const token = jwt.sign(
-    { id: buyer.id, role: "buyer" },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+  // ✅ Generate token
+  const tokenPayload = {
+    id: foundUser.id,
+    role: foundTable.role,
+  };
+
+  if (foundTable.parentField) {
+    tokenPayload.parentId = foundUser[foundTable.parentField];
+  }
+
+  const token = jwt.sign(tokenPayload, JWT_SECRET, {
+    expiresIn: "7d",
+  });
 
   return {
     message: "Login successful",
-    role: "buyer",
-    authToken: token
+    role: foundTable.role,
+    authToken: token,
+    userToken: foundUser[foundTable.token]
   };
 };

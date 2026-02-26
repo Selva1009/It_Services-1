@@ -1,7 +1,6 @@
-const express = require("express");
-const router = express.Router();
-const controller = require("../controllers/itUser.controller");
+const express =require("express")
+const router=express.Router();
+const itUserEmployeeController=require('../controllers/itUser.controller')
 
-router.post("/signup", controller.signup);
-router.post("/send-otp", controller.sendOtp);
+router.post("/signup",itUserEmployeeController.signup)
 module.exports = router;

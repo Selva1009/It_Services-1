@@ -13,7 +13,6 @@ const Page = () => {
   const router = useRouter();
   const { validateForm } = useUserFormValidation();
   const [formValues, setFormValues] = useState({
-    companyName: "",
     personName: "",
     phoneNumber: "",
     Email: "",
@@ -123,7 +122,7 @@ const Page = () => {
         vendorAdminId: adminId,
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/vendor-users/add-user`, {
+      const response = await fetch(`${API_BASE_URL}/api/vendor-user/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

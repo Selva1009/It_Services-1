@@ -1,7 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import "./customerSignup.css";
 import { useCountriesStatesCities } from "../hooks/useCountriesStatesCities";
 
@@ -79,16 +78,10 @@ const CustomerSignup = () => {
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
   const otpInputRefs = useRef([]);
 
-  const { countries, states, cities, fetchStates, fetchCities } =
-    useCountriesStatesCities(formValues.country, formValues.state);
-
-  useEffect(() => {
-    fetchStates();
-  }, [formValues.country, fetchStates]);
-
-  useEffect(() => {
-    fetchCities();
-  }, [formValues.state, fetchCities]);
+  const { countries, states, cities } = useCountriesStatesCities(
+    formValues.country,
+    formValues.state
+  );
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -235,7 +228,7 @@ const CustomerSignup = () => {
 
     try {
       const res = await fetch(
-        'http://localhost:5000/api/itUser/send-otp',
+        'http://localhost:5000/api/user-admin/send-otp',
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -330,7 +323,7 @@ const CustomerSignup = () => {
     try {
       const { confirmPassword, ...payload } = formValues;
       const response = await fetch(
-        'http://localhost:5000/api/itUser/signup',
+        'http://localhost:5000/api/user-admin/signup',
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
