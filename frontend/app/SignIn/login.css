@@ -338,6 +338,7 @@
   margin-bottom: 0.44rem;
   font-weight: 600;
   color: #e7f1ff;
+
 }
 
 .signin-input-wrap {
@@ -356,10 +357,13 @@
 
 .signin-input {
   border: 1px solid rgba(178, 208, 248, 0.34);
-  border-radius: 0.78rem;
+  border-radius: 12px;
   background: rgba(6, 17, 39, 0.72);
   color: #f3f8ff;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  height: 50px;
+  font-size: 16px;
+  padding: 0 14px 0 42px;
 }
 
 .signin-input:hover {
@@ -429,6 +433,9 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
   transition: all 0.3s ease;
+  height: 50px;          
+  font-size: 20px;
+  border-radius: 14px;
 }
 
 .signin-submit:hover:not(:disabled) {
@@ -489,6 +496,7 @@
 }
 
 @keyframes signin-float-a {
+
   0%,
   100% {
     transform: translate(0, 0);
@@ -500,6 +508,7 @@
 }
 
 @keyframes signin-float-b {
+
   0%,
   100% {
     transform: translate(0, 0);
@@ -549,4 +558,30 @@
     gap: 0.7rem;
     flex-wrap: wrap;
   }
+}
+
+
+/* FIX CHROME AUTOFILL STYLE */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset !important;
+  /* your input bg color */
+  box-shadow: 0 0 0 1000px #1e293b inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  /* text color */
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Prevent icon fading */
+.signin-input-wrap {
+  position: relative;
+}
+
+.signin-eye-toggle {
+  opacity: 1 !important;
+  z-index: 10;
 }
