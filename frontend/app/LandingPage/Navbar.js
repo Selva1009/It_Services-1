@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X, User, Store, Check, ArrowRight, Home, Settings, Mail } from "lucide-react";
 import { RiMenuUnfold2Fill } from "react-icons/ri";
+import "./landingPage.css";
 
 const NAV_ITEMS = [
   { name: "Home", href: "/", icon: Home, label: "Home" },
@@ -139,57 +140,62 @@ export default function Navbar() {
       </header>
 
       {isSignupCardOpen && (
-        <div className="lp-modal-overlay" onClick={closeSignupCard}>
-          <div className="lp-modal" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closeSignupCard} className="lp-modal-close">
-              <X size={16} />
+        <div className="tile-modal-overlay" onClick={closeSignupCard}>
+          <div className="tile-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="tile-modal-close" onClick={closeSignupCard}>
+              <X size={18} />
             </button>
 
-            <div className="lp-modal-head">
-              <h2>Welcome!</h2>
-              <p>Choose how you&apos;d like to join us</p>
+            <div className="tile-modal-header">
+              <h2>Welcome to IT Service</h2>
+              <p>Pick your role and enter your workspace</p>
             </div>
 
-            <div className="lp-role-grid">
-              <button
-                className={`lp-role-card ${selectedRole === "Customer" ? "selected" : ""}`}
+            <div className="tile-carousel">
+              {/* IT User Tile */}
+              <div
+                className={`tile-card ${selectedRole === "Customer" ? "selected" : ""}`}
                 onClick={() => setSelectedRole("Customer")}
               >
-                <span className="lp-role-icon">
-                  <User size={20} />
-                </span>
-                <span className="lp-role-copy">
-                  <strong>IT User Admin</strong>
-                  <small>Discover products tailored for you</small>
-                </span>
-                <span className="lp-check-wrap">
-                  {selectedRole === "Customer" && <Check size={12} />}
-                </span>
-              </button>
+                <div className="tile-icon">
+                  <User size={28} />
+                </div>
+                <h3>IT User Admin</h3>
+                <p>Manage IT services, requests, and workflows easily.</p>
+                {/* {selectedRole === "Customer" && (
+                  <div className="tile-check">
+                    <Check size={16} /> Selected
+                  </div>
+                )} */}
+              </div>
 
-              <button
-                className={`lp-role-card ${selectedRole === "Vendor" ? "selected" : ""}`}
+              {/* Vendor Tile */}
+              <div
+                className={`tile-card ${selectedRole === "Vendor" ? "selected" : ""}`}
                 onClick={() => setSelectedRole("Vendor")}
               >
-                <span className="lp-role-icon">
-                  <Store size={20} />
-                </span>
-                <span className="lp-role-copy">
-                  <strong>Vendor Engineer Admin</strong>
-                  <small>Grow your business with our marketplace</small>
-                </span>
-                <span className="lp-check-wrap">
-                  {selectedRole === "Vendor" && <Check size={12} />}
-                </span>
-              </button>
+                <div className="tile-icon">
+                  <Store size={28} />
+                </div>
+                <h3>Vendor Engineer Admin</h3>
+                <p>Manage clients, showcase expertise, and grow business.</p>
+                {/* {selectedRole === "Vendor" && (
+                  <div className="tile-check">
+                    <Check size={16} /> Selected
+                  </div>
+                )} */}
+              </div>
             </div>
 
             <button
-              className={`lp-continue-btn ${selectedRole ? "ready" : ""}`}
+              className={`tile-continue-btn ${selectedRole ? "enabled" : ""}`}
               disabled={!selectedRole}
               onClick={handleContinue}
             >
-              Continue as {selectedRole || "..."} <ArrowRight size={16} />
+              {selectedRole
+                ? `Join as ${selectedRole === "Customer" ? "User" : "Vendor"}`
+                : "Select a role to continue"}
+              <ArrowRight size={18} />
             </button>
           </div>
         </div>
