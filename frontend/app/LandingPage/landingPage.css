@@ -709,3 +709,237 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+
+/* Navbar CSS */
+/* ================= MODAL OVERLAY ================= */
+
+.tile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* ================= MODAL ================= */
+
+.tile-modal {
+  background: #ffffff;
+  width: 600px;
+  max-width: 95%;
+  border-radius: 18px;
+  padding: 32px 28px;
+  position: relative;
+  animation: modalFade 0.25s ease;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.18);
+}
+
+/* Close button */
+
+.tile-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #f1f5f9;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================= HEADER ================= */
+
+.tile-modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.tile-modal-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tile-modal-header p {
+  color: #64748b;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+/* ================= TILE CONTAINER ================= */
+
+.tile-carousel {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 26px;
+  flex-wrap: wrap;
+}
+
+/* ================= TILE CARD ================= */
+
+.tile-card {
+  flex: 1;
+  min-width: 220px;
+  max-width: 250px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.tile-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+
+.tile-card.selected {
+  background: #eff6ff;
+  border: 1.5px solid #2563eb;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18);
+}
+.tile-card.selected .tile-icon {
+  color: #2563eb;
+}
+
+/* ================= ICON ================= */
+
+.tile-icon {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #475569;
+}
+
+/* ================= TEXT ================= */
+
+.tile-card h3 {
+  margin-bottom: 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tile-card p {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+/* ================= CHECK LABEL ================= */
+
+.tile-check {
+  margin-top: 10px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+/* ================= CONTINUE BUTTON ================= */
+
+.tile-continue-btn {
+  width: 260px;              /* reduced width */
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: #cbd5e1;
+  color: white;
+  font-weight: 600;
+  cursor: not-allowed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: 0.25s ease;
+}
+
+/* Enabled state */
+
+.tile-continue-btn.enabled {
+  background: linear-gradient(90deg,#2563eb,#4f46e5);
+  cursor: pointer;
+}
+
+.tile-continue-btn.enabled:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+}/* Default (disabled) */
+/* Default (disabled) */
+.tile-continue-btn {
+  width: 260px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #e5e7eb;
+  color: #9ca3af;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  cursor: not-allowed;
+  transition: all 0.25s ease;
+}
+
+/* Enabled */
+.tile-continue-btn.enabled {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Hover */
+.tile-continue-btn.enabled:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.35);
+}
+
+/* ================= ANIMATION ================= */
+
+@keyframes modalFade {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 640px) {
+
+  .tile-carousel {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .tile-modal {
+    width: 92%;
+    padding: 24px 18px;
+  }
+
+  .tile-continue-btn {
+    width: 100%;
+  }
+}

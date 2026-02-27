@@ -2,74 +2,55 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import ImageSlider from "./ImageSlider";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import axios from "axios";
+import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
 import Swal from "sweetalert2";
-import { createSession } from "@/lib/api/sessions";
 import "./login.css";
 
-const USER_SESSION_CONFIG = {
-  "vendor-admin": {
-    storageKey: "vendor",
-    redirectTo: "/vendor-admin",
-    idKeys: ["vendorAdminId"],
-  },
-  "customer-admin": {
-    storageKey: "customer",
-    redirectTo: "/customer-admin/customerAdminDashboard",
-    idKeys: [],
-  },
-  "vendor-user": {
-    storageKey: "vendorUser",
-    redirectTo: "/vendorUser",
-    idKeys: ["vendorUserId"],
-  },
-  "customer-user": {
-    storageKey: "customerUser",
-    redirectTo: "/customer/products",
-    idKeys: ["customerUserId"],
-  },
+const ROLE_REDIRECT = {
+  vendor_admin: "/vendor-admin",
+  it_admin: "/customer-admin/customerAdminDashboard",
+  vendor_user: "/vendorUser",
+  it_user: "/customer/products",
 };
 
-const persistSessionToken = ({ token, rememberMe }) => {
-  if (rememberMe) {
-    localStorage.setItem("token", token);
-    sessionStorage.removeItem("token");
-    return;
+const normalizeRole = (value) => String(value || "").toLowerCase().replace(/-/g, "_");
+
+const decodeJwtPayload = (token) => {
+  if (!token) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
   }
-
-  sessionStorage.setItem("token", token);
-  localStorage.removeItem("token");
 };
 
-export default function LoginPage({isSignupCardOpen}) {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const[rememberMe,setRememberMe]=useState(false)
+  const [, setSession] = useState({
+    authToken: "",
+    userToken: "",
+    role: "",
+  });
   const router = useRouter();
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
-  useEffect(() => {
-    const preventBackNavigation = () => {
-      window.history.pushState(null, "", window.location.href);
-    };
-
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", preventBackNavigation);
-
-    return () => {
-      window.removeEventListener("popstate", preventBackNavigation);
-    };
-  }, []);
-
-  const handleLogin = useCallback(async () => {
+  const handleLogin = async () => {
     const normalizedEmail = email.trim();
+
     if (!normalizedEmail || !password) {
       Swal.fire({
         title: "Missing Credentials",
@@ -83,12 +64,61 @@ export default function LoginPage({isSignupCardOpen}) {
     setLoading(true);
 
     try {
-      const data = await createSession({ email: normalizedEmail, password });
+      const { data } = await axios.post("http://localhost:5000/api/auth/login", {
+        email: normalizedEmail,
+        password,
+      });
+      const { authToken, userToken, role } = data || {};
+      const normalizedRole = normalizeRole(role);
 
-      persistSessionToken({ token: data.token, rememberMe });
+      if (!authToken || !userToken || !normalizedRole) {
+        throw new Error("Invalid login response from server.");
+      }
 
-      localStorage.setItem("userType", data.userType);
-      localStorage.setItem("userId", data.user.id.toString());
+      setSession({
+        authToken,
+        userToken,
+        role: normalizedRole,
+      });
+
+      const authPayload = decodeJwtPayload(authToken);
+      const userIdFromToken = authPayload?.id ? String(authPayload.id) : null;
+      const parentIdFromToken = authPayload?.parentId ? String(authPayload.parentId) : null;
+      
+      sessionStorage.setItem("authToken", authToken);
+      sessionStorage.setItem("userToken", userToken);
+      sessionStorage.setItem("role", normalizedRole);
+      sessionStorage.setItem("token", authToken);
+      localStorage.setItem("authToken", authToken);
+      localStorage.setItem("userToken", userToken);
+      localStorage.setItem("role", normalizedRole);
+      localStorage.setItem("token", authToken);
+
+      if (normalizedRole === "vendor_admin") {
+        localStorage.setItem("vendorToken", userToken);
+        if (userIdFromToken) {
+          const previousVendor = (() => {
+            try {
+              const raw = localStorage.getItem("vendor");
+              return raw ? JSON.parse(raw) : {};
+            } catch {
+              return {};
+            }
+          })();
+          localStorage.setItem("vendor", JSON.stringify({ ...previousVendor, id: Number(userIdFromToken) }));
+        }
+      }
+
+      if (normalizedRole === "vendor_user") {
+        if (userIdFromToken) {
+          localStorage.setItem("vendorUserId", userIdFromToken);
+          sessionStorage.setItem("vendorUserId", userIdFromToken);
+        }
+        if (parentIdFromToken) {
+          localStorage.setItem("vendorId", parentIdFromToken);
+          sessionStorage.setItem("vendorId", parentIdFromToken);
+        }
+      }
 
       Swal.fire({
         title: "Login Successful!",
@@ -103,34 +133,31 @@ export default function LoginPage({isSignupCardOpen}) {
           confirmButton: "px-6 py-2 bg-blue-600 text-white rounded-md",
         },
       }).then(() => {
-        const config = USER_SESSION_CONFIG[data.userType];
-        if (!config) {
+        const redirectPath = ROLE_REDIRECT[normalizedRole];
+
+        if (!redirectPath) {
           Swal.fire("Unknown User Type", "Please contact support.", "warning");
           return;
         }
 
-        localStorage.setItem(config.storageKey, JSON.stringify(data.user));
-        config.idKeys.forEach((key) => {
-          localStorage.setItem(key, data.user.id.toString());
-        });
-        router.push(config.redirectTo);
+        router.push(redirectPath);
       });
     } catch (err) {
       Swal.fire({
         title: "Login Failed!",
-        text: err.message || "Login failed. Please try again.",
+        text: err.response?.data?.message || err.response?.data?.messages || err.message || "Login failed. Please try again.",
         icon: "error",
         confirmButtonColor: "#D33",
       });
     } finally {
       setLoading(false);
     }
-  }, [email, password, rememberMe, router]);
+  };
 
-  const handleSubmit = useCallback((event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
     handleLogin();
-  }, [handleLogin]);
+  };
 
   return (
     <div className="signin-page flex flex-col lg:flex-row h-screen w-full">
@@ -154,25 +181,11 @@ export default function LoginPage({isSignupCardOpen}) {
                   />
                 </div>
               </div>
-              {/* <div className="signin-security-badge">
-                <ShieldCheck size={ 15 } />
-                <span>Secure Login</span>
-              </div> */}
             </div>
             <h2 className="signin-title text-2xl 2xl:text-3xl font-semibold">Welcome Back</h2>
             <p className="signin-subtitle mb-4 2xl:mb-5 2xl:text-lg">
               Login to continue to your account
             </p>
-            {/* <div className="signin-pill-row">
-              <div className="signin-pill">
-                <Sparkles size={ 14 } />
-                <span>Fast access</span>
-              </div>
-              <div className="signin-pill">
-                <ShieldCheck size={ 14 } />
-                <span>Protected session</span>
-              </div>
-            </div> */}
           </CardHeader>
           <CardContent className="signin-card-content">
             <form className="signin-form space-y-4 2xl:space-y-6" onSubmit={ handleSubmit }>
@@ -217,7 +230,7 @@ export default function LoginPage({isSignupCardOpen}) {
                 </div>
               </div>
 
-              <div className="signin-meta flex justify-between items-center text-sm 2xl:text-base">
+             <div className="signin-meta flex justify-between items-center text-sm 2xl:text-base">
                 <label className="signin-remember flex items-center">
                   <input
                     type="checkbox"
@@ -241,17 +254,12 @@ export default function LoginPage({isSignupCardOpen}) {
                   <Loader2 className="animate-spin" size={ 24 } />
                 ) : (
                   <span className="signin-submit-content">
-                    <span>Sign In</span>
+                    <span>SIGN IN</span>
                     <ArrowRight size={ 18 } className="signin-submit-icon" />
                   </span>
                 ) }
               </Button>
             </form>
-
-            {/* <div className="signin-helper">
-              <span className="signin-helper-label">Tip</span>
-              <p className="signin-helper-text">Use your registered business email for the fastest sign-in experience.</p>
-            </div> */}
 
             <p className="signin-footer text-center text-sm 2xl:text-base mt-4 2xl:mt-6">
               New here? <Link href="/LandingPage" className="signin-create-account"  >Create an account</Link>
