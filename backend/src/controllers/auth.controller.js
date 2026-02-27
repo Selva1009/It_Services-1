@@ -9,7 +9,7 @@ exports.login=async(req,res)=>{
   }
   catch(err){
     res.status(err.status||400).json({
-        messages:err.message
+        message:err.message
     })
   }
 }
