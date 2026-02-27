@@ -39,7 +39,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
+  const[rememberMe,setRememberMe]=useState(false)
   const [, setSession] = useState({
     authToken: "",
     userToken: "",
@@ -84,7 +84,7 @@ export default function LoginPage() {
       const authPayload = decodeJwtPayload(authToken);
       const userIdFromToken = authPayload?.id ? String(authPayload.id) : null;
       const parentIdFromToken = authPayload?.parentId ? String(authPayload.parentId) : null;
-
+      
       sessionStorage.setItem("authToken", authToken);
       sessionStorage.setItem("userToken", userToken);
       sessionStorage.setItem("role", normalizedRole);
@@ -230,7 +230,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="signin-meta flex justify-between items-center text-sm 2xl:text-base">
+             <div className="signin-meta flex justify-between items-center text-sm 2xl:text-base">
                 <label className="signin-remember flex items-center">
                   <input
                     type="checkbox"
@@ -254,7 +254,7 @@ export default function LoginPage() {
                 ) : (
                   <span className="signin-submit-content">
                     <span>SIGN IN</span>
-                    <ArrowRight size={18} className="signin-submit-icon" />
+                    <ArrowRight size={ 18 } className="signin-submit-icon" />
                   </span>
                 )}
               </Button>
