@@ -174,8 +174,8 @@ export default function LoginPage() {
                   <Image
                     src="/Logo.png"
                     alt="M-Place Logo"
-                    width={ 80 }
-                    height={ 80 }
+                    width={80}
+                    height={80}
                     className="signin-logo-image w-12 h-12 sm:w-16 sm:h-16 2xl:w-20 2xl:h-20 object-contain"
                     priority
                   />
@@ -188,19 +188,19 @@ export default function LoginPage() {
             </p>
           </CardHeader>
           <CardContent className="signin-card-content">
-            <form className="signin-form space-y-4 2xl:space-y-6" onSubmit={ handleSubmit }>
+            <form className="signin-form space-y-4 2xl:space-y-6" onSubmit={handleSubmit}>
               <div className="signin-field">
                 <label htmlFor="email" className="signin-label text-sm 2xl:text-base">
                   Email Address
                 </label>
                 <div className="signin-input-wrap">
-                  <Mail size={ 18 } className="signin-field-icon" />
+                  <Mail size={18} className="signin-field-icon" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="Enter email"
-                    value={ email }
-                    onChange={ (e) => setEmail(e.target.value) }
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="signin-input signin-input-with-icon 2xl:h-12 2xl:text-base"
                   />
                 </div>
@@ -211,21 +211,21 @@ export default function LoginPage() {
                   Password
                 </label>
                 <div className="signin-input-wrap">
-                  <LockKeyhole size={ 18 } className="signin-field-icon" />
+                  <LockKeyhole size={18} className="signin-field-icon" />
                   <Input
                     id="password"
-                    type={ showPassword ? "text" : "password" }
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter password"
-                    value={ password }
-                    onChange={ (e) => setPassword(e.target.value) }
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="signin-input signin-input-with-icon signin-password-input 2xl:h-12 2xl:text-base"
                   />
                   <button
                     type="button"
-                    onClick={ () => setShowPassword(!showPassword) }
+                    onClick={() => setShowPassword(!showPassword)}
                     className="signin-eye-toggle absolute inset-y-0 right-3 flex items-center"
                   >
-                    { showPassword ? <EyeOff size={ 20 } className="2xl:w-6 2xl:h-6" /> : <Eye size={ 20 } className="2xl:w-6 2xl:h-6" /> }
+                    {showPassword ? <EyeOff size={20} className="2xl:w-6 2xl:h-6" /> : <Eye size={20} className="2xl:w-6 2xl:h-6" />}
                   </button>
                 </div>
               </div>
@@ -244,26 +244,25 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-
               <Button
                 type="submit"
-                disabled={ loading || !canSubmit }
+                disabled={loading || !canSubmit}
                 className="signin-submit w-full py-2.5 2xl:py-3 flex items-center justify-center text-base 2xl:text-lg"
               >
-                { loading ? (
-                  <Loader2 className="animate-spin" size={ 24 } />
+                {loading ? (
+                  <Loader2 className="animate-spin" size={24} />
                 ) : (
                   <span className="signin-submit-content">
                     <span>SIGN IN</span>
                     <ArrowRight size={ 18 } className="signin-submit-icon" />
                   </span>
-                ) }
+                )}
               </Button>
             </form>
 
             <p className="signin-footer text-center text-sm 2xl:text-base mt-4 2xl:mt-6">
               New here? <Link href="/LandingPage" className="signin-create-account"  >Create an account</Link>
-            
+
             </p>
           </CardContent >
         </Card>
