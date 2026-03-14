@@ -1,267 +1,259 @@
 ﻿"use client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState, useEffect, useCallback } from "react";
-import ImageSlider from "./ImageSlider";
-import Link from "next/link";
-import Image from "next/image";
+
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api/config";
 import Swal from "sweetalert2";
-import { createSession } from "@/lib/api/sessions";
-import "./login.css";
+import "./itUserProfile.css";
 
+/* ─── Field Config ───────────────────────────────────────── */
+const PROFILE_FIELDS = [
+  { label: "Company Name", key: "company_name", editable: false },
+  { label: "Name",         key: "name",         editable: true,  type: "text" },
+  { label: "Email",        key: "email",        editable: false, type: "email" },
+  { label: "Mobile",       key: "mobile",       editable: true,  type: "tel"  },
+  { label: "Designation",  key: "designation",  editable: true,  type: "text" },
+];
 
-const USER_SESSION_CONFIG = {
-  "vendor_admin": {
-    storageKey: "vendor",
-    redirectTo: "/vendor-admin",
-    idKeys: ["vendorAdminId"],
-  },
-  "customer_admin": {
-    storageKey: "customer",
-    redirectTo: "/customer-admin/customerAdminDashboard",
-    idKeys: [],
-  },
-  "vendor-user": {
-    storageKey: "vendorUser",
-    redirectTo: "/vendorUser",
-    idKeys: ["vendorUserId"],
-  },
-  "customer-user": {
-    storageKey: "customerUser",
-    redirectTo: "/customer/products",
-    idKeys: ["customerUserId"],
-  },
-};
+/* ─── Helpers ────────────────────────────────────────────── */
+const getAuthToken = () =>
+  typeof window !== "undefined"
+    ? localStorage.getItem("token") || sessionStorage.getItem("token")
+    : null;
 
-const persistSessionToken = ({ token, rememberMe, userType }) => {
-  if (rememberMe) {
-    localStorage.setItem("userType", userType);
-    sessionStorage.removeItem("token");
-    return;
-  }
+const getInitials = (name) =>
+  name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "IT";
 
-  sessionStorage.setItem("token", token);
-  localStorage.removeItem("token");
-};
+/* ─── Sub-components ─────────────────────────────────────── */
+function SectionTitle({ children }) {
+  return <p className="vp-section-title">{children}</p>;
+}
 
-export default function LoginPage({ isSignupCardOpen }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
+function InfoItem({ label, value }) {
+  return (
+    <div className="vp-info-item">
+      <span className="vp-info-label">{label}</span>
+      <span className={`vp-info-value ${!value ? "not-provided" : ""}`}>
+        {value || "Not provided"}
+      </span>
+    </div>
+  );
+}
+
+function FormField({ label, fieldKey, value, onChange, editable = true, type = "text" }) {
+  return (
+    <div className="vp-form-field">
+      <label className="vp-form-label" htmlFor={fieldKey}>{label}</label>
+      <input
+        id={fieldKey}
+        name={fieldKey}
+        type={type}
+        value={value || ""}
+        onChange={onChange}
+        disabled={!editable}
+        className="vp-form-input"
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────────────── */
+export default function ITUserProfilePage() {
   const router = useRouter();
-  const canSubmit = email.trim().length > 0 && password.length > 0;
 
-  useEffect(() => {
-    const preventBackNavigation = () => {
-      window.history.pushState(null, "", window.location.href);
-    };
+  const [profile, setProfile]     = useState(null);
+  const [formData, setFormData]   = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving]   = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", preventBackNavigation);
-
-    return () => {
-      window.removeEventListener("popstate", preventBackNavigation);
-    };
-  }, []);
-
-  const handleLogin = useCallback(async () => {
-    const normalizedEmail = email.trim();
-    if (!normalizedEmail || !password) {
-      Swal.fire({
-        title: "Missing Credentials",
-        text: "Please enter both email and password.",
-        icon: "warning",
-        confirmButtonColor: "#3085D6",
-      });
-      return;
-    }
-
-    setLoading(true);
+  /* ── Fetch profile ── */
+  const fetchProfile = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) { router.push("/SignIn"); return; }
 
     try {
-      const data = await createSession({ email: normalizedEmail, password });
+      const res = await fetch(`${API_BASE_URL}/api/it-user-employee/profile`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      const token = data.authToken;
-      const userType = data.role;
+      if (!res.ok) {
+        if (res.status === 401) { router.push("/SignIn"); return; }
+        throw new Error("Failed to fetch profile");
+      }
 
-      persistSessionToken({ token, rememberMe });
+      const data = await res.json();
+      setProfile(data.profile);
+      setFormData(data.profile);
+    } catch (err) {
+      console.error("Profile fetch error:", err);
+      Swal.fire({ icon: "error", title: "Error", text: "Could not load your profile." });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router]);
 
-      localStorage.setItem("userType", userType);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
+  /* ── Handlers ── */
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-      localStorage.setItem("userType", userType);
-      // localStorage.setItem("userId", data.user.id.toString());
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/api/it-user-employee/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name:        formData.name,
+          mobile:      formData.mobile,
+          designation: formData.designation,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Update failed");
+      }
+
+      await fetchProfile();
+      setIsEditing(false);
 
       Swal.fire({
-        title: "Login Successful!",
-        text: "You are now logged in.",
-        imageUrl: "/login.gif",
-        imageWidth: 127,
-        imageHeight: 151,
-        imageAlt: "Login Success",
-        confirmButtonColor: "#3085D6",
-        customClass: {
-          popup: "rounded-lg shadow-md",
-          confirmButton: "px-6 py-2 bg-blue-600 text-white rounded-md",
-        },
-      }).then(() => {
-        const config = USER_SESSION_CONFIG[userType];
-
-        if (!config) {
-          Swal.fire("Unknown User Type", "Please contact support.", "warning");
-          return;
-        }
-
-        router.push(config.redirectTo);
+        icon: "success",
+        title: "Profile Updated",
+        text: "Your changes have been saved.",
+        confirmButtonColor: "#1a56db",
+        timer: 2500,
+        showConfirmButton: false,
       });
     } catch (err) {
-      Swal.fire({
-        title: "Login Failed!",
-        text: err.message || "Login failed. Please try again.",
-        icon: "error",
-        confirmButtonColor: "#D33",
-      });
+      Swal.fire({ icon: "error", title: "Update Failed", text: err.message });
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
-  }, [email, password, rememberMe, router]);
+  };
 
-  const handleSubmit = useCallback((event) => {
-    event.preventDefault();
-    handleLogin();
-  }, [handleLogin]);
+  const handleCancelEdit = () => {
+    setFormData(profile);
+    setIsEditing(false);
+  };
 
+  /* ── Loading ── */
+  if (isLoading) {
+    return (
+      <div className="vp-loading">
+        <div className="vp-loading-spinner" />
+        <span>Loading your profile…</span>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  /* ── Render ── */
   return (
-    <div className="signin-page">
-      <div className="signin-container">
+    <div className="vp-page">
+      <div className="vp-container">
 
-        <div className="signin-left-panel">
-          <ImageSlider />
-        </div>
+        <button className="vp-back-btn" onClick={() => router.back()}>
+          ← Back
+        </button>
 
-        <div className="signin-right-panel">
-          <Card className="signin-card">
-            <CardHeader className="signin-card-header">
+        <div className="vp-card">
 
-              <div className="signin-brand-row">
-                <div className="signin-logo-shell">
-                  <div className="signin-logo-inner">
-                    <Image
-                      src="/Logo.png"
-                      alt="M-Place Logo"
-                      width={80}
-                      height={80}
-                      className="signin-logo-image"
-                      priority
-                    />
-                  </div>
-                </div>
+          {/* ── Header ── */}
+          <div className="vp-card-header">
+            <div className="vp-avatar-wrapper">
+              <div className="vp-avatar-initials">
+                {getInitials(profile.name)}
               </div>
+              <div className="vp-avatar-badge" />
+            </div>
 
-              <h2 className="signin-title">Welcome Back</h2>
-              <p className="signin-subtitle">
-                Login to continue to your account
-              </p>
+            <div className="vp-header-info">
+              <h1 className="vp-header-name">{profile.name || "IT User"}</h1>
+              <p className="vp-header-role">{profile.email}</p>
+              <span className="vp-header-badge">✦ {profile.designation || "Employee"}</span>
+            </div>
+          </div>
 
-            </CardHeader>
-
-            <CardContent className="signin-card-content">
-              <form className="signin-form" onSubmit={handleSubmit}>
-
-                <div className="signin-field">
-                  <label htmlFor="email" className="signin-label">
-                    Email Address
-                  </label>
-
-                  <div className="signin-input-wrap">
-                    <Mail size={18} className="signin-field-icon" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="signin-input signin-input-with-icon"
-                    />
-                  </div>
+          {/* ── Body ── */}
+          <div className="vp-card-body">
+            {!isEditing ? (
+              <>
+                <SectionTitle>Profile Information</SectionTitle>
+                <div className="vp-info-grid">
+                  {PROFILE_FIELDS.map(({ label, key }) => (
+                    <InfoItem key={key} label={label} value={profile[key]} />
+                  ))}
                 </div>
 
-                <div className="signin-field">
-                  <label htmlFor="password" className="signin-label">
-                    Password
-                  </label>
-
-                  <div className="signin-input-wrap">
-                    <LockKeyhole size={18} className="signin-field-icon" />
-
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="signin-input signin-input-with-icon signin-password-input"
+                <div className="vp-actions">
+                  <button className="vp-btn vp-btn-primary" onClick={() => setIsEditing(true)}>
+                    ✎ Edit Profile
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleSave}>
+                <SectionTitle>Edit Profile</SectionTitle>
+                <div className="vp-form-grid">
+                  {PROFILE_FIELDS.map(({ label, key, editable, type }) => (
+                    <FormField
+                      key={key}
+                      label={label}
+                      fieldKey={key}
+                      value={formData[key]}
+                      onChange={handleChange}
+                      editable={editable}
+                      type={type}
                     />
-
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="signin-eye-toggle"
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="signin-meta">
-                  <label className="signin-remember">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={() => setRememberMe(!rememberMe)}
-                      className="signin-checkbox"
-                    />
-                    Remember Me
-                  </label>
-
-                  <Link href="../ForgotPassword" className="signin-forgot">
-                    Forgot password?
-                  </Link>
+                <div className="vp-btn-group">
+                  <button
+                    type="button"
+                    className="vp-btn vp-btn-outline"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="vp-btn vp-btn-primary"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <svg className="vp-spin" width="15" height="15" viewBox="0 0 24 24"
+                          fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                        Saving…
+                      </>
+                    ) : "Save Changes"}
+                  </button>
                 </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading || !canSubmit}
-                  className="signin-submit"
-                >
-                  {loading ? (
-                    <Loader2 className="animate-spin" size={24} />
-                  ) : (
-                    <span className="signin-submit-content">
-                      <span>SIGN IN</span>
-                      <ArrowRight size={18} className="signin-submit-icon" />
-                    </span>
-                  )}
-                </Button>
-
               </form>
+            )}
+          </div>
 
-              <p className="signin-footer">
-                New here?{" "}
-                <Link href="/LandingPage" className="signin-create-account">
-                  Create an account
-                </Link>
-              </p>
-
-            </CardContent>
-          </Card>
         </div>
-
       </div>
     </div>
   );

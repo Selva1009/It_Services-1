@@ -53,3 +53,36 @@ exports.createItUserEmployee=async(data)=>{
     authToken:authToken,
    };
 }
+
+
+
+
+exports.getItUserEmployeeProfile = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT id, company_name, name, email, mobile, designation
+     FROM it_users_employee
+     WHERE id = ?`,
+    [userId]
+  );
+
+  if (rows.length === 0) throw { status: 404, message: "User not found" };
+
+  return { profile: rows[0] };
+};
+
+exports.editItUserEmployeeProfile = async (userId, data) => {
+  const { name, mobile, designation } = data;
+
+  await db.query(
+    `UPDATE it_users_employee
+     SET name=?, mobile=?, designation=?
+     WHERE id=?`,
+    [name, mobile, designation, userId]
+  );
+
+  return { message: "Profile updated successfully" };
+};
+
+
+
+

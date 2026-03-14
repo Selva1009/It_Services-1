@@ -274,7 +274,7 @@ export default function DashboardLayout({ id, children }) {
   }, []);
 
   return (
-    <div className="flex flex-col h-20 min-h-screen bg-gray-100">
+    <div className="flex flex-col h-20 min-h-screen bg-gray-100" >
       {/* Desktop Header */ }
       <div className="hidden sm:flex bg-white shadow px-6 py-2 justify-between items-center border-b fixed top-0 left-0 right-0 z-10">
         {/* Left Section - Logo and Navigation */ }
@@ -359,7 +359,7 @@ export default function DashboardLayout({ id, children }) {
             <div className="ml-2 text-[14px]">
               { loading && <span>Loading...</span> }
               { error && <span className="text-red-500">{ error }</span> }
-              { vendorUser && <span>{ vendorUser.personName }</span> } <br />{ " " }
+              { vendorUser && <span>{ vendorUser.name }</span> } <br />{ " " }
               <span className="text-[12px] text-[#999999]">Vendor User</span>
             </div>
           </div>

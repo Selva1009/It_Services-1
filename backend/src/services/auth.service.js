@@ -13,8 +13,8 @@ exports.login = async ({ email, password }) => {
     throw { status: 400, message: "Missing credentials" };
 
   const tables = [
-    { table: "vendor_engineers_signup", role: "vendor_admin", parentField: null, token: "vendor_token" },
-    { table: "it_user_admin_signup", role: "it_admin", parentField: null, token: "user_token" },
+    { table: "vendor_engineers_signup", role: "vendor_admin", id: "id", token: "vendor_token" },
+    { table: "it_user_admin_signup", role: "it_admin", id: "id", token: "user_token" },
     { table: "vendor_users", role: "vendor_user", parentField: "vendor_id", token: "token" },
     { table: "it_users_employee", role: "it_user", parentField: "user_id", token: "token" },
   ];
@@ -64,6 +64,7 @@ exports.login = async ({ email, password }) => {
     message: "Login successful",
     role: foundTable.role,
     authToken: token,
-    userToken: foundUser[foundTable.token]
+    userToken: foundUser[foundTable.token],
+    id:foundUser[foundTable.id]
   };
 };

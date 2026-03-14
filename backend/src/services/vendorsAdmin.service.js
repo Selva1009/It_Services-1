@@ -153,3 +153,169 @@ exports.sendOtp = async (email) => {
 
   return { message: "OTP sent successfully" };
 };
+
+
+exports.getVendorProfile= async(vendorId)=> {
+
+  if (!vendorId) throw {status:400,message:"vendor ID Required"}
+  
+    const [vendorRows] = await db.query(
+    `SELECT 
+      id, company_name, contact_person, email, 
+      mobile, pan, gst, vendor_token, created_at
+     FROM vendor_engineers_signup 
+     WHERE id = ?`,
+    [vendorId]
+  );
+
+  if(!vendorRows.length){
+    throw {status:404,message:"vendor not found"}
+  }
+  
+  const vendor = vendorRows[0];
+
+  const [addressRows]=await db.query(
+    `SELECT 
+      address, country, state, city, pincode
+     FROM vendor_company_addresses 
+     WHERE vendor_id = ?`,
+    [vendorId]
+  )
+
+    const [serviceRows] = await db.query(
+    `SELECT 
+      id, service_name, support_level
+     FROM vendor_services 
+     WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+   return {
+    message: "Vendor profile fetched successfully",
+    data: {
+      id: vendor.id,
+      companyName: vendor.company_name,
+      contactPerson: vendor.contact_person,
+      email: vendor.email,
+      mobile: vendor.mobile,
+      pan: vendor.pan,
+      gst: vendor.gst,
+      vendorToken: vendor.vendor_token,
+      createdAt: vendor.created_at,
+      address: addressRows.length ? addressRows[0] : null,
+      services: serviceRows || []
+    }
+  };
+
+
+}
+
+
+
+exports.updateVendorProfile=async(vendorId,data)=>{
+  if(!vendorId) throw {status:400,message:"vendor id required"}
+
+   const {
+    contactPerson,
+    mobile,
+    gst,
+    address,
+    country,
+    state,
+    city,
+    pincode,
+  } = data;
+
+
+  await db.query(
+    `UPDATE vendor_engineers_signup
+     SET contact_person = ?,
+         mobile         = ?,
+         gst            = ?
+     WHERE id = ?`,
+    [contactPerson, mobile, gst, vendorId]
+  )
+
+  const [addressRows] = await db.query(
+    `SELECT id FROM vendor_company_addresses WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+   if (addressRows.length) {
+    /* ---------- Update address ---------- */
+    await db.query(
+      `UPDATE vendor_company_addresses
+       SET address = ?,
+           country = ?,
+           state   = ?,
+           city    = ?,
+           pincode = ?
+       WHERE vendor_id = ?`,
+      [address, country, state, city, pincode, vendorId]
+    );
+  } else {
+    /* ---------- Insert address if not exists ---------- */
+    await db.query(
+      `INSERT INTO vendor_company_addresses
+       (vendor_id, address, country, state, city, pincode)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [vendorId, address, country, state, city, pincode]
+    );
+  }
+  
+
+
+  /* ---------- Fetch updated profile ---------- */
+  const [vendorRows] = await db.query(
+    `SELECT
+       id, company_name, contact_person, email,
+       mobile, pan, gst, created_at
+     FROM vendor_engineers_signup
+     WHERE id = ?`,
+    [vendorId]
+  );
+
+  const [updatedAddress] = await db.query(
+    `SELECT address, country, state, city, pincode
+     FROM vendor_company_addresses
+     WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+ const [services] = await db.query(
+    `SELECT id, service_name, support_level
+     FROM vendor_services
+     WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+  const vendor = vendorRows[0];
+
+   return {
+    message: "Profile updated successfully",
+    data: {
+      id:            vendor.id,
+      companyName:   vendor.company_name,
+      contactPerson: vendor.contact_person,
+      email:         vendor.email,
+      mobile:        vendor.mobile,
+      pan:           vendor.pan,
+      gst:           vendor.gst,
+      createdAt:     vendor.created_at,
+      address:       updatedAddress[0] || null,
+      services:      services || [],
+    },
+  };
+
+}
+
+
+exports.getVendorUsers = async (vendor_id) => {
+  const [users] = await db.query(
+    `SELECT id, name, email, mobile, designation, created_at 
+     FROM vendor_users 
+     WHERE vendor_id = ?`,
+    [vendor_id]
+  );
+  return { total: users.length, users };
+};

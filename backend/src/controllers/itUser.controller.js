@@ -15,3 +15,23 @@ exports.signup = async (req, res) => {
     });
   }
 };
+
+
+exports.getItUserEmployeeProfile = async (req, res) => {
+  console.log(req,"req")
+  try {
+    const result = await itUserEmployeeService.getItUserEmployeeProfile(req.users.id);
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+};
+
+exports.editItUserEmployeeProfile = async (req, res) => {
+  try {
+    const result = await itUserEmployeeService.editItUserEmployeeProfile(req.users.id, req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+};
