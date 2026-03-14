@@ -129,3 +129,63 @@ exports.sendOtp = async (email) => {
 
   return { message: "OTP sent successfully" };
 };
+
+
+// GET /profile/:userId
+exports.getUserAdminProfile = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT 
+       u.id, u.company_name, u.registration_number, u.company_website,
+       u.gst_number, u.first_name, u.last_name, u.phone, u.email,
+       a.address, a.country, a.state, a.city, a.pincode
+     FROM it_user_admin_signup u
+     LEFT JOIN it_user_addresses a ON a.user_id = u.id
+     WHERE u.id = ?`,
+    [userId]
+  );
+
+  if (!rows.length) throw { status: 404, message: "User not found" };
+
+  return { profile: rows[0] };
+};
+
+// PUT
+exports.editUserAdminProfile = async (userId, data) => {
+  const {
+    companyName, registrationNumber, companyWebsite,
+    gstNumber, firstName, lastName, phone,
+    address, country, state, city, pincode
+  } = data;
+
+  // Update user table (email & password excluded from edit)
+  await db.query(
+    `UPDATE it_user_admin_signup SET
+       company_name=?, registration_number=?, company_website=?,
+       gst_number=?, first_name=?, last_name=?, phone=?
+     WHERE id=?`,
+    [companyName, registrationNumber, companyWebsite,
+     gstNumber, firstName, lastName, phone, userId]
+  );
+
+  // Upsert address
+  await db.query(
+    `INSERT INTO it_user_addresses (user_id, address, country, state, city, pincode)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       address=VALUES(address), country=VALUES(country),
+       state=VALUES(state), city=VALUES(city), pincode=VALUES(pincode)`,
+    [userId, address, country, state, city, pincode]
+  );
+
+  return { message: "Profile updated successfully" };
+};
+
+exports.getAllItUsers = async (user_id) => {
+  const [users] = await db.query(
+    `SELECT id, name, email, mobile, designation, created_at 
+     FROM it_users_employee 
+     WHERE user_id = ?`,
+    [user_id]
+  );
+  return { total: users.length, users };
+};

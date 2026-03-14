@@ -2,11 +2,38 @@
 
 import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
-import { Mail, Phone, MapPin, User, MessageSquare } from "lucide-react";
+import { Mail, Phone, MapPin, Send, User, MessageSquare, ArrowRight } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Button, TextField, InputAdornment } from "@mui/material";
 import Swal from "sweetalert2";
-import { motion } from "framer-motion";
+import "./landingPage.css";
+
+const contactInfo = [
+  {
+    icon: Mail,
+    label: "Email Us",
+    value: "info@teckost.com",
+    href: "mailto:info@teckost.com",
+    cta: "Send an email",
+    color: "blue",
+  },
+  {
+    icon: Phone,
+    label: "Call Us",
+    value: "(044) 477-03399",
+    href: "tel:+04447703399",
+    cta: "Call now",
+    color: "green",
+  },
+  {
+    icon: MapPin,
+    label: "Visit Us",
+    value: "53, North Boag Road, Chennai 600017",
+    href: "https://maps.google.com",
+    cta: "Get directions",
+    color: "indigo",
+    target: "_blank",
+  },
+];
 
 export default function ContactSection() {
 
@@ -18,6 +45,7 @@ export default function ContactSection() {
   } = useForm();
 
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -28,29 +56,13 @@ export default function ContactSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Unable to send message.");
-      }
-
-      Swal.fire({
-        title: "Message Sent",
-        text: "We will get back to you within 24 hours.",
-        icon: "success",
-      });
-
+      if (!response.ok) throw new Error(result.message || "Unable to send message.");
+      Swal.fire({ title: "Message Sent", text: "We will get back to you within 24 hours.", icon: "success" });
       reset();
 
     } catch (error) {
-
-      Swal.fire({
-        icon: "error",
-        title: "Request Failed",
-        text: error.message || "Please try again later.",
-      });
-
+      Swal.fire({ icon: "error", title: "Request Failed", text: error.message || "Please try again later." });
     } finally {
       setLoading(false);
     }
@@ -58,184 +70,145 @@ export default function ContactSection() {
 
   return (
     <section id="ContactSection" className="lp-contact">
+      {/* Background decoration */}
+      <div className="lp-contact-bg-shape" />
+
       <div className="lp-contact-container">
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="lp-contact-head"
-        >
-          <h2>Get in Touch</h2>
-          <p>Have questions or want to discuss a project? Reach out to our team.</p>
-        </motion.div>
+        {/* Header */}
+        <div className="lp-contact-head">
+          <span className="lp-section-label">Contact Us</span>
+          <h2>Let's Start a Conversation</h2>
+          <p>Have questions or want to discuss a project? Our team is ready to help.</p>
+        </div>
 
+        <div className="lp-contact-body">
 
-        <div className="lp-contact-grid">
+          {/* LEFT — info panel */}
+          <div className="lp-contact-info-panel">
 
-          {/* Contact Cards */}
+            <div className="lp-cip-header">
+              <h3>Get in Touch</h3>
+              <p>Reach us through any of these channels and we'll respond within 24 hours.</p>
+            </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="lp-contact-cards"
-          >
+            <div className="lp-cip-items">
+              {contactInfo.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target={item.target || "_self"}
+                    rel="noopener noreferrer"
+                    className={`lp-cip-item lp-cip-item--${item.color}`}
+                  >
+                    <span className="lp-cip-icon">
+                      <Icon size={19} />
+                    </span>
+                    <div className="lp-cip-text">
+                      <span className="lp-cip-label">{item.label}</span>
+                      <span className="lp-cip-value">{item.value}</span>
+                      <span className="lp-cip-cta">{item.cta} <ArrowRight size={12} /></span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
 
-            <article className="lp-contact-card">
-              <span className="lp-contact-icon blue">
-                <Mail size={22}/>
-              </span>
+            {/* Decorative tag strip */}
+            <div className="lp-cip-footer">
+              <span>⚡ Quick response</span>
+              <span>🛡 Confidential</span>
+              <span>🌐 Remote support</span>
+            </div>
 
-              <div>
-                <h3>Email Us</h3>
-                <p>info@teckost.com</p>
-                <a href="mailto:info@teckost.com">Send us an email</a>
-              </div>
-            </article>
+          </div>
 
+          {/* RIGHT — form panel */}
+          <div className="lp-contact-form-panel">
 
-            <article className="lp-contact-card">
-              <span className="lp-contact-icon green">
-                <Phone size={22}/>
-              </span>
+            <div className="lp-cfp-header">
+              <h3>Send us a Message</h3>
+              <p>Fill in the details and we'll get back to you shortly.</p>
+            </div>
 
-              <div>
-                <h3>Call Us</h3>
-                <p>(044) 477-03399</p>
-                <a href="tel:+04447703399">Call now</a>
-              </div>
-            </article>
-
-
-            <article className="lp-contact-card">
-              <span className="lp-contact-icon indigo">
-                <MapPin size={22}/>
-              </span>
-
-              <div>
-                <h3>Visit Us</h3>
-
-                <p>
-                  53, North Boag Road, Fourth Floor, Mandira Block B,<br/>
-                  Behind Residency Towers,<br/>
-                  Chennai, Tamil Nadu 600017
-                </p>
-
-                <a href="https://maps.google.com" target="_blank">
-                  Get directions
-                </a>
-              </div>
-
-            </article>
-
-          </motion.div>
-
-
-          {/* Contact Form */}
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="lp-contact-form-wrap"
-          >
-
-            <h3>Send us a message</h3>
-            <p>Fill out the form below and we'll get back to you soon.</p>
-
-
-            <form onSubmit={handleSubmit(onSubmit)} className="lp-contact-form">
+            <form onSubmit={handleSubmit(onSubmit)} className="lp-cfp-form">
 
               {/* Name */}
-
-              <TextField
-                label="Your Name"
-                fullWidth
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                {...register("name",{ required:"Name is required"})}
-
-                InputProps={{
-                  startAdornment:(
-                    <InputAdornment position="start">
-                      <User size={18}/>
-                    </InputAdornment>
-                  )
-                }}
-              />
-
+              <div className={`lp-cfp-field ${focusedField === "name" ? "focused" : ""} ${errors.name ? "error" : ""}`}>
+                <label htmlFor="cf-name">
+                  <User size={14} />
+                  Your Name
+                </label>
+                <input
+                  id="cf-name"
+                  type="text"
+                  placeholder="John Doe"
+                  onFocus={() => setFocusedField("name")}
+                  onBlur={() => setFocusedField(null)}
+                  {...register("name", { required: "Name is required" })}
+                />
+                {errors.name && <span className="lp-cfp-err">{errors.name.message}</span>}
+              </div>
 
               {/* Email */}
-
-              <TextField
-                label="Email Address"
-                type="email"
-                fullWidth
-                error={!!errors.email}
-                helperText={errors.email?.message}
-
-                {...register("email",{
-                  required:"Email is required",
-                  pattern:{
-                    value:/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message:"Invalid email address"
-                  }
-                })}
-
-                InputProps={{
-                  startAdornment:(
-                    <InputAdornment position="start">
-                      <Mail size={18}/>
-                    </InputAdornment>
-                  )
-                }}
-              />
-
+              <div className={`lp-cfp-field ${focusedField === "email" ? "focused" : ""} ${errors.email ? "error" : ""}`}>
+                <label htmlFor="cf-email">
+                  <Mail size={14} />
+                  Email Address
+                </label>
+                <input
+                  id="cf-email"
+                  type="email"
+                  placeholder="you@company.com"
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField(null)}
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Invalid email address" },
+                  })}
+                />
+                {errors.email && <span className="lp-cfp-err">{errors.email.message}</span>}
+              </div>
 
               {/* Message */}
+              <div className={`lp-cfp-field lp-cfp-field--textarea ${focusedField === "comment" ? "focused" : ""} ${errors.comment ? "error" : ""}`}>
+                <label htmlFor="cf-comment">
+                  <MessageSquare size={14} />
+                  Your Message
+                </label>
+                <textarea
+                  id="cf-comment"
+                  rows={5}
+                  placeholder="Describe your issue or question..."
+                  onFocus={() => setFocusedField("comment")}
+                  onBlur={() => setFocusedField(null)}
+                  {...register("comment", {
+                    required: "Message is required",
+                    minLength: { value: 10, message: "Message must be at least 10 characters" },
+                  })}
+                />
+                {errors.comment && <span className="lp-cfp-err">{errors.comment.message}</span>}
+              </div>
 
-              <TextField
-                label="Your Message"
-                multiline
-                rows={5}
-                fullWidth
-                error={!!errors.comment}
-                helperText={errors.comment?.message}
-
-                {...register("comment",{
-                  required:"Message is required",
-                  minLength:{
-                    value:10,
-                    message:"Message must be at least 10 characters"
-                  }
-                })}
-
-                InputProps={{
-                  startAdornment:(
-                    <InputAdornment position="start">
-                      <MessageSquare size={18}/>
-                    </InputAdornment>
-                  )
-                }}
-              />
-
-
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={loading}
-                className="lp-submit-btn"
-              >
-                {loading ? "Sending..." : "Send Message"}
-              </Button>
+              <button type="submit" className="lp-cfp-submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="lp-cfp-spinner" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Send Message
+                  </>
+                )}
+              </button>
 
             </form>
 
-          </motion.div>
+          </div>
 
         </div>
 
