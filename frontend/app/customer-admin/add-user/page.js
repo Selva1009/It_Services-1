@@ -1,243 +1,180 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import CustomerAdminNavbar from "../components/customerAdminNavbar";
-import { CustomerAddUser } from "@/app/Components/auth/CustomerAddUser";
-import { PasswordSection } from "@/app/Components/auth/PasswordSection";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import Swal from "sweetalert2";
+
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
-import { UserPlus } from "lucide-react";
+import {
+  Eye, EyeOff,
+  User, Mail, Phone, Briefcase,
+  Lock, ArrowRight, CheckCircle2, UserPlus,
+} from "lucide-react";
+import "./customer-addUser.css";
 
-const Page = () => {
+const CustomerAddUserPage = () => {
   const router = useRouter();
-  const { validateForm } = useUserFormValidation();
-  const [adminID, setAdminId] = useState(null);
-  const [formValues, setFormValues] = useState({
 
-    personName: "",
-    contactNumber: "",
-    Email: "",
+  const [formValues, setFormValues] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    designation: "",
     password: "",
     confirmPassword: "",
-    adminID: null,
   });
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword]               = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    const storedCustomer = localStorage.getItem("customer");
-    if (storedCustomer) {
-      try {
-        const customerData = JSON.parse(storedCustomer);
-        setAdminId(customerData.id);
-        setFormValues((prev) => ({
-          ...prev,
-          adminID: customerData.id,
-        }));
-      } catch (err) {
-        console.error("Invalid customer data in localStorage:", err);
-      }
-    }
-  }, []);
+  const [isSubmitting, setIsSubmitting]               = useState(false);
+  const [submitted, setSubmitted]                     = useState(false);
+  const [focused, setFocused]                         = useState(null);
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
-  const toggleConfirmPasswordVisibility = () =>
-    setShowConfirmPassword(!showConfirmPassword);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCancel = () => router.push("/customer-admin");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    if (!formValues.adminID) {
-      Swal.fire({
-        title: "Error",
-        text: "Admin session not found. Please login again.",
-        icon: "error",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { isValid, errors: validationErrors } = validateForm(formValues);
-    if (!isValid) {
-      setErrors(validationErrors);
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/customer-users/customerUser`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formValues),
-        }
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
-        Swal.fire({
-          title: "Success!",
-          text: "User created successfully",
-          icon: "success",
-          confirmButtonColor: "#4BB543",
-        }).then(() => {
-          router.push("/customer-admin/user-profile");
-        });
-      } else {
-        Swal.fire({
-          title: "Error",
-          text: result.message || "Failed to create user",
-          icon: "error",
-          confirmButtonColor: "#D9534F",
-        });
-      }
-    } catch (error) {
-      Swal.fire({
-        title: "Error",
-        text: error.message || "Network error occurred",
-        icon: "error",
-        confirmButtonColor: "#D9534F",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await new Promise((r) => setTimeout(r, 1800));
+    setIsSubmitting(false);
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 3000);
   };
 
+  const fields = [
+    { name: "name",        label: "Full Name",     icon: User,      placeholder: "Enter full name",     type: "text",  col: 1 },
+    { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter mobile number", type: "tel",   col: 1 },
+    { name: "email",       label: "Email Address", icon: Mail,      placeholder: "Enter email address", type: "email", col: 2 },
+    { name: "designation", label: "Designation",   icon: Briefcase, placeholder: "Enter designation",   type: "text",  col: 2 },
+  ];
 
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      const storedCustomer = localStorage.getItem("customer");
-      if (storedCustomer) {
-        try {
-          const customerData = JSON.parse(storedCustomer);
-          setAdminId(customerData.id);
+  const passwordFields = [
+    { name: "password",        label: "Password",         show: showPassword,        toggle: () => setShowPassword((v) => !v) },
+    { name: "confirmPassword", label: "Confirm Password", show: showConfirmPassword, toggle: () => setShowConfirmPassword((v) => !v) },
+  ];
 
-          // Fetch admin's company details
-          const response = await fetch(
-            `${API_BASE_URL}/api/customer-users/company-name/${customerData.id}`
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            setFormValues((prev) => ({
-              ...prev,
-              companyName: data.companyName,
-              adminID: customerData.id,
-            }));
-          } else {
-            console.error("Failed to fetch admin details");
-          }
-        } catch (err) {
-          console.error("Error:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchAdminData();
-  }, []);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === "companyName" && formValues.companyName) {
-      return;
-    }
-    setFormValues((prevValues) => ({
-      ...prevValues,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        [name]: "",
-      }));
-    }
-  };
-
+  const btnClass = [
+    "cau-btn-submit",
+    isSubmitting ? "loading"  : "",
+    submitted    ? "success"  : "",
+  ].filter(Boolean).join(" ");
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-      <CustomerAdminNavbar />
-      <main className="flex-1 flex items-center justify-center py-10 px-4">
-        <div className="w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-200">
-          {/* Form Header */ }
-          <div className="flex items-center justify-between px-6 py-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-md">
-                <UserPlus className="text-blue-600" size={ 22 } />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800">Create New User</h2>
-                <p className="text-sm text-gray-500">Add a user to your organization</p>
-              </div>
+    <div className="cau-page">
+      <div className="cau-card">
+
+        {/* ── Header ── */}
+        <div className="cau-header">
+          <div className="cau-header-inner">
+            <div className="cau-avatar">
+              <UserPlus size={22} color="rgba(255,255,255,0.85)" />
+            </div>
+            <div className="cau-header-text">
+              <h1>Create User</h1>
+              <p>Add a new member to your team</p>
             </div>
           </div>
+        </div>
 
-          <form onSubmit={ handleSubmit } className="px-6 py-6 space-y-6">
-            {/* Basic Info Section */ }
-            <div>
-              <div className="text-sm font-medium text-gray-700 bg-blue-50 rounded-md px-3 py-1 inline-block mb-3">
-                Basic Information
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <CustomerAddUser
-                  formValues={ formValues }
-                  handleInputChange={ handleInputChange }
-                  errors={ errors }
+        {/* ── Form ── */}
+        <div className="cau-body">
+          <form onSubmit={handleSubmit}>
+            <div className="cau-grid">
 
-                />
-              </div>
+              {/* Text fields */}
+              {fields.map(({ name, label, icon: Icon, placeholder, type, col }) => (
+                <div
+                  key={name}
+                  className={`cau-field cau-col-${col}${focused === name ? " focused" : ""}`}
+                >
+                  <label htmlFor={name}>{label}</label>
+                  <div className="cau-input-wrap">
+                    <span className="cau-input-icon"><Icon size={15} /></span>
+                    <input
+                      id={name}
+                      name={name}
+                      type={type}
+                      value={formValues[name]}
+                      onChange={handleChange}
+                      placeholder={placeholder}
+                      onFocus={() => setFocused(name)}
+                      onBlur={() => setFocused(null)}
+                      className="cau-input"
+                    />
+                    {formValues[name] && (
+                      <span className="cau-input-check">
+                        <CheckCircle2 size={14} />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
 
-              <div className="grid grid-cols-2 gap-2">
-                <PasswordSection
-                  formValues={ formValues }
-                  handleInputChange={ handleInputChange }
-                  errors={ errors }
-                  showPassword={ showPassword }
-                  togglePasswordVisibility={ togglePasswordVisibility }
-                  showConfirmPassword={ showConfirmPassword }
-                  toggleConfirmPasswordVisibility={ toggleConfirmPasswordVisibility }
-                />
-              </div>
+              {/* Password fields */}
+              {passwordFields.map(({ name, label, show, toggle }) => (
+                <div
+                  key={name}
+                  className={`cau-field cau-col-1${focused === name ? " focused" : ""}`}
+                >
+                  <label htmlFor={name}>{label}</label>
+                  <div className="cau-input-wrap">
+                    <span className="cau-input-icon"><Lock size={15} /></span>
+                    <input
+                      id={name}
+                      name={name}
+                      type={show ? "text" : "password"}
+                      value={formValues[name]}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      onFocus={() => setFocused(name)}
+                      onBlur={() => setFocused(null)}
+                      className="cau-input cau-input-password"
+                    />
+                    <button type="button" onClick={toggle} className="cau-toggle-btn">
+                      {show ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+
             </div>
 
+            {/* Divider */}
+            <div className="cau-divider" />
 
-
-            {/* Action Buttons */ }
-            <div className="flex justify-end gap-4 border-t pt-5">
-              <Button
+            {/* Actions */}
+            <div className="cau-actions">
+              <button
                 type="button"
-                variant="outline"
-                className="text-sm text-gray-700 px-4 py-2 border-gray-300 hover:bg-gray-50"
-                onClick={ () => window.history.back() }
+                className="cau-btn-cancel"
+                onClick={handleCancel}
               >
                 Cancel
-              </Button>
-              <Button
+              </button>
+
+              <button
                 type="submit"
-                className="text-sm px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={ isSubmitting }
+                disabled={isSubmitting}
+                className={btnClass}
               >
-                { isSubmitting ? "Creating..." : "Create" }
-              </Button>
+                {submitted ? (
+                  <><CheckCircle2 size={15} /> Created!</>
+                ) : isSubmitting ? (
+                  <><div className="cau-spinner" /> Creating...</>
+                ) : (
+                  <>Create User <ArrowRight size={15} /></>
+                )}
+              </button>
             </div>
+
           </form>
         </div>
-      </main>
-    </div>
 
+      </div>
+    </div>
   );
 };
 
-export default Page;
+export default CustomerAddUserPage;

@@ -51,10 +51,10 @@ const features = [
 export default function Home() {
   return (
     <div className="lp-root">
-
+      
       {/* ── HERO ── */}
       <section className="lp-hero">
-
+        
         {/* Decorative blobs */}
         <div className="lp-hero-blob lp-hero-blob--1" />
         <div className="lp-hero-blob lp-hero-blob--2" />
@@ -62,7 +62,7 @@ export default function Home() {
 
         <div className="lp-hero-content">
 
-          {/* Left column — text */}
+          {/* Left column */}
           <div className="lp-hero-left">
             <div className="lp-hero-badge">
               <span className="lp-hero-badge-dot" />
@@ -70,8 +70,10 @@ export default function Home() {
             </div>
 
             <h1>
-              Smart IT Support<br />
-              for <span>Modern</span><br />
+              Smart IT Support
+              <br />
+              for <span>Modern</span>
+              <br />
               <span>Workplaces</span>
             </h1>
 
@@ -85,6 +87,7 @@ export default function Home() {
               <a href="#ContactSection" className="lp-hero-btn-primary">
                 Raise a Support Ticket
               </a>
+
               <a href="#plans" className="lp-hero-btn-ghost">
                 View Support Plans
               </a>
@@ -98,14 +101,17 @@ export default function Home() {
             </ul>
           </div>
 
-          {/* Right column — stat card panel */}
+          {/* Right column */}
           <div className="lp-hero-right">
             <div className="lp-hero-card">
+              
               <div className="lp-hero-card-header">
                 <span className="lp-hero-card-dot green" />
                 <span className="lp-hero-card-dot yellow" />
                 <span className="lp-hero-card-dot red" />
-                <span className="lp-hero-card-title">Live Support Dashboard</span>
+                <span className="lp-hero-card-title">
+                  Live Support Dashboard
+                </span>
               </div>
 
               <div className="lp-hero-stats-grid">
@@ -113,14 +119,17 @@ export default function Home() {
                   <strong>99.8%</strong>
                   <span>Uptime SLA</span>
                 </div>
+
                 <div className="lp-hero-stat-box accent">
                   <strong>&lt; 2hr</strong>
                   <span>Avg Resolution</span>
                 </div>
+
                 <div className="lp-hero-stat-box">
                   <strong>500+</strong>
                   <span>Businesses</span>
                 </div>
+
                 <div className="lp-hero-stat-box teal">
                   <strong>L1–L3</strong>
                   <span>Escalation Tiers</span>
@@ -129,55 +138,84 @@ export default function Home() {
 
               <div className="lp-hero-ticket-list">
                 {[
-                  { id: "#4821", label: "VPN connectivity issue", status: "Resolved", color: "green" },
-                  { id: "#4822", label: "Laptop screen flickering", status: "In Progress", color: "yellow" },
-                  { id: "#4823", label: "Malware detected on endpoint", status: "Escalated", color: "red" },
+                  {
+                    id: "#4821",
+                    label: "VPN connectivity issue",
+                    status: "Resolved",
+                    color: "green",
+                  },
+                  {
+                    id: "#4822",
+                    label: "Laptop screen flickering",
+                    status: "In Progress",
+                    color: "yellow",
+                  },
+                  {
+                    id: "#4823",
+                    label: "Malware detected on endpoint",
+                    status: "Escalated",
+                    color: "red",
+                  },
                 ].map((t) => (
                   <div key={t.id} className="lp-hero-ticket">
                     <span className={`lp-ticket-dot ${t.color}`} />
                     <span className="lp-ticket-id">{t.id}</span>
                     <span className="lp-ticket-label">{t.label}</span>
-                    <span className={`lp-ticket-status ${t.color}`}>{t.status}</span>
+                    <span className={`lp-ticket-status ${t.color}`}>
+                      {t.status}
+                    </span>
                   </div>
                 ))}
               </div>
+
             </div>
           </div>
-
         </div>
       </section>
 
       {/* ── FEATURES ── */}
       <section className="lp-features" id="features">
+
         <div className="lp-features-head">
           <span className="lp-section-label">What We Offer</span>
+
           <h2>One Platform for All IT Support Needs</h2>
+
           <p>
             MPACE provides a centralized platform where businesses can raise
-            support requests, track issues, and resolve technical problems quickly.
+            support requests, track issues, and resolve technical problems
+            quickly.
           </p>
         </div>
-      </section>
 
         <div className="lp-features-grid">
           {features.map((f, idx) => {
             const Icon = f.icon;
             const num = String(idx + 1).padStart(2, "0");
+
             return (
-              <div key={f.title} className="lp-feature-card" style={{ "--card-index": idx }}>
+              <div
+                key={f.title}
+                className="lp-feature-card"
+                style={{ "--card-index": idx }}
+              >
                 <div className="lp-fc-top">
                   <span className="lp-fc-num">{num}</span>
+
                   <div className="lp-fc-icon">
                     <Icon size={20} />
                   </div>
                 </div>
+
                 <h3>{f.title}</h3>
                 <p>{f.description}</p>
-                <div className="lp-fc-line" />
+
+                <div className="lp-fc-line"></div>
               </div>
             );
           })}
         </div>
+
       </section>
 
     </div>
