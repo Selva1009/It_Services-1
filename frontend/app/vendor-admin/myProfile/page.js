@@ -9,15 +9,15 @@ import "./profile.css";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
 const COMPANY_FIELDS = [
-  { label: "Company Name",    key: "companyName",    editable: false },
-  { label: "Contact Person",  key: "contactPerson",  editable: true  },
-  { label: "PAN Number",      key: "pan",            editable: false },
-  { label: "GST Number",      key: "gst",            editable: true  },
+  { label: "Company Name", key: "companyName", editable: false },
+  { label: "Contact Person", key: "contactPerson", editable: true },
+  { label: "PAN Number", key: "pan", editable: false },
+  { label: "GST Number", key: "gst", editable: true },
 ];
 
 const CONTACT_FIELDS = [
-  { label: "Email",           key: "email",          editable: false, type: "email"  },
-  { label: "Mobile",          key: "mobile",         editable: true,  type: "tel"    },
+  { label: "Email", key: "email", editable: false, type: "email" },
+  { label: "Mobile", key: "mobile", editable: true, type: "tel" },
 ];
 
 const ADDRESS_KEYS = ["address", "country", "state", "city", "pincode"];
@@ -76,10 +76,10 @@ function ServiceChip({ name, level }) {
 export default function VendorProfilePage() {
   const router = useRouter();
 
-  const [profile, setProfile]     = useState(null);
-  const [formData, setFormData]   = useState({});
+  const [profile, setProfile] = useState(null);
+  const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving]   = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   /* ── Fetch profile from API ── */
@@ -95,6 +95,11 @@ export default function VendorProfilePage() {
         cache: "no-store",
         headers: { Authorization: `Bearer ${token}` },
       });
+      // ADD THESE TWO LINES to see the exact problem
+      console.log("Status:", res.status);
+      console.log("URL hit:", `${API_BASE_URL}/api/vendor-admin/myprofile`);
+
+
 
       if (!res.ok) {
         if (res.status === 401) { router.push("/SignIn"); return; }
@@ -124,17 +129,17 @@ export default function VendorProfilePage() {
   /* ── Flatten nested address for form ── */
   function flattenProfile(data) {
     return {
-      companyName:   data.companyName   || "",
+      companyName: data.companyName || "",
       contactPerson: data.contactPerson || "",
-      email:         data.email         || "",
-      mobile:        data.mobile        || "",
-      pan:           data.pan           || "",
-      gst:           data.gst           || "",
-      address:       data.address?.address || "",
-      country:       data.address?.country || "",
-      state:         data.address?.state   || "",
-      city:          data.address?.city    || "",
-      pincode:       data.address?.pincode || "",
+      email: data.email || "",
+      mobile: data.mobile || "",
+      pan: data.pan || "",
+      gst: data.gst || "",
+      address: data.address?.address || "",
+      country: data.address?.country || "",
+      state: data.address?.state || "",
+      city: data.address?.city || "",
+      pincode: data.address?.pincode || "",
     };
   }
 
@@ -235,7 +240,7 @@ export default function VendorProfilePage() {
 
             <div className="vp-header-info">
               <h1 className="vp-header-name">
-                {profile.contactPerson || profile.companyName} 
+                {profile.contactPerson || profile.companyName}
               </h1>
               <p className="vp-header-role">{profile.email}</p>
               <span className="vp-header-badge">

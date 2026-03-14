@@ -1,6 +1,6 @@
 /* ============================================
-   CUSTOMER ADD USER PAGE - EXTERNAL CSS
-   Matches customerAdminProfile.css style
+   VENDOR ADD USER PAGE - EXTERNAL CSS
+   Matches customerAdminProfile.css blue gradient style
    ============================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
@@ -10,6 +10,7 @@
   --primary-dark:  #1241a8;
   --primary-light: #ebf1fd;
   --success:       #10b981;
+  --danger:        #ef4444;
 
   --bg-page:    #f0f4fa;
   --bg-card:    #ffffff;
@@ -26,6 +27,7 @@
   --shadow-lg:    0 8px 32px rgba(26, 86, 219, 0.12);
 
   --radius-sm:   8px;
+  --radius-md:   12px;
   --radius-lg:   20px;
   --radius-full: 9999px;
 
@@ -35,43 +37,44 @@
 }
 
 /* ── Page ── */
-.cau-page {
+.vau-page {
   min-height: 100vh;
   background-color: var(--bg-page);
   font-family: var(--font-body);
   color: var(--text-primary);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 16px 64px;
 }
 
 /* ── Card ── */
-.cau-card {
+.vau-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   border: 1px solid var(--border);
   width: 100%;
-  max-width: 620px;
-  animation: cardFadeIn 0.4s ease;
+  max-width: 640px;
+  animation: vauFadeIn 0.4s ease;
 }
 
-@keyframes cardFadeIn {
+@keyframes vauFadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Card Header ── */
-.cau-header {
+.vau-header {
   background: var(--bg-header);
   padding: 32px 32px 26px;
   position: relative;
   overflow: hidden;
 }
 
-.cau-header::before {
+.vau-header::before {
   content: '';
   position: absolute;
   top: -40px;
@@ -82,7 +85,7 @@
   border-radius: 50%;
 }
 
-.cau-header::after {
+.vau-header::after {
   content: '';
   position: absolute;
   bottom: -60px;
@@ -94,7 +97,7 @@
 }
 
 /* ── Header Inner ── */
-.cau-header-inner {
+.vau-header-inner {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -102,8 +105,8 @@
   z-index: 1;
 }
 
-/* ── Avatar ── */
-.cau-avatar {
+/* ── Avatar Icon ── */
+.vau-avatar {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -117,7 +120,7 @@
 }
 
 /* ── Header Text ── */
-.cau-header-text h1 {
+.vau-header-text h1 {
   font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 700;
@@ -126,7 +129,7 @@
   letter-spacing: -0.3px;
 }
 
-.cau-header-text p {
+.vau-header-text p {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.75);
   margin: 0;
@@ -134,28 +137,56 @@
 }
 
 /* ── Card Body ── */
-.cau-body {
+.vau-body {
   padding: 32px;
 }
 
-/* ── Grid ── */
-.cau-grid {
+/* ── Section Label ── */
+.vau-section-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary-light);
+}
+
+/* ── Form Grid ── */
+.vau-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px 24px;
+  margin-bottom: 20px;
 }
 
-.cau-col-1 { grid-column: span 1; }
-.cau-col-2 { grid-column: span 2; }
-
 /* ── Field ── */
-.cau-field {
+.vau-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.cau-field label {
+.vau-field.full-width {
+  grid-column: span 2;
+}
+
+.vau-col-1 { grid-column: span 1; }
+.vau-col-2 { grid-column: span 2; }
+
+/* ── Check icon (field filled) ── */
+.vau-input-check {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  color: var(--success);
+  pointer-events: none;
+}
+
+.vau-field label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -163,14 +194,14 @@
 }
 
 /* ── Input Wrapper ── */
-.cau-input-wrap {
+.vau-input-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
 
 /* ── Input Icon ── */
-.cau-input-icon {
+.vau-input-icon {
   position: absolute;
   left: 12px;
   display: flex;
@@ -180,12 +211,12 @@
   transition: color var(--transition);
 }
 
-.cau-field.focused .cau-input-icon {
+.vau-field.focused .vau-input-icon {
   color: var(--primary);
 }
 
 /* ── Input ── */
-.cau-input {
+.vau-input {
   width: 100%;
   padding: 10px 12px 10px 36px;
   font-family: var(--font-body);
@@ -198,28 +229,48 @@
   transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
-.cau-input::placeholder {
+.vau-input::placeholder {
   color: var(--text-muted);
   font-size: 13px;
 }
 
-.cau-input:hover {
+.vau-input:hover {
   background: #f1f5f9;
 }
 
-.cau-input:focus {
+.vau-input:focus {
   border-color: var(--border-focus);
   background: #fff;
   box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.10);
 }
 
+.vau-input:disabled {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* ── Input error state ── */
+.vau-input.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.10);
+}
+
+/* ── Error message ── */
+.vau-error-msg {
+  font-size: 11px;
+  color: var(--danger);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
 /* ── Password input ── */
-.cau-input-password {
+.vau-input-password {
   padding-right: 40px;
 }
 
 /* ── Toggle password button ── */
-.cau-toggle-btn {
+.vau-toggle-btn {
   position: absolute;
   right: 10px;
   background: none;
@@ -232,36 +283,38 @@
   transition: color var(--transition);
 }
 
-.cau-toggle-btn:hover {
+.vau-toggle-btn:hover {
   color: var(--text-primary);
 }
 
-/* ── Check icon (field filled) ── */
-.cau-input-check {
-  position: absolute;
-  right: 10px;
-  display: flex;
-  align-items: center;
-  color: var(--success);
-  pointer-events: none;
+/* ── Kill browser autofill background ── */
+.vau-input:-webkit-autofill,
+.vau-input:-webkit-autofill:hover,
+.vau-input:-webkit-autofill:focus,
+.vau-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 /* ── Divider ── */
-.cau-divider {
+.vau-divider {
   height: 1px;
   background: var(--border);
   margin: 28px 0;
 }
 
 /* ── Actions ── */
-.cau-actions {
+.vau-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 28px;
 }
 
 /* ── Cancel Button ── */
-.cau-btn-cancel {
+.vau-btn-cancel {
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
@@ -274,14 +327,14 @@
   transition: all var(--transition);
 }
 
-.cau-btn-cancel:hover {
+.vau-btn-cancel:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
   color: var(--text-primary);
 }
 
 /* ── Submit Button ── */
-.cau-btn-submit {
+.vau-btn-submit {
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
@@ -296,79 +349,67 @@
   gap: 8px;
   box-shadow: 0 2px 8px rgba(26, 86, 219, 0.25);
   transition: all var(--transition);
-  min-width: 140px;
+  min-width: 148px;
   justify-content: center;
 }
 
-.cau-btn-submit:hover:not(:disabled) {
+.vau-btn-submit:hover:not(:disabled) {
   background: var(--primary-dark);
   box-shadow: 0 4px 16px rgba(26, 86, 219, 0.35);
   transform: translateY(-1px);
 }
 
-.cau-btn-submit:disabled {
-  opacity: 0.75;
+.vau-btn-submit:disabled {
+  opacity: 0.72;
   cursor: not-allowed;
   transform: none;
 }
 
-.cau-btn-submit.success {
+.vau-btn-submit.success {
   background: var(--success);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.30);
 }
 
 /* ── Spinner ── */
-.cau-spinner {
+.vau-spinner {
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: vauSpin 0.7s linear infinite;
   flex-shrink: 0;
 }
 
-@keyframes spin {
+@keyframes vauSpin {
   to { transform: rotate(360deg); }
 }
 
 /* ── Responsive ── */
-@media (max-width: 540px) {
-  .cau-header {
+@media (max-width: 560px) {
+  .vau-header {
     padding: 24px 20px;
   }
 
-  .cau-body {
+  .vau-body {
     padding: 20px 16px;
   }
 
-  .cau-grid {
+  .vau-grid {
     grid-template-columns: 1fr;
   }
 
-  .cau-col-1,
-  .cau-col-2 {
+  .vau-field.full-width {
     grid-column: span 1;
   }
 
-  .cau-actions {
+  .vau-actions {
     flex-direction: column-reverse;
   }
 
-  .cau-btn-cancel,
-  .cau-btn-submit {
+  .vau-btn-cancel,
+  .vau-btn-submit {
     width: 100%;
     justify-content: center;
   }
-} 
-
-/* ── Kill browser autofill background ── */
-.cau-input:-webkit-autofill,
-.cau-input:-webkit-autofill:hover,
-.cau-input:-webkit-autofill:focus,
-.cau-input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
-  -webkit-text-fill-color: var(--text-primary) !important;
-  caret-color: var(--text-primary);
-  transition: background-color 9999s ease-in-out 0s;
 }
