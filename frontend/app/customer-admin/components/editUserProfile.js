@@ -22,8 +22,10 @@ import {
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UserCog, Loader2 } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 export const EditUserForm = ({ user, onClose, onUpdate }) => {
+  const { getAuthToken: getAuthTokenFromContext } = useAuth();
   const [formData, setFormData] = useState({
     companyName: "",
     personName: "",
@@ -80,7 +82,7 @@ export const EditUserForm = ({ user, onClose, onUpdate }) => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${getAuthTokenFromContext() || sessionStorage.getItem("token")}`,
           },
           body: JSON.stringify({
             companyName,

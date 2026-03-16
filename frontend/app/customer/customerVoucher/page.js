@@ -10,27 +10,30 @@ import {
   Gift,
   CalendarCheck2,
 } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const CustomerUserVouchers = () => {
+  const { auth, getCustomerUserId } = useAuth();
   const [customerId, setCustomerId] = useState(null);
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedCustomerUserId = localStorage.getItem("customerUserId");
+    const storedCustomerUserId = getCustomerUserId() || sessionStorage.getItem("customerUserId");
     if (storedCustomerUserId) {
       setCustomerId(storedCustomerUserId.toString());
+      return;
+    }
+
+    const customerData = auth.customerUser || (() => {
+      const storedCustomerUser = sessionStorage.getItem("customerUser");
+      return storedCustomerUser ? JSON.parse(storedCustomerUser) : null;
+    })();
+    if (customerData?.id) {
+      setCustomerId(customerData.id.toString());
     } else {
-      const storedCustomerUser = localStorage.getItem("customerUser");
-      if (storedCustomerUser) {
-        const customerData = JSON.parse(storedCustomerUser);
-        if (customerData?.id) {
-          setCustomerId(customerData.id.toString());
-        }
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
 

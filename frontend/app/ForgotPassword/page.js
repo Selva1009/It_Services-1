@@ -56,7 +56,7 @@ export default function ForgotPassword() {
       if (result.success) {
         setOtpSent(true);
         setOtpMessage("OTP sent successfully!");
-        localStorage.setItem("userEmail", data.email);
+        sessionStorage.setItem("userEmail", data.email);
         router.push("./ForgotPassOtp");
       } else {
         setOtpMessage(result.message || "Failed to send OTP");

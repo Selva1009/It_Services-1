@@ -2,22 +2,14 @@
 import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Swal from "sweetalert2";
-import {
-  UserPlus, User, Phone, Mail, Briefcase,
-  Lock, Eye, EyeOff, ArrowRight, CheckCircle2,
-} from "lucide-react";
-import "./vendor-addUser.css";
-
-/* ── Validation helpers ── */
-const validateMobile   = (mobile)   => /^[6-9]\d{9}$/.test(mobile);
-const validateEmail    = (email)    => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const validatePassword = (password) =>
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
+import { UserPlus } from "lucide-react";
+import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const Page = () => {
   const router = useRouter();
-
+  const { validateForm } = useUserFormValidation();
+  const { auth, getUserToken } = useAuth();
   const [formValues, setFormValues] = useState({
     name:            "",
     mobile:          "",
@@ -38,7 +30,7 @@ const Page = () => {
 
   /* ── Load vendor from localStorage ── */
   useEffect(() => {
-    const storedVendor = localStorage.getItem("vendor");
+    const storedVendor = sessionStorage.getItem("vendor");
     if (storedVendor) {
       try {
         const vendorData = JSON.parse(storedVendor);
@@ -47,6 +39,10 @@ const Page = () => {
       } catch (err) {
         console.error("Invalid vendor data:", err);
       }
+    }
+
+    if (auth.vendor?.id) {
+      setVendorId(auth.vendor.id);
     }
   }, []);
 
@@ -163,7 +159,7 @@ const Page = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("vendorToken")}`,
+          "Authorization": `Bearer ${getUserToken() || sessionStorage.getItem("vendorToken")}`
         },
         body: JSON.stringify(payload),
       });

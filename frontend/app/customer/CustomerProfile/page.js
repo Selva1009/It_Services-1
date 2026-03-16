@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/config";
 import Swal from "sweetalert2";
 import "./itUserProfile.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 /* ─── Field Config ───────────────────────────────────────── */
 const PROFILE_FIELDS = [
@@ -18,7 +19,7 @@ const PROFILE_FIELDS = [
 /* ─── Helpers ────────────────────────────────────────────── */
 const getAuthToken = () =>
   typeof window !== "undefined"
-    ? localStorage.getItem("token") || sessionStorage.getItem("token")
+    ? sessionStorage.getItem("token")
     : null;
 
 const getInitials = (name) =>
@@ -61,6 +62,7 @@ function FormField({ label, fieldKey, value, onChange, editable = true, type = "
 /* ─── Main Component ─────────────────────────────────────── */
 export default function ITUserProfilePage() {
   const router = useRouter();
+  const { getAuthToken: getAuthTokenFromContext } = useAuth();
 
   const [profile, setProfile]     = useState(null);
   const [formData, setFormData]   = useState({});
@@ -70,7 +72,7 @@ export default function ITUserProfilePage() {
 
   /* ── Fetch profile ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthToken();
+    const token = getAuthTokenFromContext() || getAuthToken();
     if (!token) { router.push("/SignIn"); return; }
 
     try {
@@ -109,7 +111,7 @@ export default function ITUserProfilePage() {
     setIsSaving(true);
 
     try {
-      const token = getAuthToken();
+      const token = getAuthTokenFromContext() || getAuthToken();
       const res = await fetch(`${API_BASE_URL}/api/it-user-employee/profile`, {
         method: "PUT",
         headers: {

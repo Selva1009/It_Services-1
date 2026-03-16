@@ -7,9 +7,38 @@ import navbar from "./components/navbar";
 import Swal from "sweetalert2";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
-  Chart as ChartJS, ArcElement, Tooltip, Legend,
-  CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, Title, Filler,
+  CheckCircle,
+  XCircle,
+  Building2,
+  User,
+  ChevronRight,
+  Clock,
+  TrendingUp,
+  Edit,
+  Bell,
+  Package,
+  Plus,
+  Activity,
+  Users,
+  UserPlus,
+  UserX,
+  Sun,
+  Moon
+} from "lucide-react";
+import { Pie, Line, Bar, Doughnut } from "react-chartjs-2";
+import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Filler
 } from "chart.js";
 import {
   Users, Activity, UserX, UserPlus, Edit,
@@ -101,6 +130,15 @@ const makeDoughnutOptions = () => ({
 const VendorDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
+  const { getAuthToken: getAuthTokenFromContext } = useAuth();
+  const [vendors, setVendors] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [vendorID, setVendorID] = useState(null);
+  const [timeRange, setTimeRange] = useState("week");
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [stats, setStats] = useState({ week: 0, month: 0 });
+  const [darkMode, setDarkMode] = useState(false);
 
   const [vendors,           setVendors]           = useState([]);
   const [notifications,     setNotifications]     = useState([]);
@@ -124,7 +162,31 @@ const VendorDashboard = () => {
       : { start: subMonths(now, 1), end: now };
   };
 
-  const filterVendorsByTimeRange = (list) => {
+  // Fetch notifications data
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getAuthTokenFromContext() || sessionStorage.getItem("token") || sessionStorage.getItem("vendorToken") || ""}`
+        },
+        body: JSON.stringify({ vendorAdminID: vendorID, limit: NOTIFICATION_LIMIT }),
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch notifications");
+      const data = await response.json();
+
+      setNotifications(data.notifications);
+      console.log(data.notifications)
+
+
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  const filterVendorsByTimeRange = (vendors) => {
     const { start } = getTimeRangeDates();
     return list.filter((v) => v.createdAt && new Date(v.createdAt) >= start);
   };
@@ -247,8 +309,8 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => {
-    const raw = localStorage.getItem("vendor");
-    if (raw) {
+    const storedVendor = sessionStorage.getItem("vendor");
+    if (storedVendor) {
       try {
         const v = JSON.parse(raw);
         if (v?.id) { setVendorID(v.id); return; }
@@ -320,43 +382,26 @@ const VendorDashboard = () => {
           </div>
         </div>
 
-        {/* ── Stat Cards ── */}
-        <div className="vd-stats-grid">
-          <div className="vd-stat-card">
-            <div className="vd-stat-header">
-              <span className="vd-stat-label">Total Vendors</span>
-              <div className="vd-stat-icon green"><Users size={16} /></div>
-            </div>
-            <div className="vd-stat-value">{vendors.length}</div>
-            <div className="vd-stat-meta"><span className="vd-badge up">↑ 12%</span>&nbsp;vs last period</div>
-          </div>
-
-          <div className="vd-stat-card">
-            <div className="vd-stat-header">
-              <span className="vd-stat-label">Active Vendors</span>
-              <div className="vd-stat-icon blue"><Activity size={16} /></div>
-            </div>
-            <div className="vd-stat-value">{activeVendors}</div>
-            <div className="vd-stat-meta"><span className="vd-badge up">↑ 8%</span>&nbsp;vs last period</div>
-          </div>
-
-          <div className="vd-stat-card">
-            <div className="vd-stat-header">
-              <span className="vd-stat-label">Inactive Vendors</span>
-              <div className="vd-stat-icon red"><UserX size={16} /></div>
-            </div>
-            <div className="vd-stat-value">{inactiveVendors}</div>
-            <div className="vd-stat-meta"><span className="vd-badge down">↑ 3%</span>&nbsp;vs last period</div>
-          </div>
-
-          <div className="vd-stat-card">
-            <div className="vd-stat-header">
-              <span className="vd-stat-label">Total Orders</span>
-              <div className="vd-stat-icon amber"><ShoppingCart size={16} /></div>
-            </div>
-            <div className="vd-stat-value">{notificationStats.total}</div>
-            <div className="vd-stat-meta"><span className="vd-badge up">↑ 21%</span>&nbsp;vs last period</div>
-          </div>
+        {/* Stat Cards */ }
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total Vendors"
+            value={ vendors.length }
+            icon={ <Users /> }
+            darkMode={ darkMode }
+          />
+          <StatCard
+            title="Active Vendors"
+            value={ activeVendors }
+            icon={ <Activity /> }
+            darkMode={ darkMode }
+          />
+          <StatCard
+            title="Inactive Vendors"
+            value={ inactiveVendors }
+            icon={ <UserX /> }
+            darkMode={ darkMode }
+          />
         </div>
 
         {/* ── Charts Row ── */}

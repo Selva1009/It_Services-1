@@ -1,20 +1,47 @@
 "use client";
+
 import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  LayoutDashboard, UserPlus, Users,
-  Bell, User, LogOut, Calendar,
-  Menu, X, ChevronDown, UserRoundPen,
+  Users,
+  UserPlus,
+  User,
+  LayoutDashboard,
+  LogOut,
+  Calendar,
+  Menu,
+  X,
+  UserRoundPen
 } from "lucide-react";
 import Swal from "sweetalert2";
-import "./CustomerAdminNavbar.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
-const getInitials = (first = "", last = "") =>
-  `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase();
+export default function CustomerAdminNavbar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { auth, getAuthToken: getAuthTokenFromContext, setCustomer: setAuthCustomer, clearAuth } = useAuth();
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const customerName =
+    auth.customer?.name ||
+    auth.customer?.firstName ||
+    auth.customer?.first_name ||
+    auth.customer?.companyName ||
+    auth.customer?.company_name ||
+    auth.customer?.vendor_name ||
+    auth.customer?.email ||
+    null;
+  const customerRole = auth.role || auth.customer?.role || null;
+
+  const getAuthToken = () =>
+    getAuthTokenFromContext() || sessionStorage.getItem("token");
 
 export default function CustomerAdminNavbar() {
   const pathname  = usePathname();
@@ -36,50 +63,40 @@ export default function CustomerAdminNavbar() {
   useEffect(() => {
     let isMounted = true;
 
-    const loadCustomer = async () => {
+    const syncProfile = async () => {
+      if (!auth.customer?.id) return;
+
+      const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
+      const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
+
+      if (!shouldSync) return;
+
       setLoading(true);
-      setError("");
-
-      // No customer object in localStorage — fetch purely from API via token
-      const token =
-        localStorage.getItem("token")     ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("userToken") ||
-        sessionStorage.getItem("token");
-
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const res = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
-          cache:   "no-store",
-          headers: { Authorization: `Bearer ${token}` },
+        const authToken = getAuthToken();
+        const response = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
+          cache: "no-store",
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
         });
 
-        if (res.ok) {
-          const payload = await res.json();
-          const latest  = payload.profile || payload.customer || payload.data || payload;
-          if (process.env.NODE_ENV === "development") {
-            console.log("[Navbar] API response keys:", Object.keys(latest));
-            console.log("[Navbar] API response:", latest);
-          }
-          if (isMounted) setCustomer(latest);
-        } else {
-          console.error("[Navbar] Profile API returned:", res.status);
+        if (response.ok && isMounted) {
+          const payload = await response.json();
+          const latestCustomer = payload.customer || payload;
+          setAuthCustomer(latestCustomer);
+          sessionStorage.setItem("customer", JSON.stringify(latestCustomer));
+          sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
         }
-      } catch (fetchErr) {
-        console.error("Profile fetch failed:", fetchErr);
+      } catch (err) {
+        console.error("Failed to sync customer profile:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    void loadCustomer();
+    void syncProfile();
 
     return () => { isMounted = false; };
-  }, []);
+  }, [auth.customer?.id]);
 
   // ── Close dropdown on outside click ──────────────────────────────────────
   useEffect(() => {
@@ -111,16 +128,28 @@ export default function CustomerAdminNavbar() {
       customClass:       { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
+        clearAuth();
         router.push("/SignIn");
       }
     });
   };
 
   const menuItems = [
-    { href: "/customer-admin/customerAdminDashboard", icon: <LayoutDashboard size={16} />, label: "Dashboard"     },
-    { href: "/customer-admin/add-user",               icon: <UserPlus         size={16} />, label: "Add User"      },
-    { href: "/customer-admin/user-profile",           icon: <Users            size={16} />, label: "User Profiles" },
+    {
+      href: "/customer-admin/customerAdminDashboard",
+      icon: <LayoutDashboard className="h-5 w-5" />,
+      label: "Dashboard",
+    },
+    {
+      href: "/customer-admin/add-user",
+      icon: <UserPlus className="h-5 w-5" />,
+      label: "Add User",
+    },
+    {
+      href: "/customer-admin/user-profile",
+      icon: <Users className="h-5 w-5" />,
+      label: "User Profiles",
+    },
   ];
 
   const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -173,37 +202,37 @@ export default function CustomerAdminNavbar() {
           </nav>
         </div>
 
-        {/* Right: date · bell · profile */}
-        <div className="ca-nav-right">
-
-          {/* Date pill */}
-          <div className="ca-nav-date">
-            <Calendar size={13} />
-            {currentDate}
+        {/* RIGHT: Date & Profile */}
+        <div className="flex items-center space-x-6">
+          {/* Date */}
+          <div className="hidden sm:flex items-center">
+            <Calendar className="text-black-900" />
+            <span className="ml-2">{currentDate}</span>
           </div>
 
-          {/* Bell */}
-          <button className="ca-nav-icon-btn" aria-label="Notifications">
-            <Bell size={16} />
-            <div className="ca-nav-bell-dot" />
-          </button>
+          <div className="h-10 w-[1px] bg-gray-300" />
 
-          {/* Profile dropdown */}
-          <div
-            className={`ca-nav-profile${dropdownOpen ? " open" : ""}`}
-            onClick={() => setDropdownOpen((o) => !o)}
-          >
-            <div className="ca-nav-avatar">{initials}</div>
-
-            <div className="ca-nav-profile-info">
-              {loading && <span className="ca-nav-profile-name">Loading…</span>}
-              {error   && <span className="ca-nav-profile-name" style={{ color: "var(--red)" }}>{error}</span>}
-              {!loading && !error && (
-                <>
-                  <span className="ca-nav-profile-name">{profileName || "Customer Admin"}</span>
-                  <span className="ca-nav-profile-role">Customer Admin</span>
-                </>
-              )}
+          {/* Profile Dropdown */}
+          <div className="relative">
+            <div
+              className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition cursor-pointer"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              <User size={32} className="text-gray-800" />
+              <div className="hidden sm:block">
+                {loading ? (
+                  <span className="text-sm">Loading...</span>
+                ) : (
+                  <>
+                    <p className="text-[14px] font-medium">
+                      {customerName}
+                    </p>
+                    <p className="text-[#999999] text-[12px] capitalize">
+                      {customerRole?.replace(/_/g, " ")}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
 
             <ChevronDown size={14} className="ca-nav-chevron" />
@@ -231,16 +260,19 @@ export default function CustomerAdminNavbar() {
         </div>
       </nav>
 
-      {/* ════════════════ MOBILE NAVBAR ════════════════ */}
-      <nav className="ca-nav-mobile">
-        <div className="ca-nav-mobile-brand">
-          <div className="ca-nav-mobile-logo">
-            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-              <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
+      {/* Mobile Navbar */}
+      <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
+            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
+              <img
+                src="/Logo.png"
+                alt="M-Place Logo"
+                className="w-7 h-7 object-contain"
+              />
+            </div>
           </div>
-          <span className="ca-nav-mobile-title">Customer Admin</span>
+          <span className="font-medium text-sm">Customer Admin</span>
         </div>
 
         <button
@@ -251,7 +283,7 @@ export default function CustomerAdminNavbar() {
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Slide-in drawer */}
+        {/* Mobile Slide Menu */}
         {mobileMenuOpen && (
           <div className="ca-mobile-overlay" onClick={() => setMobileMenuOpen(false)}>
             <div className="ca-mobile-drawer" onClick={(e) => e.stopPropagation()}>
@@ -260,13 +292,17 @@ export default function CustomerAdminNavbar() {
               <div className="ca-mobile-drawer-profile">
                 <div className="ca-mobile-drawer-avatar">{initials}</div>
                 <div>
-                  <div className="ca-mobile-drawer-name">{profileName || "Customer Admin"}</div>
-                  <div className="ca-mobile-drawer-role">Customer Admin</div>
+                  <p className="font-medium">
+                    {customerName || "Admin"}
+                  </p>
+                  <p className="text-sm text-gray-500 capitalize">
+                    {customerRole?.replace(/_/g, " ") || "IT Admin"}
+                  </p>
                 </div>
               </div>
 
-              {/* Nav links */}
-              <div className="ca-mobile-nav-links">
+              {/* Nav Links */}
+              <div className="p-4 space-y-2">
                 {menuItems.map((item) => (
                   <Link
                     key={item.href}
@@ -280,20 +316,25 @@ export default function CustomerAdminNavbar() {
                 ))}
               </div>
 
-              {/* Footer */}
-              <div className="ca-mobile-drawer-footer">
-                <Link
-                  href="/customer-admin/customerAdminProfile"
-                  className="ca-mobile-nav-link"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <UserRoundPen size={17} />
-                  My Profile
-                </Link>
-                <button className="ca-mobile-nav-link" style={{ color: "var(--red)" }} onClick={handleLogout}>
-                  <LogOut size={17} />
-                  Logout
-                </button>
+              {/* Bottom Actions */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+                <div className="space-y-2">
+                  <Link
+                    href="/customer-admin/customerAdminProfile"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <UserRoundPen size={20} />
+                    <span>My Profile</span>
+                  </Link>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
               </div>
 
             </div>

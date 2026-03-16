@@ -4,8 +4,22 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, subMonths, startOfWeek } from "date-fns";
 import {
-  Users, Activity, UserX, UserPlus, Edit,
-  Bell, PieChart, ShoppingCart, Clock, Plus,
+  Users,
+  CheckCircle,
+  XCircle,
+  Activity,
+  UserPlus,
+  UserX,
+  Plus,
+  Edit,
+  Bell,
+  BarChart2,
+  PieChart,
+  TrendingUp,
+  Search,
+  Clock,
+  Sun,
+  Moon,
 } from "lucide-react";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import Swal from "sweetalert2";
@@ -14,7 +28,7 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
   Title, ArcElement, Tooltip, Legend, PointElement, LineElement, Filler,
 } from "chart.js";
-import "./CustomerAdminDashboard.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, Title, ArcElement,
@@ -136,6 +150,16 @@ const makeDoughnutOptions = () => ({
 const CustomerAdminDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
+  const { auth } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [adminID, setAdminID] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [timeRange, setTimeRange] = useState("week");
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [stats, setStats] = useState({ week: 0, month: 0 });
+  const [darkMode, setDarkMode] = useState(false);
 
   const [users,             setUsers]             = useState([]);
   const [filteredUsers,     setFilteredUsers]     = useState([]);
@@ -289,50 +313,80 @@ const CustomerAdminDashboard = () => {
       const data   = await res.json();
       const unread = data.notifications.filter((n) => n.status === "unread").length;
       setNotifications(data.notifications);
-      setNotificationStats({
-        total:  data.notifications.length,
-        unread,
-        read:   data.notifications.length - unread,
-      });
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
+
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
     }
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem("customer");
-    if (stored) {
-      try { setAdminID(JSON.parse(stored).id); } catch (e) { console.error(e); }
+    const storedCustomer = sessionStorage.getItem("customer");
+    try {
+      const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
+      if (customerData?.id) {
+        setAdminID(customerData.id);
+      }
+    } catch (err) {
+      console.error("Invalid customer data:", err);
     }
   }, []);
 
-  useEffect(() => {
-    if (!adminID) return;
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const [usersRes, summaryRes, activityRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/customer-users/user-profile`, {
-            method:  "POST",
-            headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ adminID }),
-          }),
-          fetch(`${API_BASE_URL}/api/customer-users/new-users-summary?adminID=${adminID}`),
-          fetch(`${API_BASE_URL}/api/customer-users/recent-activity?adminID=${adminID}`),
-        ]);
-        if (usersRes.ok)    { const d = await usersRes.json();    setUsers(d); setFilteredUsers(filterUsersByTimeRange(d)); }
-        if (summaryRes.ok)  setStats(await summaryRes.json());
-        if (activityRes.ok) setRecentActivity(await activityRes.json());
-      } catch (err) {
-        console.error(err);
-        Swal.fire("Error", "Failed to load data", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
-    fetchNotifications();
-  }, [adminID]);
+  // useEffect(() => {
+  //   if (!adminID) return;
+
+  //   const fetchUsers = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/customer-users/user-profile`,
+  //         {
+  //           method: "POST",
+  //           headers: { "Content-Type": "application/json" },
+  //           body: JSON.stringify({ adminID }),
+  //         }
+  //       );
+
+  //       if (!response.ok) throw new Error("Failed to fetch users");
+  //       const data = await response.json();
+  //       setUsers(data);
+  //       setFilteredUsers(filterUsersByTimeRange(data));
+  //     } catch (error) {
+  //       console.error("Error fetching users:", error);
+  //       Swal.fire("Error", "Failed to load users", "error");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   const fetchNewUserSummary = async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/customer-users/new-users-summary?adminID=${adminID}`
+  //       );
+  //       const data = await response.json();
+  //       setStats(data);
+  //     } catch (error) {
+  //       console.error("Error fetching activity:", error);
+  //     }
+  //   };
+
+  //   const fetchRecentActivity = async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/customer-users/recent-activity?adminID=${adminID}`
+  //       );
+  //       const data = await response.json();
+  //       setRecentActivity(data);
+  //     } catch (error) {
+  //       console.error("Error fetching activity:", error);
+  //     }
+  //   };
+
+  //   fetchUsers();
+  //   fetchNewUserSummary();
+  //   fetchRecentActivity();
+  //   fetchNotifications();
+  // }, [adminID]);
 
   useEffect(() => {
     if (users.length > 0) setFilteredUsers(filterUsersByTimeRange(users));
@@ -364,16 +418,53 @@ const CustomerAdminDashboard = () => {
           </div>
         </div>
 
-        {/* ── Stat Cards ── */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-header">
-              <span className="stat-label">Total Users</span>
-              <div className="stat-icon green"><Users size={16} /></div>
-            </div>
-            <div className="stat-value">{users.length}</div>
-            <div className="stat-meta">
-              <span className="badge up">↑ 12%</span>&nbsp;vs last period
+        {/* Stat Cards */ }
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total Users"
+            value={ users.length }
+            icon={ <Users /> }
+
+          />
+          <StatCard
+            title="Active Users"
+            value={ users.filter((u) => u.status === "Active").length }
+            icon={ <Activity /> }
+
+          />
+          <StatCard
+            title="Inactive Users"
+            value={ users.filter((u) => u.status === "Inactive").length }
+            icon={ <UserX /> }
+
+          />
+        </div>
+
+        {/* Charts Section */ }
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* User Growth Chart */ }
+          <div
+            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
+              }` }
+          >
+            <div className="h-64">
+              { users.length > 0 ? (
+                <Line
+                  data={ prepareChartData(users) }
+                  options={ lineChartOptions }
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <Clock
+                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
+                  />
+                  <p
+                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
+                  >
+                    Loading user data...
+                  </p>
+                </div>
+              ) }
             </div>
           </div>
 

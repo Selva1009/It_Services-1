@@ -52,6 +52,8 @@ const CustomerAddUserPage = () => {
       } catch (err) {
         console.error("Failed to decode token:", err);
       }
+    } catch (err) {
+      console.error("Invalid customer data in localStorage:", err);
     }
   }, []);
 

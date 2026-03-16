@@ -11,6 +11,7 @@ import axios from "axios";
 import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
 import Swal from "sweetalert2";
 import "./login.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const ROLE_REDIRECT = {
   vendor_admin: "/vendor-admin",
@@ -20,19 +21,6 @@ const ROLE_REDIRECT = {
 };
 
 const normalizeRole = (value) => String(value || "").toLowerCase().replace(/-/g, "_");
-
-const decodeJwtPayload = (token) => {
-  if (!token) return null;
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return null;
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-    return JSON.parse(atob(padded));
-  } catch {
-    return null;
-  }
-};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -45,6 +33,7 @@ export default function LoginPage() {
     userToken: "",
     role: "",
   });
+  const { setAuthFromLogin } = useAuth();
   const router = useRouter();
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
@@ -68,7 +57,7 @@ export default function LoginPage() {
         email: normalizedEmail,
         password,
       });
-      const { authToken, userToken, role } = data || {};
+      const { authToken, userToken, role, user } = data || {};
       const normalizedRole = normalizeRole(role);
 
       if (!authToken || !userToken || !normalizedRole) {
@@ -81,42 +70,81 @@ export default function LoginPage() {
         role: normalizedRole,
       });
 
-      const authPayload = decodeJwtPayload(authToken);
-      const userIdFromToken = authPayload?.id ? String(authPayload.id) : null;
-      const parentIdFromToken = authPayload?.parentId ? String(authPayload.parentId) : null;
+      const userIdFromResponse = user?.id ? String(user.id) : String(data?.id || "");
+      const parentIdFromResponse =
+        user?.parentId ||
+        user?.vendor_id ||
+        user?.admin_id ||
+        null;
+
+      setAuthFromLogin({
+        ...data,
+        authToken,
+        userToken,
+        role: normalizedRole,
+        userId: userIdFromResponse || undefined,
+        parentId: parentIdFromResponse || undefined,
+      });
       
       sessionStorage.setItem("authToken", authToken);
       sessionStorage.setItem("userToken", userToken);
       sessionStorage.setItem("role", normalizedRole);
       sessionStorage.setItem("token", authToken);
-      localStorage.setItem("authToken", authToken);
-      localStorage.setItem("userToken", userToken);
-      localStorage.setItem("role", normalizedRole);
-      localStorage.setItem("token", authToken);
 
       if (normalizedRole === "vendor_admin") {
-        localStorage.setItem("vendorToken", userToken);
-        if (userIdFromToken) {
-          const previousVendor = (() => {
-            try {
-              const raw = localStorage.getItem("vendor");
-              return raw ? JSON.parse(raw) : {};
-            } catch {
-              return {};
-            }
-          })();
-          localStorage.setItem("vendor", JSON.stringify({ ...previousVendor, id: Number(userIdFromToken) }));
+        sessionStorage.setItem("vendorToken", userToken);
+        if (userIdFromResponse) {
+          sessionStorage.setItem(
+            "vendor",
+            JSON.stringify({
+              id: Number(userIdFromResponse),
+              ...user,
+            })
+          );
         }
       }
 
       if (normalizedRole === "vendor_user") {
-        if (userIdFromToken) {
-          localStorage.setItem("vendorUserId", userIdFromToken);
-          sessionStorage.setItem("vendorUserId", userIdFromToken);
+        if (userIdFromResponse) {
+          sessionStorage.setItem("vendorUserId", userIdFromResponse);
+          sessionStorage.setItem(
+            "vendorUser",
+            JSON.stringify({
+              id: Number(userIdFromResponse),
+              ...user,
+            })
+          );
         }
-        if (parentIdFromToken) {
-          localStorage.setItem("vendorId", parentIdFromToken);
-          sessionStorage.setItem("vendorId", parentIdFromToken);
+        if (parentIdFromResponse) {
+          sessionStorage.setItem("vendorId", String(parentIdFromResponse));
+        }
+      }
+
+      if (normalizedRole === "it_admin") {
+        if (userIdFromResponse) {
+          sessionStorage.setItem(
+            "customer",
+            JSON.stringify({
+              id: Number(userIdFromResponse),
+              ...user,
+            })
+          );
+        }
+      }
+
+      if (normalizedRole === "it_user") {
+        if (userIdFromResponse) {
+          sessionStorage.setItem("customerUserId", userIdFromResponse);
+          sessionStorage.setItem(
+            "customerUser",
+            JSON.stringify({
+              id: Number(userIdFromResponse),
+              ...user,
+            })
+          );
+        }
+        if (parentIdFromResponse) {
+          sessionStorage.setItem("adminId", String(parentIdFromResponse));
         }
       }
 

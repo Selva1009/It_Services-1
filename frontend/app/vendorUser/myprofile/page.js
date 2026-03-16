@@ -7,6 +7,7 @@ import { API_BASE_URL } from "@/lib/api/config";
 import Swal from "sweetalert2";
 import "./profile.css";
 import Navbar from './../../LandingPage/Navbar';
+import { useAuth } from "@/app/contexts/AuthContext";
 
 
 /* ─── Field Config ───────────────────────────────────────── */
@@ -21,7 +22,7 @@ const PROFILE_FIELDS = [
 /* ─── Helpers ────────────────────────────────────────────── */
 const getAuthToken = () =>
   typeof window !== "undefined"
-    ? localStorage.getItem("token") || sessionStorage.getItem("token")
+    ? sessionStorage.getItem("token")
     : null;
 
 /* ─── Sub-components ─────────────────────────────────────── */
@@ -61,6 +62,7 @@ function FormField({ label, fieldKey, value, onChange, editable = true, type = "
 /* ─── Main Component ─────────────────────────────────────── */
 export default function VendorAdminProfilePage() {
   const router = useRouter();
+  const { getAuthToken: getAuthTokenFromContext, setVendorUser: setAuthVendorUser } = useAuth();
 
   const [profile, setProfile]     = useState(null);
   const [formData, setFormData]   = useState({});
@@ -70,7 +72,7 @@ export default function VendorAdminProfilePage() {
 
   /* ── Fetch profile ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthToken();
+    const token = getAuthTokenFromContext() || getAuthToken();
     if (!token) { router.push("/SignIn"); return; }
 
     try {
@@ -86,6 +88,7 @@ export default function VendorAdminProfilePage() {
 
       const data = await res.json();
       setProfile(data);
+      setAuthVendorUser(data);
       setFormData(data);
     } catch (err) {
       console.error("Profile fetch error:", err);
@@ -109,7 +112,7 @@ export default function VendorAdminProfilePage() {
     setIsSaving(true);
 
     try {
-      const token = getAuthToken();
+      const token = getAuthTokenFromContext() || getAuthToken();
       const res = await fetch(`${API_BASE_URL}/api/vendor-user/profile`, {
         method: "PUT",
         headers: {

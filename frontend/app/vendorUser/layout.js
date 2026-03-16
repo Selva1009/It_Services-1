@@ -3,12 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/app/Components/DashboardLayout";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const normalizeRole = (role) => String(role || "").toLowerCase().replace(/-/g, "_");
 
 const readAuthValue = (key) => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(key) || sessionStorage.getItem(key);
+  return sessionStorage.getItem(key);
 };
 
 const decodeJwtPayload = (token) => {
@@ -32,34 +33,34 @@ export default function VendorDashboardLayout({ children }) {
   const router = useRouter();
   const [vendorUserId, setVendorUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { auth, getRole, getVendorUserId, getAuthToken } = useAuth();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const role = normalizeRole(readAuthValue("role"));
+    const role = normalizeRole(getRole() || readAuthValue("role") || auth.role);
     if (role && role !== "vendor_user") {
       router.replace("/SignIn");
       setIsLoading(false);
       return;
     }
 
-    let storedVendorUserId = readAuthValue("vendorUserId");
+    let storedVendorUserId = getVendorUserId() || readAuthValue("vendorUserId");
 
     if (!storedVendorUserId) {
-      const authToken = readAuthValue("authToken");
+      const authToken = getAuthToken() || readAuthValue("authToken");
       const payload = decodeJwtPayload(authToken);
       storedVendorUserId = payload?.id ? String(payload.id) : null;
     }
 
     if (!storedVendorUserId) {
-      localStorage.removeItem("vendorUserId");
       sessionStorage.removeItem("vendorUserId");
       router.replace("/SignIn");
       setIsLoading(false);
       return;
     }
 
-    localStorage.setItem("vendorUserId", String(storedVendorUserId));
+    sessionStorage.setItem("vendorUserId", String(storedVendorUserId));
     setVendorUserId(storedVendorUserId);
     setIsLoading(false);
   }, [router]);

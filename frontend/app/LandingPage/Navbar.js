@@ -26,14 +26,15 @@ export default function Navbar() {
     router.prefetch("/SignIn");
   }, [router]);
 
-  // Lock body scroll when modal/sidebar is open
   useEffect(() => {
     if (isSidebarOpen || isSignupCardOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isSidebarOpen, isSignupCardOpen]);
 
   const handleLinkClick = (link) => {
@@ -56,7 +57,11 @@ export default function Navbar() {
       <header className="lp-navbar">
         <div className="lp-navbar-inner">
           {/* Logo */}
-          <Link href="/" onClick={() => handleLinkClick("Home")}>
+          <Link
+            href="/"
+            onClick={() => handleLinkClick("Home")}
+            style={{ display: "flex", alignItems: "center", flexShrink: 0 }}
+          >
             <img src="/Logo.png" alt="IT Services Logo" className="lp-logo-image" />
           </Link>
 
@@ -77,7 +82,13 @@ export default function Navbar() {
               );
             })}
 
-            <button className="lp-primary-btn" onClick={() => setSignupCardOpen(true)}>
+            {/* Divider */}
+            <div className="lp-nav-divider" />
+
+            <button
+              className="lp-primary-btn"
+              onClick={() => setSignupCardOpen(true)}
+            >
               Sign Up
             </button>
             <Link href="/SignIn" className="lp-primary-btn lp-signin-link">
@@ -99,11 +110,17 @@ export default function Navbar() {
       {/* Mobile Sidebar */}
       {isSidebarOpen && (
         <div className="lp-sidebar-overlay">
-          <div className="lp-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="lp-sidebar-backdrop"
+            onClick={() => setSidebarOpen(false)}
+          />
           <aside className="lp-sidebar-panel">
             <div className="lp-sidebar-head">
               <img src="/Logo.png" alt="Logo" className="lp-sidebar-logo" />
-              <button onClick={() => setSidebarOpen(false)} className="lp-close-btn">
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lp-close-btn"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -115,7 +132,9 @@ export default function Navbar() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`lp-sidebar-link ${activeLink === item.name ? "active" : ""}`}
+                    className={`lp-sidebar-link ${
+                      activeLink === item.name ? "active" : ""
+                    }`}
                     onClick={() => handleLinkClick(item.name)}
                   >
                     <Icon size={16} />
@@ -127,7 +146,10 @@ export default function Navbar() {
 
             <div className="lp-sidebar-actions">
               <button
-                onClick={() => { setSignupCardOpen(true); setSidebarOpen(false); }}
+                onClick={() => {
+                  setSignupCardOpen(true);
+                  setSidebarOpen(false);
+                }}
                 className="lp-primary-btn full"
               >
                 Sign Up
@@ -160,7 +182,9 @@ export default function Navbar() {
             <div className="tile-carousel">
               {/* IT User Tile */}
               <div
-                className={`tile-card ${selectedRole === "Customer" ? "selected" : ""}`}
+                className={`tile-card ${
+                  selectedRole === "Customer" ? "selected" : ""
+                }`}
                 onClick={() => setSelectedRole("Customer")}
               >
                 <div className="tile-icon">
@@ -172,7 +196,9 @@ export default function Navbar() {
 
               {/* Vendor Tile */}
               <div
-                className={`tile-card ${selectedRole === "Vendor" ? "selected" : ""}`}
+                className={`tile-card ${
+                  selectedRole === "Vendor" ? "selected" : ""
+                }`}
                 onClick={() => setSelectedRole("Vendor")}
               >
                 <div className="tile-icon">

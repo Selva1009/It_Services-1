@@ -182,9 +182,8 @@ export default function Home() {
           <h2>One Platform for All IT Support Needs</h2>
 
           <p>
-            MPACE provides a centralized platform where businesses can raise
-            support requests, track issues, and resolve technical problems
-            quickly.
+            MPLACE provides a centralized platform where businesses can raise
+            support requests, track issues, and resolve technical problems quickly.
           </p>
         </div>
 
