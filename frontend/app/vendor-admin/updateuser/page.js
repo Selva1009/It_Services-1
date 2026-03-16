@@ -22,9 +22,11 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const UpdateUserPage = () => {
   const router = useRouter();
+  const { getVendorUserId } = useAuth();
   const [form, setForm] = useState({
     companyName: "",
     personName: "",
@@ -36,7 +38,7 @@ const UpdateUserPage = () => {
   const [vendorUserId, setVendorUserId] = useState(null); // <-- New state for vendorUserId
 
   useEffect(() => {
-    const id = localStorage.getItem("vendorUserId");
+    const id = getVendorUserId() || sessionStorage.getItem("vendorUserId");
     if (!id) {
       Swal.fire("Error", "No user ID found in localStorage", "error");
       return;

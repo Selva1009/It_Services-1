@@ -9,10 +9,12 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
 import { UserPlus } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const Page = () => {
   const router = useRouter();
   const { validateForm } = useUserFormValidation();
+  const { auth } = useAuth();
   const [adminID, setAdminId] = useState(null);
   const [formValues, setFormValues] = useState({
 
@@ -30,18 +32,18 @@ const Page = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    const storedCustomer = localStorage.getItem("customer");
-    if (storedCustomer) {
-      try {
-        const customerData = JSON.parse(storedCustomer);
+    const storedCustomer = sessionStorage.getItem("customer");
+    try {
+      const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
+      if (customerData?.id) {
         setAdminId(customerData.id);
         setFormValues((prev) => ({
           ...prev,
           adminID: customerData.id,
         }));
-      } catch (err) {
-        console.error("Invalid customer data in localStorage:", err);
       }
+    } catch (err) {
+      console.error("Invalid customer data in localStorage:", err);
     }
   }, []);
 
@@ -114,10 +116,10 @@ const Page = () => {
 
   useEffect(() => {
     const fetchAdminData = async () => {
-      const storedCustomer = localStorage.getItem("customer");
-      if (storedCustomer) {
-        try {
-          const customerData = JSON.parse(storedCustomer);
+      const storedCustomer = sessionStorage.getItem("customer");
+      try {
+        const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
+        if (customerData?.id) {
           setAdminId(customerData.id);
 
           // Fetch admin's company details
@@ -135,11 +137,11 @@ const Page = () => {
           } else {
             console.error("Failed to fetch admin details");
           }
-        } catch (err) {
-          console.error("Error:", err);
-        } finally {
-          setIsLoading(false);
         }
+      } catch (err) {
+        console.error("Error:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 

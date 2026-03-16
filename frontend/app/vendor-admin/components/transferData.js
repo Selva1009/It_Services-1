@@ -48,8 +48,8 @@ export default function TransferProducts({ onClose }) {
       if (response.ok) {
         if (data.newUserId) {
           // ✅ Update both keys so other pages get the correct ID
-          localStorage.setItem("vendor_user_id", data.newUserId);
-          localStorage.setItem("userId", data.newUserId); // <-- Critical for products page
+          sessionStorage.setItem("vendor_user_id", data.newUserId);
+          sessionStorage.setItem("userId", data.newUserId); // <-- Critical for products page
         }
 
         Swal.fire({

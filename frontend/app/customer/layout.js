@@ -7,7 +7,7 @@ const normalizeRole = (role) => String(role || "").toLowerCase().replace(/-/g, "
 
 const readAuthValue = (key) => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(key) || sessionStorage.getItem(key);
+  return sessionStorage.getItem(key);
 };
 
 export default function CustomerLayout({ children }) {

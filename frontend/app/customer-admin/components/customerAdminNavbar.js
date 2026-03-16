@@ -1,4 +1,5 @@
 "use client";
+
 import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -6,108 +7,80 @@ import { useState, useEffect } from "react";
 import {
   Users,
   UserPlus,
-  Activity,
-  Bell,
   User,
   LayoutDashboard,
   LogOut,
   Calendar,
   Menu,
   X,
-  Clipboard,
   UserRoundPen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
 export default function CustomerAdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [customer, setCustomer] = useState(null);
+  const { auth, getAuthToken: getAuthTokenFromContext, setCustomer: setAuthCustomer, clearAuth } = useAuth();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
+  const [loading, setLoading] = useState(false);
+
+  const customerName =
+    auth.customer?.name ||
+    auth.customer?.firstName ||
+    auth.customer?.first_name ||
+    auth.customer?.companyName ||
+    auth.customer?.company_name ||
+    auth.customer?.vendor_name ||
+    auth.customer?.email ||
+    null;
+  const customerRole = auth.role || auth.customer?.role || null;
+
+  const getAuthToken = () =>
+    getAuthTokenFromContext() || sessionStorage.getItem("token");
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadCustomer = async () => {
+    const syncProfile = async () => {
+      if (!auth.customer?.id) return;
+
+      const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
+      const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
+
+      if (!shouldSync) return;
+
       setLoading(true);
-      setError("");
-
-      const customerData = localStorage.getItem("customer");
-      if (!customerData) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const parsedCustomer = JSON.parse(customerData);
-        if (isMounted) {
-          setCustomer(parsedCustomer);
+        const authToken = getAuthToken();
+        const response = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
+          cache: "no-store",
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+        });
+
+        if (response.ok && isMounted) {
+          const payload = await response.json();
+          const latestCustomer = payload.customer || payload;
+          setAuthCustomer(latestCustomer);
+          sessionStorage.setItem("customer", JSON.stringify(latestCustomer));
+          sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
         }
-
-        if (!parsedCustomer?.id) {
-          setLoading(false);
-          return;
-        }
-
-        const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
-        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-
-        if (shouldSync) {
-          try {
-            const authToken = getAuthToken();
-            const response = await fetch(
-              `${API_BASE_URL}/api/customers/profile`,
-              {
-                cache: "no-store",
-                headers: authToken
-                  ? { Authorization: `Bearer ${authToken}` }
-                  : undefined,
-              }
-            );
-
-            if (response.ok) {
-              const payload = await response.json();
-              const latestCustomer = payload.customer || payload;
-              if (isMounted) {
-                setCustomer(latestCustomer);
-                localStorage.setItem("customer", JSON.stringify(latestCustomer));
-                sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
-              }
-            }
-          } catch (fetchError) {
-            console.error("Failed to fetch latest customer admin details:", fetchError);
-          }
-        }
-      } catch (parseError) {
-        console.error("Invalid customer data in localStorage:", parseError);
-        setError("Failed to load customer profile");
+      } catch (err) {
+        console.error("Failed to sync customer profile:", err);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
-    void loadCustomer();
+    void syncProfile();
 
-    const handleStorage = () => {
-      void loadCustomer();
-    };
-
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
+    return () => { isMounted = false; };
+  }, [auth.customer?.id]);
 
   const isActive = (path) => pathname === path;
 
@@ -130,7 +103,7 @@ export default function CustomerAdminNavbar() {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
+        clearAuth();
         router.push("/SignIn");
       }
     });
@@ -151,16 +124,6 @@ export default function CustomerAdminNavbar() {
       href: "/customer-admin/user-profile",
       icon: <Users className="h-5 w-5" />,
       label: "User Profiles",
-    },
-    {
-      href: "/customer-admin/AdminNotifications",
-      icon: <Bell className="h-5 w-5" />,
-      label: "Orders",
-    },
-    {
-      href: "/customer-admin/PoAutomation",
-      icon: <Clipboard className="h-5 w-5" />,
-      label: "PO Automation",
     },
   ];
 
@@ -202,7 +165,7 @@ export default function CustomerAdminNavbar() {
           </div>
         </div>
 
-        {/* RIGHT: Date & Customer Admin Profile */}
+        {/* RIGHT: Date & Profile */}
         <div className="flex items-center space-x-6">
           {/* Date */}
           <div className="hidden sm:flex items-center">
@@ -210,26 +173,27 @@ export default function CustomerAdminNavbar() {
             <span className="ml-2">{currentDate}</span>
           </div>
 
-          <div className="h-10 w-[1px] bg-gray-300"></div>
+          <div className="h-10 w-[1px] bg-gray-300" />
 
-          {/* Customer Admin Dropdown */}
+          {/* Profile Dropdown */}
           <div className="relative">
             <div
               className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition cursor-pointer"
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
               <User size={32} className="text-gray-800" />
-              <div className="hidden sm:block text-[16px]">
-                {loading && <span>Loading...</span>}
-                {error && <span className="text-red-500">{error}</span>}
-                {customer && (
-                  <span>
-                    <span className="text-[14px]">
-                      {customer.firstName} {customer.lastName}
-                    </span>
-                    <br />
-                    <p className="text-[#999999] text-[12px]">Customer Admin</p>
-                  </span>
+              <div className="hidden sm:block">
+                {loading ? (
+                  <span className="text-sm">Loading...</span>
+                ) : (
+                  <>
+                    <p className="text-[14px] font-medium">
+                      {customerName}
+                    </p>
+                    <p className="text-[#999999] text-[12px] capitalize">
+                      {customerRole?.replace(/_/g, " ")}
+                    </p>
+                  </>
                 )}
               </div>
             </div>
@@ -265,7 +229,6 @@ export default function CustomerAdminNavbar() {
 
       {/* Mobile Navbar */}
       <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        {/* Left: Brand Name and Mobile Menu Button */}
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
             <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
@@ -276,11 +239,9 @@ export default function CustomerAdminNavbar() {
               />
             </div>
           </div>
-
           <span className="font-medium text-sm">Customer Admin</span>
         </div>
 
-        {/* Right: Menu Button */}
         <button
           className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -288,7 +249,7 @@ export default function CustomerAdminNavbar() {
           {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Mobile Menu */}
+        {/* Mobile Slide Menu */}
         {mobileMenuOpen && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
@@ -305,13 +266,15 @@ export default function CustomerAdminNavbar() {
                 </div>
                 <div>
                   <p className="font-medium">
-                    {customer?.firstName} {customer?.lastName}
+                    {customerName || "Admin"}
                   </p>
-                  <p className="text-sm text-gray-500">Customer Admin</p>
+                  <p className="text-sm text-gray-500 capitalize">
+                    {customerRole?.replace(/_/g, " ") || "IT Admin"}
+                  </p>
                 </div>
               </div>
 
-              {/* Navigation Links */}
+              {/* Nav Links */}
               <div className="p-4 space-y-2">
                 {menuItems.map((item) => (
                   <Link
@@ -328,7 +291,7 @@ export default function CustomerAdminNavbar() {
                 ))}
               </div>
 
-              {/* Bottom Section */}
+              {/* Bottom Actions */}
               <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
                 <div className="space-y-2">
                   <Link
@@ -336,14 +299,11 @@ export default function CustomerAdminNavbar() {
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                     <UserRoundPen size={20} />
+                    <UserRoundPen size={20} />
                     <span>My Profile</span>
                   </Link>
                   <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleLogout();
-                    }}
+                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
                   >
                     <LogOut className="h-4 w-4" />

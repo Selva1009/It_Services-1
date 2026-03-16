@@ -2,7 +2,6 @@
 
 import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
-import { FaClipboardList } from "react-icons/fa";
 import Link from "next/link";
 import {
   User,
@@ -11,20 +10,19 @@ import {
   UserRoundPen,
   LogOut,
   X,
-  ShoppingCart,
-  PackagePlus,
-  FileText,
   Menu,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import Footer from "../LandingPage/Footer";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 export default function DashboardLayout({ id, children }) {
   const NOTIFICATION_LIMIT = 50;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [vendorUser, setVendorUser] = useState(null);
+  const { auth, getAuthToken: getAuthTokenFromContext, setVendorUser: setAuthVendorUser } = useAuth();
+  const [vendorUser, setVendorUser] = useState(auth.vendorUser || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,12 +33,22 @@ export default function DashboardLayout({ id, children }) {
 
 
   const router = useRouter();
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
+  const getAuthToken = () =>
+    getAuthTokenFromContext() ||
+    sessionStorage.getItem("token");
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
+
+  const vendorUserDisplayName =
+    vendorUser?.name ||
+    vendorUser?.personName ||
+    vendorUser?.companyName ||
+    vendorUser?.company_name ||
+    vendorUser?.email ||
+    null;
 
   useEffect(() => {
     let isMounted = true;
@@ -49,8 +57,9 @@ export default function DashboardLayout({ id, children }) {
 
     const fetchVendorDetails = async () => {
       try {
-        const storedVendorUser = localStorage.getItem("vendorUser");
-        if (!storedVendorUser) {
+        const storedVendorUser = sessionStorage.getItem("vendorUser");
+        const resolvedVendorUser = storedVendorUser ? JSON.parse(storedVendorUser) : auth.vendorUser;
+        if (!resolvedVendorUser) {
           console.warn("No vendor user found in localStorage");
           return;
         }
@@ -58,7 +67,7 @@ export default function DashboardLayout({ id, children }) {
         const authToken = getAuthToken();
 
         const response = await fetch(
-          `${API_BASE_URL}/api/vendor-users/profile`,
+          `${API_BASE_URL}/api/vendor-user/profile`,
           {
             signal,
             headers: authToken
@@ -75,7 +84,9 @@ export default function DashboardLayout({ id, children }) {
 
         const data = await response.json();
         if (isMounted) {
-          setVendorUser(Array.isArray(data) ? data[0] : data);
+          const nextVendorUser = Array.isArray(data) ? data[0] : data;
+          setVendorUser(nextVendorUser);
+          setAuthVendorUser(nextVendorUser);
         }
       } catch (err) {
         if (!signal.aborted && isMounted) {
@@ -185,16 +196,16 @@ export default function DashboardLayout({ id, children }) {
 
   // Handle mark all as read
   const markAllAsRead = async () => {
-    const storedVendorUser = localStorage.getItem("vendorUser");
+    const storedVendorUser = sessionStorage.getItem("vendorUser");
+    const resolvedVendorUser = storedVendorUser ? JSON.parse(storedVendorUser) : auth.vendorUser;
 
-    if (!storedVendorUser) {
+    if (!resolvedVendorUser) {
       console.error("Vendor user not found in localStorage.");
       setMessage("Vendor user not found. Please log in again.");
       return;
     }
 
-    const vendorUser = JSON.parse(storedVendorUser);
-    const vendorId = vendorUser.id; // assuming the object has an 'id' field
+    const vendorId = resolvedVendorUser.id; // assuming the object has an 'id' field
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications/read-all/${vendorId}`, {
@@ -253,7 +264,7 @@ export default function DashboardLayout({ id, children }) {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
+        sessionStorage.clear();
         router.push("/");
       }
     });
@@ -261,9 +272,11 @@ export default function DashboardLayout({ id, children }) {
 
   useEffect(() => {
     const updateVendor = () => {
-      const vendorData = localStorage.getItem("vendorUser");
+      const vendorData = sessionStorage.getItem("vendorUser");
       if (vendorData) {
-        setVendorUser(JSON.parse(vendorData));
+        const parsedVendor = JSON.parse(vendorData);
+        setVendorUser(parsedVendor);
+        setAuthVendorUser(parsedVendor);
       }
     };
 
@@ -292,35 +305,7 @@ export default function DashboardLayout({ id, children }) {
             </div>
           </Link>
 
-          {/* Navigation Links */ }
-          <nav className="flex space-x-6">
-            <button
-              onClick={ () => router.push(`/vendorUser/productcards`) }
-              className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <ShoppingCart size={ 18 } /> Product Portal
-            </button>
-
-            <button
-              onClick={ () => router.push(`/vendorUser/addproducts`) }
-              className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <PackagePlus size={ 18 } /> Add Product
-            </button>
-
-            <button
-              onClick={ () => router.push(`/vendorUser/productdetails`) }
-              className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <FileText size={ 18 } /> Product Details
-            </button>
-            <button
-              onClick={ () => router.push(`/vendorUser/PoTracking`) }
-              className="text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <FileText size={ 18 } /> Po Tracking
-            </button>
-          </nav>
+          {/* Navigation Links removed for vendor user */ }
         </div>
 
         {/* Right Section - Calendar, Notification, User Profile */ }
@@ -359,7 +344,7 @@ export default function DashboardLayout({ id, children }) {
             <div className="ml-2 text-[14px]">
               { loading && <span>Loading...</span> }
               { error && <span className="text-red-500">{ error }</span> }
-              { vendorUser && <span>{ vendorUser.name }</span> } <br />{ " " }
+              { vendorUser && <span>{ vendorUserDisplayName || "Vendor User" }</span> } <br />{ " " }
               <span className="text-[12px] text-[#999999]">Vendor User</span>
             </div>
           </div>
@@ -431,55 +416,13 @@ export default function DashboardLayout({ id, children }) {
                 </div>
                 <div>
                   <p className="font-medium">
-                    { vendorUser?.personName || "Vendor User" }
+                    { vendorUserDisplayName || "Vendor User" }
                   </p>
                   <p className="text-sm text-gray-500">Vendor User</p>
                 </div>
               </div>
 
-              {/* Navigation Links */ }
-              <div className="p-4 space-y-2">
-                <button
-                  onClick={ () => {
-                    router.push(`/vendorUser/productcards`);
-                    toggleMobileMenu();
-                  } }
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-                >
-                  <ShoppingCart size={ 20 } />
-                  <span>Product Portal</span>
-                </button>
-                <button
-                  onClick={ () => {
-                    router.push(`/vendorUser/addproducts`);
-                    toggleMobileMenu();
-                  } }
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-                >
-                  <PackagePlus size={ 20 } />
-                  <span>Add Product</span>
-                </button>
-                <button
-                  onClick={ () => {
-                    router.push(`/vendorUser/productdetails`);
-                    toggleMobileMenu();
-                  } }
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-                >
-                  <FileText size={ 20 } />
-                  <span>Product Details</span>
-                </button>
-                <button
-                  onClick={ () => {
-                    router.push(`/vendorUser/PoTracking`);
-                    toggleMobileMenu();
-                  } }
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-                >
-                  <FileText size={ 20 } />
-                  <span>Po Tracking</span>
-                </button>
-              </div>
+              {/* Navigation Links removed for vendor user */ }
 
               {/* Bottom Section */ }
               <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">

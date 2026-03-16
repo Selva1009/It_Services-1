@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { AuthProvider } from "./contexts/AuthContext";
 
 export default function ClientWrapper({ children }) {
   useEffect(() => {
@@ -16,5 +17,5 @@ export default function ClientWrapper({ children }) {
     return () => window.removeEventListener("error", handleChunkError);
   }, []);
 
-  return <>{children}</>;
+  return <AuthProvider>{children}</AuthProvider>;
 }

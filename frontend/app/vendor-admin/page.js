@@ -22,10 +22,10 @@ import {
   UserPlus,
   UserX,
   Sun,
-  Moon,
-  ShoppingCart
+  Moon
 } from "lucide-react";
 import { Pie, Line, Bar, Doughnut } from "react-chartjs-2";
+import { useAuth } from "@/app/contexts/AuthContext";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -92,6 +92,7 @@ const StatCard = ({ title, value, icon, darkMode }) => {
 const VendorDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
+  const { getAuthToken: getAuthTokenFromContext } = useAuth();
   const [vendors, setVendors] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,11 +100,6 @@ const VendorDashboard = () => {
   const [timeRange, setTimeRange] = useState("week");
   const [recentActivity, setRecentActivity] = useState([]);
   const [stats, setStats] = useState({ week: 0, month: 0 });
-  const [notificationStats, setNotificationStats] = useState({
-    total: 0,
-    unread: 0,
-    read: 0
-  });
   const [darkMode, setDarkMode] = useState(false);
 
   // Color palettes for both themes
@@ -165,7 +161,7 @@ const VendorDashboard = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token") || sessionStorage.getItem("token") || localStorage.getItem("vendorToken") || ""}`
+          "Authorization": `Bearer ${getAuthTokenFromContext() || sessionStorage.getItem("token") || sessionStorage.getItem("vendorToken") || ""}`
         },
         body: JSON.stringify({ vendorAdminID: vendorID, limit: NOTIFICATION_LIMIT }),
       });
@@ -177,12 +173,6 @@ const VendorDashboard = () => {
       console.log(data.notifications)
 
 
-      const unreadCount = data.notifications.filter(n => n.status === "unread").length;
-      setNotificationStats({
-        total: data.notifications.length,
-        unread: unreadCount,
-        read: data.notifications.length - unreadCount,
-      });
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -394,7 +384,7 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => {
-    const storedVendor = localStorage.getItem("vendor");
+    const storedVendor = sessionStorage.getItem("vendor");
     if (storedVendor) {
       try {
         const vendorData = JSON.parse(storedVendor);
@@ -649,12 +639,6 @@ const VendorDashboard = () => {
             title="Inactive Vendors"
             value={ inactiveVendors }
             icon={ <UserX /> }
-            darkMode={ darkMode }
-          />
-          <StatCard
-            title="Total Orders"
-            value={ notificationStats.total }
-            icon={ <ShoppingCart /> }
             darkMode={ darkMode }
           />
         </div>

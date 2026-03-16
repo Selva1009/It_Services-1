@@ -26,7 +26,10 @@ exports.sendOtp = async (req, res) => {
 //vendor profile
 exports.getVendorProfile = async (req, res) => {
   try {
-    const vendorId = req.vendor.id; 
+    const vendorId = req.users?.id;
+    if (!vendorId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
     const result = await vendorService.getVendorProfile(vendorId);
     res.status(200).json(result);
   } catch (err) {

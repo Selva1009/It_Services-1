@@ -4,47 +4,47 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  ShoppingCart,
   User,
   LogOut,
   Calendar,
-  FileCog,
   Menu,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import { getCartItemsByCustomerId } from "@/lib/api/carts";
 import { API_BASE_URL } from "@/lib/api/config";
 import {
-  CART_UPDATED_EVENT,
   CUSTOMER_USER_UPDATED_EVENT,
 } from "@/lib/events";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
 const Navbar = ({
   setSearchQuery,
   setCategoryFilter,
-  setPriceFilter,
-  disableFilters,
   disableSearch,
 }) => {
   const [search, setSearch] = useState("");
-  const [cartCount, setCartCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customerUser, setCustomerUser] = useState(null);
   const router = useRouter();
+  const { auth, getAuthToken: getAuthTokenFromContext, setCustomerUser: setAuthCustomerUser } = useAuth();
+  console.log(auth,"auth")
   const getAuthToken = useCallback(
-    () => localStorage.getItem("token") || sessionStorage.getItem("token"),
-    []
+    () =>
+      getAuthTokenFromContext() ||
+      sessionStorage.getItem("token"),
+    [getAuthTokenFromContext]
   );
-
+  const name=auth?.userName
   const readCustomerUser = useCallback(() => {
     if (typeof window === "undefined") return null;
 
-    const storedCustomerUser = localStorage.getItem("customerUser");
+    if (auth.customerUser) return auth.customerUser;
+
+    const storedCustomerUser = sessionStorage.getItem("customerUser");
     if (!storedCustomerUser) return null;
 
     try {
@@ -55,33 +55,18 @@ const Navbar = ({
     }
   }, []);
 
-  // Fetch cart count from API
-  const fetchCartCount = useCallback(async (userId) => {
-    if (!userId) {
-      setCartCount(0);
-      return;
-    }
-
-    try {
-      const data = await getCartItemsByCustomerId(userId);
-      setCartCount(data.items?.length || 0);
-    } catch (error) {
-      console.error("Error fetching cart count:", error);
-      setCartCount(0);
-    }
-  }, []);
-
   const syncCustomerState = useCallback(() => {
     const currentUser = readCustomerUser();
     setCustomerUser(currentUser);
+  }, [readCustomerUser]);
 
-    if (currentUser?.id) {
-      fetchCartCount(currentUser.id);
-      return;
-    }
-
-    setCartCount(0);
-  }, [fetchCartCount, readCustomerUser]);
+  const customerDisplayName =
+    customerUser?.name ||
+    customerUser?.personName ||
+    customerUser?.company_name ||
+    customerUser?.companyName ||
+    customerUser?.email ||
+    null;
 
   useEffect(() => {
     syncCustomerState();
@@ -94,34 +79,22 @@ const Navbar = ({
       syncCustomerState();
     };
 
-    const handleCartUpdated = () => {
-      const currentUser = readCustomerUser();
-      if (currentUser?.id) {
-        fetchCartCount(currentUser.id);
-        return;
-      }
-
-      setCartCount(0);
-    };
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        handleCartUpdated();
+        syncCustomerState();
       }
     };
 
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener(CUSTOMER_USER_UPDATED_EVENT, handleCustomerUserUpdated);
-    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdated);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener(CUSTOMER_USER_UPDATED_EVENT, handleCustomerUserUpdated);
-      window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [fetchCartCount, readCustomerUser, syncCustomerState]);
+  }, [readCustomerUser, syncCustomerState]);
 
   useEffect(() => {
     let isMounted = true;
@@ -157,7 +130,8 @@ const Navbar = ({
         if (!isMounted) return;
 
         setCustomerUser(mergedUser);
-        localStorage.setItem("customerUser", JSON.stringify(mergedUser));
+        setAuthCustomerUser(mergedUser);
+        sessionStorage.setItem("customerUser", JSON.stringify(mergedUser));
         sessionStorage.setItem(
           "customerUserProfileLastSync",
           String(Date.now())
@@ -194,9 +168,8 @@ const Navbar = ({
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
+        sessionStorage.clear();
         window.dispatchEvent(new Event(CUSTOMER_USER_UPDATED_EVENT));
-        window.dispatchEvent(new Event(CART_UPDATED_EVENT));
         router.push("/SignIn");
       }
     });
@@ -245,30 +218,6 @@ const Navbar = ({
             </div>
           ) }
 
-          { !disableSearch && (
-            <button
-              onClick={ () => router.push("./PoAutomation") }
-              className="ml-4 text-[#374151] text-[14px] flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <FileCog size={ 18 } /> PO Tracking
-            </button>
-          ) }
-
-          { !disableFilters && (
-            <div className="flex items-center space-x-4 ml-4">
-              {/* Price Filter */ }
-              <select
-                onChange={ (e) =>
-                  setPriceFilter && setPriceFilter(e.target.value)
-                }
-                className="p-2 rounded-md border-2 hover:border-blue-500 text-sm"
-              >
-                <option value="">All Prices</option>
-                <option value="low">Low to High</option>
-                <option value="high">High to Low</option>
-              </select>
-            </div>
-          ) }
         </div>
 
         {/* Right Section - Profile, Date, Cart */ }
@@ -314,7 +263,7 @@ const Navbar = ({
             <div className="mt-1">
               { customerUser && (
                 <span className="text-sm">
-                  { customerUser.personName }
+                  { name }
                   <p className="text-[#999999] text-[12px] -mt-1">
                     Customer User
                   </p>
@@ -323,18 +272,7 @@ const Navbar = ({
             </div>
           </div>
 
-          {/* Divider */ }
-          <div className="w-[1px] h-10 bg-gray-200"></div>
-
-          {/* Cart Icon */ }
-          <Link href="/customer/cart" className="relative">
-            <ShoppingCart className="cursor-pointer" size={ 28 } />
-            { cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                { cartCount }
-              </span>
-            ) }
-          </Link>
+          {/* Cart removed */ }
         </div>
       </nav>
 
@@ -354,18 +292,8 @@ const Navbar = ({
           <span className="font-medium text-sm">Customer</span>
         </div>
 
-        {/* Right Section - Menu Button and Cart */ }
+        {/* Right Section - Menu Button */ }
         <div className="flex items-center space-x-4">
-          {/* Cart Icon */ }
-          <Link href="/customer/cart" className="relative">
-            <ShoppingCart className="cursor-pointer" size={ 24 } />
-            { cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                { cartCount }
-              </span>
-            ) }
-          </Link>
-
           {/* Mobile Menu Button */ }
           <button
             onClick={ () => setMobileMenuOpen(!mobileMenuOpen) }
@@ -393,7 +321,7 @@ const Navbar = ({
               </div>
               <div>
                 <p className="font-medium">
-                  { customerUser?.personName || "Customer User" }
+                  { customerDisplayName || "Customer User" }
                 </p>
                 <p className="text-sm text-gray-500">Customer User</p>
               </div>
@@ -410,25 +338,7 @@ const Navbar = ({
                 <span>My Profile</span>
               </Link>
 
-              <Link
-                href="/customer/cart"
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-                onClick={ () => setMobileMenuOpen(false) }
-              >
-                <ShoppingCart size={ 20 } />
-                <span>My Cart ({ cartCount })</span>
-              </Link>
-
-              <button
-                onClick={ () => {
-                  router.push("./PoAutomation");
-                  setMobileMenuOpen(false);
-                } }
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-              >
-                <FileCog size={ 20 } />
-                <span>PO Tracking</span>
-              </button>
+              {/* Cart and PO tracking removed */ }
             </div>
 
 

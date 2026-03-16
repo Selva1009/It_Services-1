@@ -49,7 +49,7 @@ export default function ResetPassword() {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    const email = localStorage.getItem("userEmail");
+    const email = sessionStorage.getItem("userEmail");
 
     try {
       const response = await fetch(

@@ -334,8 +334,8 @@ const CustomerSignup = () => {
       const result = await response.json();
 
       if (response.ok) {
-        if (result.authToken) localStorage.setItem("authToken", result.authToken);
-        if (result.userId) localStorage.setItem("userId", result.userId);
+        if (result.authToken) sessionStorage.setItem("authToken", result.authToken);
+        if (result.userId) sessionStorage.setItem("userId", result.userId);
 
         Swal.fire({
           title: "The user created successfully",

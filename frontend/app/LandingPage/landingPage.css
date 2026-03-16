@@ -63,6 +63,12 @@
   background: var(--bg-base);
   -webkit-font-smoothing: antialiased;
 }
+.lp-nav-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 8px;
+}
 
 .lp-root h1,
 .lp-root h2,
@@ -92,22 +98,27 @@
 .lp-navbar-inner {
   max-width: 1200px;
   margin: auto;
-  padding: 0 28px;
-  height: 68px;
+  padding: 0 32px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
+}
+.lp-logo-image {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  
 }
 
-.lp-logo-image {
-  height: 40px;
-  object-fit: contain;
-}
 
 .lp-desktop-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .lp-nav-link {

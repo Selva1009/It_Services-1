@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import Swal from "sweetalert2";
 import "./customerAdminProfile.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 /* ─── Field Config ───────────────────────────────────────── */
 const PROFILE_FIELDS = [
@@ -26,7 +27,7 @@ const PROFILE_FIELDS = [
 /* ─── Helpers ────────────────────────────────────────────── */
 const getAuthToken = () =>
   typeof window !== "undefined"
-    ? localStorage.getItem("token") || sessionStorage.getItem("token")
+    ? sessionStorage.getItem("token")
     : null;
 
 const getInitials = (first_name, last_name) => {
@@ -72,6 +73,7 @@ function FormField({ label, fieldKey, value, onChange, editable = true, type = "
 /* ─── Main Component ─────────────────────────────────────── */
 const CustomerAdminProfile = () => {
   const router = useRouter();
+  const { getAuthToken: getAuthTokenFromContext, setCustomer: setAuthCustomer } = useAuth();
 
   const [profile, setProfile]     = useState(null);
   const [formData, setFormData]   = useState({});
@@ -81,7 +83,7 @@ const CustomerAdminProfile = () => {
 
   /* ── Fetch profile ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthToken();
+    const token = getAuthTokenFromContext() || getAuthToken();
     if (!token) { router.push("/SignIn"); return; }
 
     try {
@@ -98,6 +100,7 @@ const CustomerAdminProfile = () => {
       const data = await res.json();
       const latest = data.profile || data;
       setProfile(latest);
+      setAuthCustomer(latest);
       setFormData(latest);
     } catch (err) {
       console.error("Profile fetch error:", err);
@@ -121,7 +124,7 @@ const CustomerAdminProfile = () => {
     setIsSaving(true);
 
     try {
-      const token = getAuthToken();
+      const token = getAuthTokenFromContext() || getAuthToken();
       const res = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
         method: "PUT",
         headers: {

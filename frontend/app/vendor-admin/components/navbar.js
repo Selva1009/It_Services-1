@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Home,
   Users,
-  List,
-  BarChart,
   User,
   LogOut,
   Calendar,
@@ -16,18 +13,17 @@ import {
   UserPlus,
   UserRoundPen,
   Menu,
-  Bell,
-  Clipboard,
   X,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
 export default function Navbar() {
   const NOTIFICATION_LIMIT = 50;
-  const [vendor, setVendor] = useState(null);
+  const { auth, getAuthToken: getAuthTokenFromContext, setVendor: setAuthVendor } = useAuth();
+  const [vendor, setVendor] = useState(auth.vendor || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -36,12 +32,23 @@ export default function Navbar() {
   const [vendorAdminID, setVendorAdminID] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
+  const getAuthToken = () =>
+    getAuthTokenFromContext() ||
+    sessionStorage.getItem("token");
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
+
+  const vendorDisplayName =
+    vendor?.personName ||
+    vendor?.name ||
+    vendor?.companyName ||
+    vendor?.company_name ||
+    vendor?.vendor_name ||
+    vendor?.email ||
+    null;
 
   useEffect(() => {
     let isMounted = true;
@@ -51,12 +58,11 @@ export default function Navbar() {
       setError("");
 
       try {
-        const storedVendor = localStorage.getItem("vendor");
-        if (!storedVendor) {
+        const storedVendor = sessionStorage.getItem("vendor");
+        const vendorData = storedVendor ? JSON.parse(storedVendor) : auth.vendor;
+        if (!vendorData) {
           return;
         }
-
-        const vendorData = JSON.parse(storedVendor);
         if (isMounted) {
           setVendor(vendorData);
           setVendorAdminID(vendorData.id);
@@ -88,7 +94,8 @@ export default function Navbar() {
               if (isMounted) {
                 setVendor(latestVendor);
                 setVendorAdminID(latestVendor.id);
-                localStorage.setItem("vendor", JSON.stringify(latestVendor));
+                setAuthVendor(latestVendor);
+                sessionStorage.setItem("vendor", JSON.stringify(latestVendor));
                 sessionStorage.setItem("vendorProfileLastSync", String(Date.now()));
               }
             }
@@ -130,7 +137,7 @@ export default function Navbar() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${getAuthToken() || localStorage.getItem("vendorToken") || ""}`,
+            Authorization: `Bearer ${getAuthToken() || sessionStorage.getItem("vendorToken") || ""}`,
           },
           body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
         }
@@ -179,7 +186,7 @@ export default function Navbar() {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
+        sessionStorage.clear();
         router.push("/SignIn");
       }
     });
@@ -228,27 +235,6 @@ export default function Navbar() {
               <Users className="w-4 h-4" />
               Users Profiles
             </Link>
-            <Link
-              href="/vendor-admin/products"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <List className="w-4 h-4" />
-              Vendor Product View
-            </Link>
-            <Link
-              href="/vendor-admin/AdminNotification"
-              className="relative flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Bell className="w-4 h-4" />
-              <span>Orders</span>
-            </Link>
-            <Link
-              href="/vendor-admin/PoTracking"
-              className="relative flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Clipboard className="w-4 h-4" />
-              <span>Po Tracking</span>
-            </Link>
           </div>
         </div>
 
@@ -276,7 +262,7 @@ export default function Navbar() {
                 { error && <span className="text-red-500">{ error }</span> }
                 { vendor && (
                   <span>
-                    { vendor.firstName } { vendor.lastName }
+                    { vendorDisplayName || `${vendor.firstName || ""} ${vendor.lastName || ""}`.trim() || "Vendor Admin" }
                     <br />
                     <p className="text-[#999999] text-[12px]">Vendor Admin</p>
                   </span>
@@ -356,7 +342,7 @@ export default function Navbar() {
                 </div>
                 <div>
                   <p className="font-medium">
-                    { vendor.firstName } { vendor.lastName }
+                    { vendorDisplayName || `${vendor.firstName || ""} ${vendor.lastName || ""}`.trim() || "Vendor Admin" }
                   </p>
                   <p className="text-sm text-gray-500">Vendor Admin</p>
                 </div>
@@ -387,30 +373,6 @@ export default function Navbar() {
                 >
                   <Users size={ 20 } />
                   <span>Users Profiles</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/products"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <List size={ 20 } />
-                  <span>Vendor Product View</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/AdminNotification"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Bell size={ 20 } />
-                  <span>Orders</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/PoTracking"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Clipboard size={ 20 } />
-                  <span>Po Tracking</span>
                 </Link>
               </div>
 

@@ -16,7 +16,6 @@ import {
   BarChart2,
   PieChart,
   TrendingUp,
-  ShoppingCart,
   Search,
   Clock,
   Sun,
@@ -38,6 +37,7 @@ import {
   LineElement,
   Filler,
 } from "chart.js";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 ChartJS.register(
   CategoryScale,
@@ -55,6 +55,7 @@ ChartJS.register(
 const CustomerAdminDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
+  const { auth } = useAuth();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -63,11 +64,6 @@ const CustomerAdminDashboard = () => {
   const [timeRange, setTimeRange] = useState("week");
   const [recentActivity, setRecentActivity] = useState([]);
   const [stats, setStats] = useState({ week: 0, month: 0 });
-  const [notificationStats, setNotificationStats] = useState({
-    total: 0,
-    unread: 0,
-    read: 0,
-  });
   const [darkMode, setDarkMode] = useState(false);
 
   // Color palettes for both themes
@@ -478,87 +474,79 @@ const CustomerAdminDashboard = () => {
       const data = await response.json();
       setNotifications(data.notifications);
 
-      const unreadCount = data.notifications.filter(
-        (n) => n.status === "unread"
-      ).length;
-      setNotificationStats({
-        total: data.notifications.length,
-        unread: unreadCount,
-        read: data.notifications.length - unreadCount,
-      });
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
   };
 
   useEffect(() => {
-    const storedCustomer = localStorage.getItem("customer");
-    if (storedCustomer) {
-      try {
-        const customerData = JSON.parse(storedCustomer);
+    const storedCustomer = sessionStorage.getItem("customer");
+    try {
+      const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
+      if (customerData?.id) {
         setAdminID(customerData.id);
-      } catch (err) {
-        console.error("Invalid customer data:", err);
       }
+    } catch (err) {
+      console.error("Invalid customer data:", err);
     }
   }, []);
 
-  useEffect(() => {
-    if (!adminID) return;
+  // useEffect(() => {
+  //   if (!adminID) return;
 
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `${API_BASE_URL}/api/customer-users/user-profile`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ adminID }),
-          }
-        );
+  //   const fetchUsers = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/customer-users/user-profile`,
+  //         {
+  //           method: "POST",
+  //           headers: { "Content-Type": "application/json" },
+  //           body: JSON.stringify({ adminID }),
+  //         }
+  //       );
 
-        if (!response.ok) throw new Error("Failed to fetch users");
-        const data = await response.json();
-        setUsers(data);
-        setFilteredUsers(filterUsersByTimeRange(data));
-      } catch (error) {
-        console.error("Error fetching users:", error);
-        Swal.fire("Error", "Failed to load users", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
+  //       if (!response.ok) throw new Error("Failed to fetch users");
+  //       const data = await response.json();
+  //       setUsers(data);
+  //       setFilteredUsers(filterUsersByTimeRange(data));
+  //     } catch (error) {
+  //       console.error("Error fetching users:", error);
+  //       Swal.fire("Error", "Failed to load users", "error");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    const fetchNewUserSummary = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/customer-users/new-users-summary?adminID=${adminID}`
-        );
-        const data = await response.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Error fetching activity:", error);
-      }
-    };
+  //   const fetchNewUserSummary = async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/customer-users/new-users-summary?adminID=${adminID}`
+  //       );
+  //       const data = await response.json();
+  //       setStats(data);
+  //     } catch (error) {
+  //       console.error("Error fetching activity:", error);
+  //     }
+  //   };
 
-    const fetchRecentActivity = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/customer-users/recent-activity?adminID=${adminID}`
-        );
-        const data = await response.json();
-        setRecentActivity(data);
-      } catch (error) {
-        console.error("Error fetching activity:", error);
-      }
-    };
+  //   const fetchRecentActivity = async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/customer-users/recent-activity?adminID=${adminID}`
+  //       );
+  //       const data = await response.json();
+  //       setRecentActivity(data);
+  //     } catch (error) {
+  //       console.error("Error fetching activity:", error);
+  //     }
+  //   };
 
-    fetchUsers();
-    fetchNewUserSummary();
-    fetchRecentActivity();
-    fetchNotifications();
-  }, [adminID]);
+  //   fetchUsers();
+  //   fetchNewUserSummary();
+  //   fetchRecentActivity();
+  //   fetchNotifications();
+  // }, [adminID]);
 
   useEffect(() => {
     if (users.length > 0) {
@@ -639,12 +627,6 @@ const CustomerAdminDashboard = () => {
             title="Inactive Users"
             value={ users.filter((u) => u.status === "Inactive").length }
             icon={ <UserX /> }
-
-          />
-          <StatCard
-            title="Total Orders"
-            value={ notificationStats.total }
-            icon={ <ShoppingCart /> }
 
           />
         </div>

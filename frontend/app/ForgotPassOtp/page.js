@@ -45,7 +45,7 @@ export default function ForgotPassOtp() {
     setSuccessMessage("");
 
     try {
-      const email = localStorage.getItem("userEmail");
+      const email = sessionStorage.getItem("userEmail");
 
       if (!email) {
         setErrorMessage("Email is missing. Please request a new OTP.");

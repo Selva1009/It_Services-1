@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import "./profile.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 /* ─── Constants ─────────────────────────────────────────── */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
@@ -25,7 +26,7 @@ const ADDRESS_KEYS = ["address", "country", "state", "city", "pincode"];
 /* ─── Helpers ────────────────────────────────────────────── */
 const getAuthToken = () =>
   (typeof window !== "undefined" &&
-    (localStorage.getItem("token") || sessionStorage.getItem("token"))) || null;
+    sessionStorage.getItem("token")) || null;
 
 const val = (v) => v || <span className="not-provided">Not provided</span>;
 
@@ -75,6 +76,7 @@ function ServiceChip({ name, level }) {
 /* ─── Main Component ─────────────────────────────────────── */
 export default function VendorProfilePage() {
   const router = useRouter();
+  const { getAuthToken: getAuthTokenFromContext, setVendor: setAuthVendor } = useAuth();
 
   const [profile, setProfile]     = useState(null);
   const [formData, setFormData]   = useState({});
@@ -84,7 +86,7 @@ export default function VendorProfilePage() {
 
   /* ── Fetch profile from API ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthToken();
+    const token = getAuthTokenFromContext() || getAuthToken();
     if (!token) {
       router.push("/SignIn");
       return;
@@ -106,6 +108,7 @@ export default function VendorProfilePage() {
       /* API returns: { message, data: { ...vendor, address: {}, services: [] } } */
       const data = json.data || json;
       setProfile(data);
+      setAuthVendor(data);
       setFormData(flattenProfile(data));
     } catch (err) {
       console.error("Profile fetch error:", err);
@@ -151,7 +154,7 @@ export default function VendorProfilePage() {
     setIsSaving(true);
 
     try {
-      const token = getAuthToken();
+      const token = getAuthTokenFromContext() || getAuthToken();
       const res = await fetch(`${API_BASE_URL}/api/vendor-admin/profile`, {
         method: "PUT",
         headers: {

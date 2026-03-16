@@ -8,10 +8,12 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const Page = () => {
   const router = useRouter();
   const { validateForm } = useUserFormValidation();
+  const { auth, getUserToken } = useAuth();
   const [formValues, setFormValues] = useState({
     personName: "",
     phoneNumber: "",
@@ -28,23 +30,28 @@ const Page = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const storedVendor = localStorage.getItem("vendor");
+    const storedVendor = sessionStorage.getItem("vendor");
     if (storedVendor) {
       try {
         const vendorData = JSON.parse(storedVendor);
         setVendorId(vendorData.id);
+        return;
       } catch (err) {
         console.error("Invalid vendor data:", err);
       }
+    }
+
+    if (auth.vendor?.id) {
+      setVendorId(auth.vendor.id);
     }
   }, []);
 
   useEffect(() => {
     const fetchAdminData = async () => {
-      const storedVendor = localStorage.getItem("vendor");
-      if (storedVendor) {
+      const storedVendor = sessionStorage.getItem("vendor");
+      if (storedVendor || auth.vendor) {
         try {
-          const vendorData = JSON.parse(storedVendor);
+          const vendorData = storedVendor ? JSON.parse(storedVendor) : auth.vendor;
           setAdminId(vendorData.id);
 
           const response = await fetch(
@@ -126,7 +133,7 @@ const Page = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('vendorToken')}`
+          "Authorization": `Bearer ${getUserToken() || sessionStorage.getItem("vendorToken")}`
         },
         body: JSON.stringify(payload),
       });

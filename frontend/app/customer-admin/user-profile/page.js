@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import { Search, GroupOutlined } from "@mui/icons-material";
 import "./itUsers.css";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const ITUsersPage = () => {
   const [users, setUsers]           = useState([]);
@@ -27,12 +28,13 @@ const ITUsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage]             = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const { getAuthToken: getAuthTokenFromContext } = useAuth();
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("token");
+        const token = getAuthTokenFromContext() || sessionStorage.getItem("token");
         const response = await fetch(`${API_BASE_URL}/api/user-admin/It-users`, {
           method: "GET",
           headers: {
