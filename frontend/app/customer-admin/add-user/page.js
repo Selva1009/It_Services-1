@@ -1,6 +1,6 @@
 ﻿"use client";
 import { API_BASE_URL } from "@/lib/api/config";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import {
@@ -15,6 +15,12 @@ const getAuthToken = () =>
     ? localStorage.getItem("token") || sessionStorage.getItem("token")
     : null;
 
+/* ── Validation helpers ── */
+const validateMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
+const validateEmail  = (email)  => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validatePassword = (password) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
+
 const CustomerAddUserPage = () => {
   const router = useRouter();
 
@@ -27,27 +33,131 @@ const CustomerAddUserPage = () => {
     confirmPassword: "",
   });
 
+  const [errors,              setErrors]              = useState({});
   const [showPassword,        setShowPassword]        = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting,        setIsSubmitting]        = useState(false);
   const [submitted,           setSubmitted]           = useState(false);
   const [focused,             setFocused]             = useState(null);
+  const [userId,              setUserId]              = useState(null);
+
+  /* ── Decode user id from authToken ── */
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      try {
+        const base64Payload = token.split(".")[1];
+        const decoded = JSON.parse(atob(base64Payload));
+        setUserId(decoded.id);
+      } catch (err) {
+        console.error("Failed to decode token:", err);
+      }
+    }
+  }, []);
+
+  /* ── Per-field validation ── */
+  const validateField = (name, value) => {
+    switch (name) {
+      case "name":
+        return value.trim().length < 2 ? "Name must be at least 2 characters." : "";
+
+      case "mobile":
+        if (!value) return "Mobile number is required.";
+        if (!/^\d+$/.test(value)) return "Mobile must contain digits only.";
+        if (value.length !== 10) return "Mobile number must be exactly 10 digits.";
+        if (!validateMobile(value)) return "Enter a valid Indian mobile number (starts with 6-9).";
+        return "";
+
+      case "email":
+        if (!value) return "Email is required.";
+        if (!validateEmail(value)) return "Enter a valid email address (e.g. user@example.com).";
+        return "";
+
+      case "designation":
+        return value.trim().length < 2 ? "Designation must be at least 2 characters." : "";
+
+      case "password":
+        if (!value) return "Password is required.";
+        if (value.length < 8) return "Password must be at least 8 characters.";
+        if (!validatePassword(value))
+          return "Must include uppercase, lowercase, number & special character (@$!%*?&).";
+        return "";
+
+      case "confirmPassword":
+        if (!value) return "Please confirm your password.";
+        if (value !== formValues.password) return "Passwords do not match.";
+        return "";
+
+      default:
+        return "";
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Block non-digits for mobile & enforce 10 char limit
+    if (name === "mobile") {
+      if (!/^\d*$/.test(value)) return;
+      if (value.length > 10) return;
+    }
+
     setFormValues((prev) => ({ ...prev, [name]: value }));
+
+    // Clear error on change, re-validate on the fly
+    const error = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: error }));
+
+    // Re-validate confirmPassword when password changes
+    if (name === "password") {
+      const cpError = formValues.confirmPassword
+        ? value !== formValues.confirmPassword ? "Passwords do not match." : ""
+        : "";
+      setErrors((prev) => ({ ...prev, confirmPassword: cpError }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setFocused(null);
+    const error = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   const handleCancel = () => router.push("/customer-admin");
 
+  /* ── Full form validation before submit ── */
+  const validateAll = () => {
+    const newErrors = {};
+    Object.keys(formValues).forEach((key) => {
+      newErrors[key] = validateField(key, formValues[key]);
+    });
+    setErrors(newErrors);
+    return Object.values(newErrors).every((e) => e === "");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    if (!validateAll()) return; // Stop if any field is invalid
+
     setIsSubmitting(true);
+
+    if (!userId) {
+      Swal.fire({
+        title: "Error",
+        text: "Auth token not found. Please login again.",
+        icon: "error",
+        confirmButtonColor: "#1a56db",
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/api/user-admin/create-user`, {
+      const res = await fetch(`${API_BASE_URL}/api/it-user-employee/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,6 +169,7 @@ const CustomerAddUserPage = () => {
           mobile:      formValues.mobile,
           designation: formValues.designation,
           password:    formValues.password,
+          user_id:     userId,
         }),
       });
 
@@ -89,15 +200,15 @@ const CustomerAddUserPage = () => {
 
   const fields = [
     { name: "name",        label: "Full Name",     icon: User,      placeholder: "Enter full name",     type: "text",  col: 1 },
-    { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter mobile number", type: "tel",   col: 1 },
+    { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter mobile number", type: "tel", col: 1 },
     { name: "email",       label: "Email Address", icon: Mail,      placeholder: "Enter email address", type: "email", col: 2 },
     { name: "designation", label: "Designation",   icon: Briefcase, placeholder: "Enter designation",   type: "text",  col: 2 },
   ];
 
   const btnClass = [
     "cau-btn-submit",
-    isSubmitting ? "loading"  : "",
-    submitted    ? "success"  : "",
+    isSubmitting ? "loading" : "",
+    submitted    ? "success" : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -131,7 +242,7 @@ const CustomerAddUserPage = () => {
               {fields.map(({ name, label, icon: Icon, placeholder, type, col }) => (
                 <div
                   key={name}
-                  className={`cau-field cau-col-${col}${focused === name ? " focused" : ""}`}
+                  className={`cau-field cau-col-${col}${focused === name ? " focused" : ""}${errors[name] ? " error" : ""}`}
                 >
                   <label htmlFor={name}>{label}</label>
                   <div className="cau-input-wrap">
@@ -142,23 +253,27 @@ const CustomerAddUserPage = () => {
                       type={type}
                       value={formValues[name]}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder={placeholder}
                       onFocus={() => setFocused(name)}
-                      onBlur={() => setFocused(null)}
                       className="cau-input"
                       autoComplete="off"
+                      maxLength={name === "mobile" ? 10 : undefined}
                     />
-                    {formValues[name] && (
+                    {formValues[name] && !errors[name] && (
                       <span className="cau-input-check">
                         <CheckCircle2 size={14} />
                       </span>
                     )}
                   </div>
+                  {errors[name] && (
+                    <span className="cau-error-msg">{errors[name]}</span>
+                  )}
                 </div>
               ))}
 
-              {/* Password — rendered directly to avoid stale state in map */}
-              <div className={`cau-field cau-col-1${focused === "password" ? " focused" : ""}`}>
+              {/* Password */}
+              <div className={`cau-field cau-col-1${focused === "password" ? " focused" : ""}${errors.password ? " error" : ""}`}>
                 <label htmlFor="password">Password</label>
                 <div className="cau-input-wrap">
                   <span className="cau-input-icon"><Lock size={15} /></span>
@@ -168,9 +283,9 @@ const CustomerAddUserPage = () => {
                     type={showPassword ? "text" : "password"}
                     value={formValues.password}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="••••••••"
                     onFocus={() => setFocused("password")}
-                    onBlur={() => setFocused(null)}
                     className="cau-input cau-input-password"
                     autoComplete="new-password"
                   />
@@ -182,10 +297,19 @@ const CustomerAddUserPage = () => {
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+                {errors.password && (
+                  <span className="cau-error-msg">{errors.password}</span>
+                )}
+                {/* Password strength hint */}
+                {focused === "password" && !errors.password && (
+                  <span className="cau-hint-msg">
+                    Min 8 chars · Uppercase · Lowercase · Number · Special (@$!%*?&)
+                  </span>
+                )}
               </div>
 
-              {/* Confirm Password — rendered directly */}
-              <div className={`cau-field cau-col-1${focused === "confirmPassword" ? " focused" : ""}`}>
+              {/* Confirm Password */}
+              <div className={`cau-field cau-col-1${focused === "confirmPassword" ? " focused" : ""}${errors.confirmPassword ? " error" : ""}`}>
                 <label htmlFor="confirmPassword">Confirm Password</label>
                 <div className="cau-input-wrap">
                   <span className="cau-input-icon"><Lock size={15} /></span>
@@ -195,9 +319,9 @@ const CustomerAddUserPage = () => {
                     type={showConfirmPassword ? "text" : "password"}
                     value={formValues.confirmPassword}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="••••••••"
                     onFocus={() => setFocused("confirmPassword")}
-                    onBlur={() => setFocused(null)}
                     className="cau-input cau-input-password"
                     autoComplete="new-password"
                   />
@@ -209,6 +333,9 @@ const CustomerAddUserPage = () => {
                     {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+                {errors.confirmPassword && (
+                  <span className="cau-error-msg">{errors.confirmPassword}</span>
+                )}
               </div>
 
             </div>

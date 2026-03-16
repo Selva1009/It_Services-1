@@ -1,20 +1,20 @@
 /* ============================================
    VENDOR ADD USER PAGE - EXTERNAL CSS
-   Matches customerAdminProfile.css blue gradient style
+   Emerald green theme — matches dashboard design
    ============================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
 :root {
-  --primary:       #1a56db;
-  --primary-dark:  #1241a8;
-  --primary-light: #ebf1fd;
+  --primary:       #10b981;
+  --primary-dark:  #059669;
+  --primary-light: #d1fae5;
   --success:       #10b981;
   --danger:        #ef4444;
 
-  --bg-page:    #f0f4fa;
+  --bg-page:    #f8fafc;
   --bg-card:    #ffffff;
-  --bg-header:  linear-gradient(135deg, #1a56db 0%, #0ea5e9 100%);
+  --bg-header:  linear-gradient(135deg, #10b981 0%, #34d399 100%);
 
   --text-primary:   #0f172a;
   --text-secondary: #475569;
@@ -22,9 +22,9 @@
   --text-white:     #ffffff;
 
   --border:       #e2e8f0;
-  --border-focus: #1a56db;
+  --border-focus: #10b981;
   --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-lg:    0 8px 32px rgba(26, 86, 219, 0.12);
+  --shadow-lg:    0 8px 32px rgba(16, 185, 129, 0.12);
 
   --radius-sm:   8px;
   --radius-md:   12px;
@@ -34,6 +34,9 @@
   --font-body:    'DM Sans', sans-serif;
   --font-heading: 'Syne', sans-serif;
   --transition:   0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Navbar height — keeps page flush, no colour gap */
+  --navbar-h: 64px;
 }
 
 /* ── Page ── */
@@ -45,8 +48,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px 16px 64px;
+  /* Push content below sticky navbar, no extra gap */
+  padding: calc(var(--navbar-h) + 32px) 16px 64px;
 }
 
 /* ── Card ── */
@@ -169,22 +172,9 @@
   gap: 6px;
 }
 
-.vau-field.full-width {
-  grid-column: span 2;
-}
-
-.vau-col-1 { grid-column: span 1; }
-.vau-col-2 { grid-column: span 2; }
-
-/* ── Check icon (field filled) ── */
-.vau-input-check {
-  position: absolute;
-  right: 10px;
-  display: flex;
-  align-items: center;
-  color: var(--success);
-  pointer-events: none;
-}
+.vau-field.full-width { grid-column: span 2; }
+.vau-col-1            { grid-column: span 1; }
+.vau-col-2            { grid-column: span 2; }
 
 .vau-field label {
   font-size: 12px;
@@ -211,8 +201,16 @@
   transition: color var(--transition);
 }
 
-.vau-field.focused .vau-input-icon {
-  color: var(--primary);
+.vau-field.focused .vau-input-icon { color: var(--primary); }
+
+/* ── Check icon ── */
+.vau-input-check {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  color: var(--success);
+  pointer-events: none;
 }
 
 /* ── Input ── */
@@ -229,19 +227,13 @@
   transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
-.vau-input::placeholder {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.vau-input:hover {
-  background: #f1f5f9;
-}
+.vau-input::placeholder { color: var(--text-muted); font-size: 13px; }
+.vau-input:hover        { background: #f1f5f9; }
 
 .vau-input:focus {
   border-color: var(--border-focus);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.10);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 
 .vau-input:disabled {
@@ -250,24 +242,13 @@
   cursor: not-allowed;
 }
 
-/* ── Input error state ── */
 .vau-input.error {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.10);
 }
 
-/* ── Error message ── */
-.vau-error-msg {
-  font-size: 11px;
-  color: var(--danger);
-  font-weight: 500;
-  margin-top: 2px;
-}
-
 /* ── Password input ── */
-.vau-input-password {
-  padding-right: 40px;
-}
+.vau-input-password { padding-right: 40px; }
 
 /* ── Toggle password button ── */
 .vau-toggle-btn {
@@ -283,11 +264,9 @@
   transition: color var(--transition);
 }
 
-.vau-toggle-btn:hover {
-  color: var(--text-primary);
-}
+.vau-toggle-btn:hover { color: var(--text-primary); }
 
-/* ── Kill browser autofill background ── */
+/* ── Kill autofill bg ── */
 .vau-input:-webkit-autofill,
 .vau-input:-webkit-autofill:hover,
 .vau-input:-webkit-autofill:focus,
@@ -347,7 +326,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.25);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
   transition: all var(--transition);
   min-width: 148px;
   justify-content: center;
@@ -355,7 +334,7 @@
 
 .vau-btn-submit:hover:not(:disabled) {
   background: var(--primary-dark);
-  box-shadow: 0 4px 16px rgba(26, 86, 219, 0.35);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
   transform: translateY(-1px);
 }
 
@@ -381,35 +360,46 @@
   flex-shrink: 0;
 }
 
-@keyframes vauSpin {
-  to { transform: rotate(360deg); }
+@keyframes vauSpin { to { transform: rotate(360deg); } }
+
+/* ── Error states ── */
+.vau-field.error .vau-input-wrap {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+.vau-error-msg {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #e53e3e;
+  padding-left: 2px;
+}
+
+.vau-hint-msg {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+  padding-left: 2px;
 }
 
 /* ── Responsive ── */
+@media (max-width: 640px) {
+  /* Mobile navbar is 56px */
+  .vau-page { padding-top: calc(56px + 24px); }
+}
+
 @media (max-width: 560px) {
-  .vau-header {
-    padding: 24px 20px;
-  }
+  .vau-header  { padding: 24px 20px; }
+  .vau-body    { padding: 20px 16px; }
 
-  .vau-body {
-    padding: 20px 16px;
-  }
+  .vau-grid { grid-template-columns: 1fr; }
 
-  .vau-grid {
-    grid-template-columns: 1fr;
-  }
+  .vau-field.full-width { grid-column: span 1; }
 
-  .vau-field.full-width {
-    grid-column: span 1;
-  }
-
-  .vau-actions {
-    flex-direction: column-reverse;
-  }
+  .vau-actions { flex-direction: column-reverse; }
 
   .vau-btn-cancel,
-  .vau-btn-submit {
-    width: 100%;
-    justify-content: center;
-  }
+  .vau-btn-submit { width: 100%; justify-content: center; }
 }

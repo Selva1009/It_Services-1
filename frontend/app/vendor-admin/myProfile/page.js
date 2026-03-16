@@ -97,7 +97,7 @@ export default function VendorProfilePage() {
       });
       // ADD THESE TWO LINES to see the exact problem
       console.log("Status:", res.status);
-      console.log("URL hit:", `${API_BASE_URL}/api/vendor-admin/myprofile`);
+      console.log("URL hit:", `${API_BASE_URL}/api/vendor-admin/profile`);
 
 
 

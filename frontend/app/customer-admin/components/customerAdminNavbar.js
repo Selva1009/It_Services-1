@@ -4,34 +4,35 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  Users,
-  UserPlus,
-  Activity,
-  Bell,
-  User,
-  LayoutDashboard,
-  LogOut,
-  Calendar,
-  Menu,
-  X,
-  Clipboard,
-  UserRoundPen
+  LayoutDashboard, UserPlus, Users,
+  Bell, User, LogOut, Calendar,
+  Menu, X, ChevronDown, UserRoundPen,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
+import "./CustomerAdminNavbar.css";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
-export default function CustomerAdminNavbar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [customer, setCustomer] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
+const getInitials = (first = "", last = "") =>
+  `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase();
 
+export default function CustomerAdminNavbar() {
+  const pathname  = usePathname();
+  const router    = useRouter();
+
+  const [customer,        setCustomer]        = useState(null);
+  const [dropdownOpen,    setDropdownOpen]    = useState(false);
+  const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState("");
+
+  const getAuthToken = () =>
+    localStorage.getItem("token")      ||
+    localStorage.getItem("authToken")  ||
+    localStorage.getItem("userToken")  ||
+    sessionStorage.getItem("token");
+
+  // ── Load profile from API using token ────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
 
@@ -39,95 +40,75 @@ export default function CustomerAdminNavbar() {
       setLoading(true);
       setError("");
 
-      const customerData = localStorage.getItem("customer");
-      if (!customerData) {
+      // No customer object in localStorage — fetch purely from API via token
+      const token =
+        localStorage.getItem("token")     ||
+        localStorage.getItem("authToken") ||
+        localStorage.getItem("userToken") ||
+        sessionStorage.getItem("token");
+
+      if (!token) {
         setLoading(false);
         return;
       }
 
       try {
-        const parsedCustomer = JSON.parse(customerData);
-        if (isMounted) {
-          setCustomer(parsedCustomer);
-        }
+        const res = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
+          cache:   "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        if (!parsedCustomer?.id) {
-          setLoading(false);
-          return;
-        }
-
-        const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
-        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-
-        if (shouldSync) {
-          try {
-            const authToken = getAuthToken();
-            const response = await fetch(
-              `${API_BASE_URL}/api/customers/profile`,
-              {
-                cache: "no-store",
-                headers: authToken
-                  ? { Authorization: `Bearer ${authToken}` }
-                  : undefined,
-              }
-            );
-
-            if (response.ok) {
-              const payload = await response.json();
-              const latestCustomer = payload.customer || payload;
-              if (isMounted) {
-                setCustomer(latestCustomer);
-                localStorage.setItem("customer", JSON.stringify(latestCustomer));
-                sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
-              }
-            }
-          } catch (fetchError) {
-            console.error("Failed to fetch latest customer admin details:", fetchError);
+        if (res.ok) {
+          const payload = await res.json();
+          const latest  = payload.profile || payload.customer || payload.data || payload;
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Navbar] API response keys:", Object.keys(latest));
+            console.log("[Navbar] API response:", latest);
           }
+          if (isMounted) setCustomer(latest);
+        } else {
+          console.error("[Navbar] Profile API returned:", res.status);
         }
-      } catch (parseError) {
-        console.error("Invalid customer data in localStorage:", parseError);
-        setError("Failed to load customer profile");
+      } catch (fetchErr) {
+        console.error("Profile fetch failed:", fetchErr);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     void loadCustomer();
 
-    const handleStorage = () => {
-      void loadCustomer();
-    };
-
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handleStorage);
-    };
+    return () => { isMounted = false; };
   }, []);
+
+  // ── Close dropdown on outside click ──────────────────────────────────────
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const close = (e) => {
+      if (!e.target.closest(".ca-nav-profile")) setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [dropdownOpen]);
 
   const isActive = (path) => pathname === path;
 
+  // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
+    setDropdownOpen(false);
+    setMobileMenuOpen(false);
     Swal.fire({
-      title: "Are you sure want to logout?",
-      imageUrl: "/logout.gif",
-      imageWidth: 127,
-      imageHeight: 151,
-      imageAlt: "Logout Image",
-      showCancelButton: true,
-      confirmButtonColor: "#3085D6",
+      title:             "Are you sure want to logout?",
+      imageUrl:          "/logout.gif",
+      imageWidth:        127,
+      imageHeight:       151,
+      imageAlt:          "Logout",
+      showCancelButton:  true,
+      confirmButtonColor:"#3085D6",
       cancelButtonColor: "#3085D6",
       confirmButtonText: "<b>Yes</b>",
-      cancelButtonText: "<b>Cancel</b>",
-      customClass: {
-        confirmButton: "swal-button",
-        cancelButton: "swal-button",
-        popup: "rounded-alert",
-      },
+      cancelButtonText:  "<b>Cancel</b>",
+      customClass:       { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.clear();
@@ -137,220 +118,184 @@ export default function CustomerAdminNavbar() {
   };
 
   const menuItems = [
-    {
-      href: "/customer-admin/customerAdminDashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      label: "Dashboard",
-    },
-    {
-      href: "/customer-admin/add-user",
-      icon: <UserPlus className="h-5 w-5" />,
-      label: "Add User",
-    },
-    {
-      href: "/customer-admin/user-profile",
-      icon: <Users className="h-5 w-5" />,
-      label: "User Profiles",
-    },
-    {
-      href: "/customer-admin/AdminNotifications",
-      icon: <Bell className="h-5 w-5" />,
-      label: "Orders",
-    },
-    {
-      href: "/customer-admin/PoAutomation",
-      icon: <Clipboard className="h-5 w-5" />,
-      label: "PO Automation",
-    },
+    { href: "/customer-admin/customerAdminDashboard", icon: <LayoutDashboard size={16} />, label: "Dashboard"     },
+    { href: "/customer-admin/add-user",               icon: <UserPlus         size={16} />, label: "Add User"      },
+    { href: "/customer-admin/user-profile",           icon: <Users            size={16} />, label: "User Profiles" },
   ];
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  return (
+  // Resolve name from all possible key formats
+  // DEBUG: remove this log once name shows correctly
+  if (customer && process.env.NODE_ENV === "development") {
+    console.log("[Navbar] customer keys:", Object.keys(customer));
+    console.log("[Navbar] customer values:", customer);
+  }
+
+  // API returns first_name / last_name (snake_case)
+  const firstName = customer?.first_name || customer?.firstName || "";
+  const lastName  = customer?.last_name  || customer?.lastName  || "";
+  const profileName = [firstName, lastName].filter(Boolean).join(" ").trim() || "";
+  const initials = profileName
+    ? profileName.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("")
+    : "CA";
+
+    return (
     <>
-      {/* Desktop Navbar */}
-      <nav className="hidden sm:flex sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur h-20 items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-4">
-          {/* Logo */}
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-            <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
-              <img
-                src="/Logo.png"
-                alt="M-Place Logo"
-                className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
-              />
-            </div>
-          </div>
+      {/* ════════════════ DESKTOP NAVBAR ════════════════ */}
+      <nav className="ca-nav">
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
+        {/* Left: logo + divider + links */}
+        <div className="ca-nav-left">
+          <Link href="/customer-admin/customerAdminDashboard" className="ca-logo">
+            <div className="ca-logo-mark">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span className="ca-logo-text">M-Place</span>
+          </Link>
+
+          <div className="ca-nav-divider" />
+
+          <nav className="ca-nav-links">
             {menuItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant={isActive(item.href) ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2 text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-                >
-                  {item.icon}
-                  {item.label}
-                </Button>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`ca-nav-link${isActive(item.href) ? " active" : ""}`}
+              >
+                {item.icon}
+                {item.label}
               </Link>
             ))}
-          </div>
+          </nav>
         </div>
 
-        {/* RIGHT: Date & Customer Admin Profile */}
-        <div className="flex items-center space-x-6">
-          {/* Date */}
-          <div className="hidden sm:flex items-center">
-            <Calendar className="text-black-900" />
-            <span className="ml-2">{currentDate}</span>
+        {/* Right: date · bell · profile */}
+        <div className="ca-nav-right">
+
+          {/* Date pill */}
+          <div className="ca-nav-date">
+            <Calendar size={13} />
+            {currentDate}
           </div>
 
-          <div className="h-10 w-[1px] bg-gray-300"></div>
+          {/* Bell */}
+          <button className="ca-nav-icon-btn" aria-label="Notifications">
+            <Bell size={16} />
+            <div className="ca-nav-bell-dot" />
+          </button>
 
-          {/* Customer Admin Dropdown */}
-          <div className="relative">
-            <div
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition cursor-pointer"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              <User size={32} className="text-gray-800" />
-              <div className="hidden sm:block text-[16px]">
-                {loading && <span>Loading...</span>}
-                {error && <span className="text-red-500">{error}</span>}
-                {customer && (
-                  <span>
-                    <span className="text-[14px]">
-                      {customer.firstName} {customer.lastName}
-                    </span>
-                    <br />
-                    <p className="text-[#999999] text-[12px]">Customer Admin</p>
-                  </span>
-                )}
-              </div>
+          {/* Profile dropdown */}
+          <div
+            className={`ca-nav-profile${dropdownOpen ? " open" : ""}`}
+            onClick={() => setDropdownOpen((o) => !o)}
+          >
+            <div className="ca-nav-avatar">{initials}</div>
+
+            <div className="ca-nav-profile-info">
+              {loading && <span className="ca-nav-profile-name">Loading…</span>}
+              {error   && <span className="ca-nav-profile-name" style={{ color: "var(--red)" }}>{error}</span>}
+              {!loading && !error && (
+                <>
+                  <span className="ca-nav-profile-name">{profileName || "Customer Admin"}</span>
+                  <span className="ca-nav-profile-role">Customer Admin</span>
+                </>
+              )}
             </div>
 
+            <ChevronDown size={14} className="ca-nav-chevron" />
+
+            {/* Dropdown menu */}
             {dropdownOpen && (
-              <div className="absolute top-[80px] left-[-4px] mt-[-12px] w-56 bg-white shadow-xl rounded-xl z-50 border border-gray-200">
-                <ul className="py-2 text-sm text-gray-700 font-medium">
-                  <li>
-                    <Link
-                      href="/customer-admin/customerAdminProfile"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors"
-                    >
-                      <User size={20} className="text-gray-600" />
-                      <span>My Profile</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
-                    >
-                      <LogOut size={20} className="text-red-500" />
-                      <span>Logout</span>
-                    </button>
-                  </li>
-                </ul>
+              <div className="ca-dropdown">
+                <Link
+                  href="/customer-admin/customerAdminProfile"
+                  className="ca-dropdown-item"
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  <User size={15} />
+                  My Profile
+                </Link>
+                <div className="ca-dropdown-divider" />
+                <button className="ca-dropdown-item danger" onClick={handleLogout}>
+                  <LogOut size={15} />
+                  Logout
+                </button>
               </div>
             )}
           </div>
+
         </div>
       </nav>
 
-      {/* Mobile Navbar */}
-      <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        {/* Left: Brand Name and Mobile Menu Button */}
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
-              <img
-                src="/Logo.png"
-                alt="M-Place Logo"
-                className="w-7 h-7 object-contain"
-              />
-            </div>
+      {/* ════════════════ MOBILE NAVBAR ════════════════ */}
+      <nav className="ca-nav-mobile">
+        <div className="ca-nav-mobile-brand">
+          <div className="ca-nav-mobile-logo">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
           </div>
-
-          <span className="font-medium text-sm">Customer Admin</span>
+          <span className="ca-nav-mobile-title">Customer Admin</span>
         </div>
 
-        {/* Right: Menu Button */}
         <button
-          className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="ca-nav-mobile-menu-btn"
+          onClick={() => setMobileMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Mobile Menu */}
+        {/* Slide-in drawer */}
         {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <div
-              className="absolute right-0 top-0 h-full w-72 bg-white shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Profile Info */}
-              <div className="flex items-center gap-4 p-4 border-b">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <User size={24} className="text-gray-600" />
-                </div>
+          <div className="ca-mobile-overlay" onClick={() => setMobileMenuOpen(false)}>
+            <div className="ca-mobile-drawer" onClick={(e) => e.stopPropagation()}>
+
+              {/* Profile strip */}
+              <div className="ca-mobile-drawer-profile">
+                <div className="ca-mobile-drawer-avatar">{initials}</div>
                 <div>
-                  <p className="font-medium">
-                    {customer?.firstName} {customer?.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">Customer Admin</p>
+                  <div className="ca-mobile-drawer-name">{profileName || "Customer Admin"}</div>
+                  <div className="ca-mobile-drawer-role">Customer Admin</div>
                 </div>
               </div>
 
-              {/* Navigation Links */}
-              <div className="p-4 space-y-2">
+              {/* Nav links */}
+              <div className="ca-mobile-nav-links">
                 {menuItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 p-3 rounded-lg ${
-                      isActive(item.href) ? "bg-gray-100" : "hover:bg-gray-100"
-                    }`}
+                    className={`ca-mobile-nav-link${isActive(item.href) ? " active" : ""}`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.icon}
-                    <span>{item.label}</span>
+                    {item.label}
                   </Link>
                 ))}
               </div>
 
-              {/* Bottom Section */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-                <div className="space-y-2">
-                  <Link
-                    href="/customer-admin/customerAdminProfile"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                     <UserRoundPen size={20} />
-                    <span>My Profile</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleLogout();
-                    }}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
+              {/* Footer */}
+              <div className="ca-mobile-drawer-footer">
+                <Link
+                  href="/customer-admin/customerAdminProfile"
+                  className="ca-mobile-nav-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <UserRoundPen size={17} />
+                  My Profile
+                </Link>
+                <button className="ca-mobile-nav-link" style={{ color: "var(--red)" }} onClick={handleLogout}>
+                  <LogOut size={17} />
+                  Logout
+                </button>
               </div>
+
             </div>
           </div>
         )}
