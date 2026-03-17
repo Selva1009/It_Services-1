@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +14,11 @@ import {
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, RefreshCw, X } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { transferProducts } from "@/app/services/vendorAdminService";
 
 export default function TransferProducts({ onClose }) {
+  const { auth, setVendorUser } = useAuth();
   const [oldUsername, setOldUsername] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,24 +34,14 @@ export default function TransferProducts({ onClose }) {
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/products/transfer-products`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ oldUsername, newUsername }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
+      const data = await transferProducts({ oldUsername, newUsername });
+      if (data) {
         if (data.newUserId) {
-          // ✅ Update both keys so other pages get the correct ID
-          sessionStorage.setItem("vendor_user_id", data.newUserId);
-          sessionStorage.setItem("userId", data.newUserId); // <-- Critical for products page
+          const nextVendorUser = {
+            ...(auth.vendorUser || {}),
+            id: Number(data.newUserId),
+          };
+          setVendorUser(nextVendorUser);
         }
 
         Swal.fire({
@@ -62,8 +54,6 @@ export default function TransferProducts({ onClose }) {
           if (onClose) onClose(); // close modal
           window.location.reload(); // ✅ Reload everything with updated ID
         });
-      } else {
-        Swal.fire("Error", data.message || "Transfer failed", "error");
       }
     } catch (error) {
       console.error("Transfer error:", error);

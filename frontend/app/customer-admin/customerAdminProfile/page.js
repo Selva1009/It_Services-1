@@ -1,11 +1,11 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import Swal from "sweetalert2";
 import "./customerAdminProfile.css";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchCustomerProfile, updateCustomerProfile } from "@/app/services/profileService";
 
 /* ─── Field Config ───────────────────────────────────────── */
 const PROFILE_FIELDS = [
@@ -25,11 +25,6 @@ const PROFILE_FIELDS = [
 ];
 
 /* ─── Helpers ────────────────────────────────────────────── */
-const getAuthToken = () =>
-  typeof window !== "undefined"
-    ? sessionStorage.getItem("token")
-    : null;
-
 const getInitials = (first_name, last_name) => {
   const f = first_name?.[0] || "";
   const l = last_name?.[0] || "";
@@ -73,6 +68,9 @@ function FormField({ label, fieldKey, value, onChange, editable = true, type = "
 /* ─── Main Component ─────────────────────────────────────── */
 const CustomerAdminProfile = () => {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
   const { getAuthToken: getAuthTokenFromContext, setCustomer: setAuthCustomer } = useAuth();
 
   const [profile, setProfile]     = useState(null);
@@ -83,21 +81,11 @@ const CustomerAdminProfile = () => {
 
   /* ── Fetch profile ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthTokenFromContext() || getAuthToken();
+    const token = getAuthTokenFromContext();
     if (!token) { router.push("/SignIn"); return; }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) { router.push("/SignIn"); return; }
-        throw new Error("Failed to fetch profile");
-      }
-
-      const data = await res.json();
+      const data = await fetchCustomerProfile(token);
       const latest = data.profile || data;
       setProfile(latest);
       setAuthCustomer(latest);
@@ -108,7 +96,7 @@ const CustomerAdminProfile = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [getAuthTokenFromContext, router, setAuthCustomer]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
@@ -124,33 +112,21 @@ const CustomerAdminProfile = () => {
     setIsSaving(true);
 
     try {
-      const token = getAuthTokenFromContext() || getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          companyName:        formData.company_name,
-          registrationNumber: formData.registration_number,
-          companyWebsite:     formData.company_website,
-          gstNumber:          formData.gst_number,
-          firstName:          formData.first_name,
-          lastName:           formData.last_name,
-          phone:              formData.phone,
-          address:            formData.address,
-          country:            formData.country,
-          state:              formData.state,
-          city:               formData.city,
-          pincode:            formData.pincode,
-        }),
+      const token = getAuthTokenFromContext();
+      await updateCustomerProfile(token, {
+        companyName:        formData.company_name,
+        registrationNumber: formData.registration_number,
+        companyWebsite:     formData.company_website,
+        gstNumber:          formData.gst_number,
+        firstName:          formData.first_name,
+        lastName:           formData.last_name,
+        phone:              formData.phone,
+        address:            formData.address,
+        country:            formData.country,
+        state:              formData.state,
+        city:               formData.city,
+        pincode:            formData.pincode,
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Update failed");
-      }
 
       await fetchProfile();
       setIsEditing(false);

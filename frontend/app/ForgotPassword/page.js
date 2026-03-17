@@ -1,6 +1,6 @@
 ﻿"use client";
 import { API_BASE_URL } from "@/lib/api/config";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,9 @@ export default function ForgotPassword() {
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  useEffect(() => {
+    ["./ForgotPassOtp", "/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
 
   const {
     register,

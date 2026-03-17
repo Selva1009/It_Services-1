@@ -8,7 +8,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import ImageSlider from "../SignIn/ImageSlider";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -30,6 +30,9 @@ const schema = yup.object().shape({
 
 export default function ResetPassword() {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);

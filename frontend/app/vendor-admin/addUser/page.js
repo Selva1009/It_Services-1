@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { VendorAddUser } from "@/app/Components/auth/VendorAddUser";
 import { PasswordSection } from "@/app/Components/auth/PasswordSection";
 import { useState, useEffect } from "react";
@@ -9,9 +8,13 @@ import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { createVendorUser, fetchVendorCompanyName } from "@/app/services/vendorAdminService";
 
 const Page = () => {
   const router = useRouter();
+  useEffect(() => {
+    ["/vendor-admin/usersprofile"].forEach((path) => router.prefetch(path));
+  }, []);
   const { validateForm } = useUserFormValidation();
   const { auth, getUserToken } = useAuth();
   const [formValues, setFormValues] = useState({
@@ -27,58 +30,38 @@ const Page = () => {
   const [vendorId, setVendorId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [adminId, setAdminId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const storedVendor = sessionStorage.getItem("vendor");
-    if (storedVendor) {
-      try {
-        const vendorData = JSON.parse(storedVendor);
-        setVendorId(vendorData.id);
-        return;
-      } catch (err) {
-        console.error("Invalid vendor data:", err);
-      }
+    if (auth.vendor?.id || auth.vendorId) {
+      setVendorId(auth.vendor?.id || auth.vendorId);
     }
+  }, [auth.vendor, auth.vendorId]);
 
-    if (auth.vendor?.id) {
-      setVendorId(auth.vendor.id);
-    }
-  }, []);
-
-  useEffect(() => {
+ useEffect(() => {
     const fetchAdminData = async () => {
-      const storedVendor = sessionStorage.getItem("vendor");
-      if (storedVendor || auth.vendor) {
-        try {
-          const vendorData = storedVendor ? JSON.parse(storedVendor) : auth.vendor;
-          setAdminId(vendorData.id);
-
-          const response = await fetch(
-            `${API_BASE_URL}/api/vendor-users/company-name/${vendorData.id}`
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            setFormValues((prev) => ({
-              ...prev,
-              companyName: data.companyName,
-              adminID: vendorData.id,
-            }));
-          } else {
-            console.error("Failed to fetch vendor admin details");
-          }
-        } catch (err) {
-          console.error("Error:", err);
-        } finally {
-          setIsLoading(false);
-        }
+      if (!auth.vendor?.id && !auth.vendorId) {
+        return;
       }
-    };
+
+      try {
+        const vendorIdValue = auth.vendor?.id || auth.vendorId;
+        setAdminId(vendorIdValue);
+
+        const data = await fetchVendorCompanyName(vendorIdValue);
+        if (data?.companyName) {
+          setFormValues((prev) => ({
+            ...prev,
+            companyName: data.companyName,
+            adminID: vendorIdValue,
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch company name:", error);
+      }
+    }; // ← fetchAdminData closes here
 
     fetchAdminData();
-  }, []);
-
+  }, [auth.vendor, auth.vendorId]);
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "companyName" && formValues.companyName) {
@@ -129,32 +112,16 @@ const Page = () => {
         vendorAdminId: adminId,
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/vendor-user/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${getUserToken() || sessionStorage.getItem("vendorToken")}`
-        },
-        body: JSON.stringify(payload),
-      });
+      const result = await createVendorUser(getUserToken(), payload);
 
-      const result = await response.json();
-
-      if (response.ok) {
+      if (result) {
         Swal.fire({
           title: "Success!",
-          text: "Vendor user created successfully",
+          text: result.message || "Vendor user created successfully",
           icon: "success",
           confirmButtonColor: "#4BB543",
         }).then(() => {
           router.push("/vendor-admin/usersprofile");
-        });
-      } else {
-        Swal.fire({
-          title: "Error",
-          text: result.message || "Failed to create vendor user",
-          icon: "error",
-          confirmButtonColor: "#D9534F",
         });
       }
     } catch (error) {

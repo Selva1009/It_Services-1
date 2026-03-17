@@ -1,6 +1,5 @@
 ﻿"use client";
-import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/lib/api/config";
+import { useState, useEffect, useMemo } from "react";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import {
   Table,
@@ -20,6 +19,7 @@ import {
 import { Search, GroupOutlined } from "@mui/icons-material";
 import "./itUsers.css";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchItUsers } from "@/app/services/customerAdminService";
 
 const ITUsersPage = () => {
   const [users, setUsers]           = useState([]);
@@ -34,16 +34,12 @@ const ITUsersPage = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const token = getAuthTokenFromContext() || sessionStorage.getItem("token");
-        const response = await fetch(`${API_BASE_URL}/api/user-admin/It-users`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        const data = await response.json();
+        const token = getAuthTokenFromContext();
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        const data = await fetchItUsers(token);
         setUsers(data.users);
         setTotal(data.total);
       } catch (error) {
@@ -55,17 +51,25 @@ const ITUsersPage = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.mobile?.includes(searchTerm)
+  const filteredUsers = useMemo(
+    () =>
+      users.filter(
+        (user) =>
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.mobile?.includes(searchTerm)
+      ),
+    [users, searchTerm]
   );
 
-  const paginatedUsers = filteredUsers.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+  const paginatedUsers = useMemo(
+    () =>
+      filteredUsers.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+      ),
+    [filteredUsers, page, rowsPerPage]
   );
 
   const formatDate = (dateStr) =>

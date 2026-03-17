@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import "./profile.css";
 import { useAuth } from "@/app/contexts/AuthContext";
-
-/* ─── Constants ─────────────────────────────────────────── */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+import { fetchVendorAdminProfile, updateVendorAdminProfile } from "@/app/services/profileService";
 
 const COMPANY_FIELDS = [
   { label: "Company Name",    key: "companyName",    editable: false },
@@ -24,10 +22,6 @@ const CONTACT_FIELDS = [
 const ADDRESS_KEYS = ["address", "country", "state", "city", "pincode"];
 
 /* ─── Helpers ────────────────────────────────────────────── */
-const getAuthToken = () =>
-  (typeof window !== "undefined" &&
-    sessionStorage.getItem("token")) || null;
-
 const val = (v) => v || <span className="not-provided">Not provided</span>;
 
 /* ─── Sub-components ─────────────────────────────────────── */
@@ -76,6 +70,9 @@ function ServiceChip({ name, level }) {
 /* ─── Main Component ─────────────────────────────────────── */
 export default function VendorProfilePage() {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
   const { getAuthToken: getAuthTokenFromContext, setVendor: setAuthVendor } = useAuth();
 
   const [profile, setProfile]     = useState(null);
@@ -86,24 +83,14 @@ export default function VendorProfilePage() {
 
   /* ── Fetch profile from API ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthTokenFromContext() || getAuthToken();
+    const token = getAuthTokenFromContext();
     if (!token) {
       router.push("/SignIn");
       return;
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/vendor-admin/profile`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) { router.push("/SignIn"); return; }
-        throw new Error("Failed to fetch profile");
-      }
-
-      const json = await res.json();
+      const json = await fetchVendorAdminProfile(token);
 
       /* API returns: { message, data: { ...vendor, address: {}, services: [] } } */
       const data = json.data || json;
@@ -120,7 +107,7 @@ export default function VendorProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [getAuthTokenFromContext, router, setAuthVendor]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
@@ -154,20 +141,8 @@ export default function VendorProfilePage() {
     setIsSaving(true);
 
     try {
-      const token = getAuthTokenFromContext() || getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/api/vendor-admin/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Update failed");
-      }
+      const token = getAuthTokenFromContext();
+      await updateVendorAdminProfile(token, formData);
 
       /* Refresh from server after save */
       await fetchProfile();

@@ -1,7 +1,6 @@
-﻿"use client";
+"use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   User,
@@ -16,233 +15,161 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import Footer from "../LandingPage/Footer";
 import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  fetchVendorUserNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/app/services/notificationsService";
 
 export default function DashboardLayout({ id, children }) {
   const NOTIFICATION_LIMIT = 50;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const { auth, getAuthToken: getAuthTokenFromContext, setVendorUser: setAuthVendorUser } = useAuth();
-  const [vendorUser, setVendorUser] = useState(auth.vendorUser || null);
-  const [loading, setLoading] = useState(true);
+  const { auth, getAuthToken, setVendorUser: setAuthVendorUser, clearAuth } = useAuth();
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("all");
-  const [readNotifications, setReadNotifications] = useState(new Set());
-  const [message, setMessage] = useState("");
-
 
   const router = useRouter();
-  const getAuthToken = () =>
-    getAuthTokenFromContext() ||
-    sessionStorage.getItem("token");
+  useEffect(() => {
+    ["/", "/vendorUser", "/vendorUser/myprofile"].forEach((path) => router.prefetch(path));
+  }, []);
+
+  const vendorUser = auth.vendorUser;
+  const loading = !vendorUser;
+  const vendorUserId = useMemo(
+    () => id || auth.vendorUserId || auth.userId || vendorUser?.id || null,
+    [id, auth.vendorUserId, auth.userId, vendorUser]
+  );
+
+  const vendorUserDisplayName = useMemo(
+    () =>
+      vendorUser?.name ||
+      vendorUser?.personName ||
+      vendorUser?.companyName ||
+      vendorUser?.company_name ||
+      vendorUser?.email ||
+      null,
+    [vendorUser]
+  );
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
 
-  const vendorUserDisplayName =
-    vendorUser?.name ||
-    vendorUser?.personName ||
-    vendorUser?.companyName ||
-    vendorUser?.company_name ||
-    vendorUser?.email ||
-    null;
+  const fetchNotifications = useCallback(async () => {
+    if (!vendorUserId) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return;
+    }
 
-  useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
-    const signal = controller.signal;
+    try {
+      const data = await fetchVendorUserNotifications({
+        vendorUserId,
+        limit: NOTIFICATION_LIMIT,
+      });
 
-    const fetchVendorDetails = async () => {
-      try {
-        const storedVendorUser = sessionStorage.getItem("vendorUser");
-        const resolvedVendorUser = storedVendorUser ? JSON.parse(storedVendorUser) : auth.vendorUser;
-        if (!resolvedVendorUser) {
-          console.warn("No vendor user found in localStorage");
-          return;
-        }
-
-        const authToken = getAuthToken();
-
-        const response = await fetch(
-          `${API_BASE_URL}/api/vendor-user/profile`,
-          {
-            signal,
-            headers: authToken
-              ? { Authorization: `Bearer ${authToken}` }
-              : undefined,
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch vendor user: ${response.statusText}`
-          );
-        }
-
-        const data = await response.json();
-        if (isMounted) {
-          const nextVendorUser = Array.isArray(data) ? data[0] : data;
-          setVendorUser(nextVendorUser);
-          setAuthVendorUser(nextVendorUser);
-        }
-      } catch (err) {
-        if (!signal.aborted && isMounted) {
-          setError(err.message);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchVendorDetails();
-
-    return () => {
-      isMounted = false;
-      controller.abort();
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!id) return;
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      if (!data?.notifications) {
         return;
       }
 
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/notifications/${id}?limit=${NOTIFICATION_LIMIT}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch notifications");
-        }
-        const data = await response.json();
+      const formattedNotifications = data.notifications
+        .map((notif) => ({
+          ...notif,
+          read: notif.status === "read",
+          time: new Date(notif.created_at).toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            timeZone: "Asia/Kolkata",
+            hour12: true,
+          }),
+        }))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        if (!data.notifications) {
-          console.error("Backend returned no notifications");
-          return;
-        }
+      setNotifications((prev) =>
+        JSON.stringify(prev) === JSON.stringify(formattedNotifications)
+          ? prev
+          : formattedNotifications
+      );
+    } catch {
+      // Ignore notification errors
+    }
+  }, [vendorUserId]);
 
-        const formattedNotifications = data.notifications
-          .map((notif) => ({
-            ...notif,
-            read: notif.status === "read",
-            time: new Date(notif.created_at).toLocaleString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              timeZone: "Asia/Kolkata",
-              hour12: true,
-            }),
-          }))
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-        setNotifications((prev) =>
-          JSON.stringify(prev) === JSON.stringify(formattedNotifications)
-            ? prev
-            : formattedNotifications
-        );
-      } catch (err) {
-        console.error("Error fetching notifications:", err);
-      }
-    };
-
+  useEffect(() => {
+    if (!vendorUserId) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [vendorUserId, fetchNotifications]);
 
-  const filteredNotifications = notifications.filter((notif) => {
-    if (filter === "all") return true;
-    return filter === "read" ? notif.read : !notif.read;
-  });
+  const filteredNotifications = useMemo(() => {
+    if (filter === "all") return notifications;
+    return notifications.filter((notif) =>
+      filter === "read" ? notif.read : !notif.read
+    );
+  }, [filter, notifications]);
 
   const markAsRead = async (notifId) => {
     if (!notifId) {
-      console.error("Notification ID is missing");
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/read/${notifId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-        }
+      await markNotificationRead(notifId);
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === notifId
+            ? { ...notif, status: "read", read: true }
+            : notif
+        )
       );
-
-      if (response.ok) {
-        setNotifications((prev) =>
-          prev.map((notif) =>
-            notif.id === notifId
-              ? { ...notif, status: "read", read: true }
-              : notif
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
+    } catch {
+      // Ignore mark as read errors
     }
   };
 
-  // Handle mark all as read
   const markAllAsRead = async () => {
-    const storedVendorUser = sessionStorage.getItem("vendorUser");
-    const resolvedVendorUser = storedVendorUser ? JSON.parse(storedVendorUser) : auth.vendorUser;
-
-    if (!resolvedVendorUser) {
-      console.error("Vendor user not found in localStorage.");
-      setMessage("Vendor user not found. Please log in again.");
+    if (!vendorUserId) {
+      setError("Vendor user not found. Please log in again.");
       return;
     }
 
-    const vendorId = resolvedVendorUser.id; // assuming the object has an 'id' field
-
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/read-all/${vendorId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setMessage(data.message || "All notifications marked as read.");
-        setNotifications((prevNotifications) =>
-          prevNotifications.map((notification) => ({
-            ...notification,
-            status: "read",
-            read: true, // optional, if you use this flag
-          }))
-        );
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to mark all as read:", errorData.message);
-        setMessage(errorData.message || "Failed to mark notifications as read.");
-      }
-    } catch (error) {
-      console.error("Error marking all notifications as read:", error);
-      setMessage("An error occurred while marking notifications as read.");
+      await markAllNotificationsRead(vendorUserId);
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notification) => ({
+          ...notification,
+          status: "read",
+          read: true,
+        }))
+      );
+    } catch {
+      setError("An error occurred while marking notifications as read.");
     }
   };
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
   const toggleNotification = () => {
-    setNotificationOpen(!notificationOpen);
-    document.body.style.overflow = notificationOpen ? "auto" : "hidden";
+    setNotificationOpen((prev) => {
+      const next = !prev;
+      document.body.style.overflow = next ? "hidden" : "auto";
+      return next;
+    });
   };
 
   const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-    document.body.style.overflow = mobileMenuOpen ? "auto" : "hidden";
+    setMobileMenuOpen((prev) => {
+      const next = !prev;
+      document.body.style.overflow = next ? "hidden" : "auto";
+      return next;
+    });
   };
 
   const handleLogout = () => {
@@ -264,27 +191,11 @@ export default function DashboardLayout({ id, children }) {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        sessionStorage.clear();
+        clearAuth();
         router.push("/");
       }
     });
   };
-
-  useEffect(() => {
-    const updateVendor = () => {
-      const vendorData = sessionStorage.getItem("vendorUser");
-      if (vendorData) {
-        const parsedVendor = JSON.parse(vendorData);
-        setVendorUser(parsedVendor);
-        setAuthVendorUser(parsedVendor);
-      }
-    };
-
-    window.addEventListener("storage", updateVendor);
-    return () => {
-      window.removeEventListener("storage", updateVendor);
-    };
-  }, []);
 
   return (
     <div className="flex flex-col h-20 min-h-screen bg-gray-100" >
@@ -537,4 +448,3 @@ export default function DashboardLayout({ id, children }) {
     </div>
   );
 }
-

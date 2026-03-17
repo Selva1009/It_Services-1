@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,7 @@ import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UserCog, Loader2 } from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { updateCustomerUserProfile } from "@/app/services/customerAdminService";
 
 export const EditUserForm = ({ user, onClose, onUpdate }) => {
   const { getAuthToken: getAuthTokenFromContext } = useAuth();
@@ -76,29 +76,13 @@ export const EditUserForm = ({ user, onClose, onUpdate }) => {
         throw new Error(`Invalid user ID format: ${user.id}`);
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/customer-users/profile/${user.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getAuthTokenFromContext() || sessionStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            companyName,
-            personName,
-            contactNumber,
-            Email,
-            status,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
-      }
+      const data = await updateCustomerUserProfile(user.id, getAuthTokenFromContext(), {
+        companyName,
+        personName,
+        contactNumber,
+        Email,
+        status,
+      });
 
       Swal.fire("Success", data.message, "success");
       onUpdate(); // Refresh the user list

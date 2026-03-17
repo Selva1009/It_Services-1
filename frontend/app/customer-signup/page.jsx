@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./customerSignup.css";
 import { useCountriesStatesCities } from "../hooks/useCountriesStatesCities";
 
@@ -47,6 +47,9 @@ import { useRouter } from "next/navigation";
 
 const CustomerSignup = () => {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
 
   const [formValues, setFormValues] = useState({
     companyName: "",
@@ -334,9 +337,6 @@ const CustomerSignup = () => {
       const result = await response.json();
 
       if (response.ok) {
-        if (result.authToken) sessionStorage.setItem("authToken", result.authToken);
-        if (result.userId) sessionStorage.setItem("userId", result.userId);
-
         Swal.fire({
           title: "The user created successfully",
           html: `

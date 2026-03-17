@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -12,13 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import { API_BASE_URL } from "@/lib/api/config";
-import {
-  CUSTOMER_USER_UPDATED_EVENT,
-} from "@/lib/events";
 import { useAuth } from "@/app/contexts/AuthContext";
-
-const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
 const Navbar = ({
   setSearchQuery,
@@ -28,127 +22,24 @@ const Navbar = ({
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [customerUser, setCustomerUser] = useState(null);
   const router = useRouter();
-  const { auth, getAuthToken: getAuthTokenFromContext, setCustomerUser: setAuthCustomerUser } = useAuth();
-  console.log(auth,"auth")
-  const getAuthToken = useCallback(
-    () =>
-      getAuthTokenFromContext() ||
-      sessionStorage.getItem("token"),
-    [getAuthTokenFromContext]
-  );
-  const name=auth?.userName
-  const readCustomerUser = useCallback(() => {
-    if (typeof window === "undefined") return null;
-
-    if (auth.customerUser) return auth.customerUser;
-
-    const storedCustomerUser = sessionStorage.getItem("customerUser");
-    if (!storedCustomerUser) return null;
-
-    try {
-      return JSON.parse(storedCustomerUser);
-    } catch (error) {
-      console.error("Failed to parse customer user from localStorage:", error);
-      return null;
-    }
+  useEffect(() => {
+    ["/SignIn", "/customer/products", "/customer/CustomerProfile"].forEach((path) => router.prefetch(path));
   }, []);
+  const { auth, clearAuth } = useAuth();
 
-  const syncCustomerState = useCallback(() => {
-    const currentUser = readCustomerUser();
-    setCustomerUser(currentUser);
-  }, [readCustomerUser]);
+  const customerUser = auth.customerUser;
+  const customerDisplayName = useMemo(
+    () =>
+      customerUser?.name ||
+      customerUser?.personName ||
+      customerUser?.company_name ||
+      customerUser?.companyName ||
+      customerUser?.email ||
+      null,
+    [customerUser]
+  );
 
-  const customerDisplayName =
-    customerUser?.name ||
-    customerUser?.personName ||
-    customerUser?.company_name ||
-    customerUser?.companyName ||
-    customerUser?.email ||
-    null;
-
-  useEffect(() => {
-    syncCustomerState();
-
-    const handleStorageChange = () => {
-      syncCustomerState();
-    };
-
-    const handleCustomerUserUpdated = () => {
-      syncCustomerState();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        syncCustomerState();
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener(CUSTOMER_USER_UPDATED_EVENT, handleCustomerUserUpdated);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener(CUSTOMER_USER_UPDATED_EVENT, handleCustomerUserUpdated);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [readCustomerUser, syncCustomerState]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchLatestCustomer = async () => {
-      const currentUser = readCustomerUser();
-      if (!currentUser?.id) return;
-      const lastSync = Number(
-        sessionStorage.getItem("customerUserProfileLastSync") || 0
-      );
-      const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-      if (!shouldSync) return;
-
-      try {
-        const authToken = getAuthToken();
-        const response = await fetch(
-          `${API_BASE_URL}/api/customer-users/profile`,
-          {
-            headers: authToken
-              ? { Authorization: `Bearer ${authToken}` }
-              : undefined,
-          }
-        );
-
-        if (!response.ok) return;
-
-        const latestUser = await response.json();
-        const mergedUser = {
-          ...currentUser,
-          ...latestUser,
-        };
-
-        if (!isMounted) return;
-
-        setCustomerUser(mergedUser);
-        setAuthCustomerUser(mergedUser);
-        sessionStorage.setItem("customerUser", JSON.stringify(mergedUser));
-        sessionStorage.setItem(
-          "customerUserProfileLastSync",
-          String(Date.now())
-        );
-      } catch (error) {
-        console.error("Failed to fetch latest customer profile for navbar:", error);
-      }
-    };
-
-    void fetchLatestCustomer();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [getAuthToken, readCustomerUser]);
-
-  // Logout function
   const handleLogout = () => {
     Swal.fire({
       title: "Are you sure want to logout?",
@@ -168,8 +59,7 @@ const Navbar = ({
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        sessionStorage.clear();
-        window.dispatchEvent(new Event(CUSTOMER_USER_UPDATED_EVENT));
+        clearAuth();
         router.push("/SignIn");
       }
     });
@@ -263,7 +153,7 @@ const Navbar = ({
             <div className="mt-1">
               { customerUser && (
                 <span className="text-sm">
-                  { name }
+                  { auth.userName }
                   <p className="text-[#999999] text-[12px] -mt-1">
                     Customer User
                   </p>

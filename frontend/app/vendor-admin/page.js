@@ -1,7 +1,5 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import { useState, useEffect } from "react";
-import React from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { format, subWeeks, subMonths, isWithinInterval, startOfWeek, endOfWeek } from "date-fns";
 import Navbar from "./components/navbar";
@@ -24,8 +22,12 @@ import {
   Sun,
   Moon
 } from "lucide-react";
-import { Pie, Line, Bar, Doughnut } from "react-chartjs-2";
+const Line = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Line })));
+const Bar = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Bar })));
+const Doughnut = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Doughnut })));
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchVendorUsers } from "@/app/services/vendorAdminService";
+import { fetchVendorAdminNotifications } from "@/app/services/notificationsService";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -92,7 +94,10 @@ const StatCard = ({ title, value, icon, darkMode }) => {
 const VendorDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
-  const { getAuthToken: getAuthTokenFromContext } = useAuth();
+  useEffect(() => {
+    ["/SignIn", "/vendor-admin/addUser", "/vendor-admin/usersprofile"].forEach((path) => router.prefetch(path));
+  }, []);
+  const { auth, getAuthToken: getAuthTokenFromContext } = useAuth();
   const [vendors, setVendors] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -157,20 +162,16 @@ const VendorDashboard = () => {
   // Fetch notifications data
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${getAuthTokenFromContext() || sessionStorage.getItem("token") || sessionStorage.getItem("vendorToken") || ""}`
-        },
-        body: JSON.stringify({ vendorAdminID: vendorID, limit: NOTIFICATION_LIMIT }),
+      if (!vendorID) return;
+      const token = getAuthTokenFromContext();
+      if (!token) return;
+      const data = await fetchVendorAdminNotifications({
+        token,
+        vendorAdminId: vendorID,
+        limit: NOTIFICATION_LIMIT,
       });
 
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-      const data = await response.json();
-
       setNotifications(data.notifications);
-      console.log(data.notifications)
 
 
     } catch (error) {
@@ -384,35 +385,22 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => {
-    const storedVendor = sessionStorage.getItem("vendor");
-    if (storedVendor) {
-      try {
-        const vendorData = JSON.parse(storedVendor);
-        if (vendorData?.id) {
-          setVendorID(vendorData.id);
-          return;
-        }
-      } catch (err) {
-        console.error("Error parsing vendor data:", err);
-      }
+    const resolvedVendorId = auth.vendor?.id || auth.vendorId || auth.userId;
+    if (resolvedVendorId) {
+      setVendorID(resolvedVendorId);
+      return;
     }
 
     setLoading(false);
     router.replace("/SignIn");
-  }, [router]);
+  }, [auth.vendor, auth.vendorId, auth.userId, router]);
 
   useEffect(() => {
     const fetchVendors = async () => {
       if (!vendorID) return;
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/vendor-users/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ vendorId: vendorID }),
-        });
-
-        const data = await response.json();
+        const data = await fetchVendorUsers(vendorID);
         setVendors(data);
 
         // Calculate stats
@@ -649,10 +637,12 @@ const VendorDashboard = () => {
           <div className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="h-64">
               { vendors.length > 0 ? (
-                <Line
-                  data={ prepareVendorGrowthData(vendors) }
-                  options={ lineChartOptions }
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
+                  <Line
+                    data={ prepareVendorGrowthData(vendors) }
+                    options={ lineChartOptions }
+                  />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Clock
@@ -672,10 +662,12 @@ const VendorDashboard = () => {
           <div className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="h-64">
               { notifications.length > 0 ? (
-                <Bar
-                  data={ prepareNotificationChartData() }
-                  options={ barChartOptions }
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
+                  <Bar
+                    data={ prepareNotificationChartData() }
+                    options={ barChartOptions }
+                  />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Bell
@@ -698,10 +690,12 @@ const VendorDashboard = () => {
           <div className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"}` }>
             <div className="h-64">
               { notifications.length > 0 ? (
-                <Doughnut
-                  data={ prepareProductDistributionData() }
-                  options={ doughnutChartOptions }
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
+                  <Doughnut
+                    data={ prepareProductDistributionData() }
+                    options={ doughnutChartOptions }
+                  />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Package

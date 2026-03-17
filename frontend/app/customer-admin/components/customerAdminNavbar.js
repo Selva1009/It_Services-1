@@ -1,9 +1,8 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Users,
   UserPlus,
@@ -19,68 +18,37 @@ import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
 
-const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
-
 export default function CustomerAdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { auth, getAuthToken: getAuthTokenFromContext, setCustomer: setAuthCustomer, clearAuth } = useAuth();
+  useEffect(() => {
+    [
+      "/SignIn",
+      "/customer-admin/customerAdminDashboard",
+      "/customer-admin/add-user",
+      "/customer-admin/user-profile",
+      "/customer-admin/customerAdminProfile",
+    ].forEach((path) => router.prefetch(path));
+  }, []);
+  const { auth, clearAuth } = useAuth();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const customerName =
-    auth.customer?.name ||
-    auth.customer?.firstName ||
-    auth.customer?.first_name ||
-    auth.customer?.companyName ||
-    auth.customer?.company_name ||
-    auth.customer?.vendor_name ||
-    auth.customer?.email ||
-    null;
+  const customerName = useMemo(
+    () =>
+      auth.customer?.name ||
+      auth.customer?.firstName ||
+      auth.customer?.first_name ||
+      auth.customer?.companyName ||
+      auth.customer?.company_name ||
+      auth.customer?.vendor_name ||
+      auth.customer?.email ||
+      null,
+    [auth.customer]
+  );
+
   const customerRole = auth.role || auth.customer?.role || null;
-
-  const getAuthToken = () =>
-    getAuthTokenFromContext() || sessionStorage.getItem("token");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const syncProfile = async () => {
-      if (!auth.customer?.id) return;
-
-      const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
-      const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-
-      if (!shouldSync) return;
-
-      setLoading(true);
-      try {
-        const authToken = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/api/user-admin/profile`, {
-          cache: "no-store",
-          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-        });
-
-        if (response.ok && isMounted) {
-          const payload = await response.json();
-          const latestCustomer = payload.customer || payload;
-          setAuthCustomer(latestCustomer);
-          sessionStorage.setItem("customer", JSON.stringify(latestCustomer));
-          sessionStorage.setItem("customerProfileLastSync", String(Date.now()));
-        }
-      } catch (err) {
-        console.error("Failed to sync customer profile:", err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    void syncProfile();
-
-    return () => { isMounted = false; };
-  }, [auth.customer?.id]);
 
   const isActive = (path) => pathname === path;
 
@@ -183,18 +151,17 @@ export default function CustomerAdminNavbar() {
             >
               <User size={32} className="text-gray-800" />
               <div className="hidden sm:block">
-                {loading ? (
-                  <span className="text-sm">Loading...</span>
-                ) : (
-                  <>
-                    <p className="text-[14px] font-medium">
-                      {customerName}
-                    </p>
-                    <p className="text-[#999999] text-[12px] capitalize">
-                      {customerRole?.replace(/_/g, " ")}
-                    </p>
-                  </>
-                )}
+        {/* After */}
+{customerName ? (
+  <>
+    <p className="text-[14px] font-medium">{customerName}</p>
+    <p className="text-[#999999] text-[12px] capitalize">
+      {customerRole?.replace(/_/g, " ")}
+    </p>
+  </>
+) : (
+  <span className="text-sm">Customer Admin</span>
+)}
               </div>
             </div>
 

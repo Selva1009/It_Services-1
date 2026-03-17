@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -23,9 +22,13 @@ import {
 import { Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchVendorUserById, updateVendorUserById } from "@/app/services/vendorAdminService";
 
 const UpdateUserPage = () => {
   const router = useRouter();
+  useEffect(() => {
+    ["/vendor-admin/usersprofile"].forEach((path) => router.prefetch(path));
+  }, []);
   const { getVendorUserId } = useAuth();
   const [form, setForm] = useState({
     companyName: "",
@@ -38,19 +41,17 @@ const UpdateUserPage = () => {
   const [vendorUserId, setVendorUserId] = useState(null); // <-- New state for vendorUserId
 
   useEffect(() => {
-    const id = getVendorUserId() || sessionStorage.getItem("vendorUserId");
+    const id = getVendorUserId();
     if (!id) {
-      Swal.fire("Error", "No user ID found in localStorage", "error");
+      Swal.fire("Error", "No user ID found in session", "error");
       return;
     }
     setVendorUserId(id); // <-- Store the vendorUserId
 
     const fetchUser = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/vendor-users/profile/${id}`);
-        const data = await res.json();
-
-        if (res.ok && data) {
+        const data = await fetchVendorUserById(id);
+        if (data) {
           setForm({
             companyName: data.companyName || "",
             personName: data.personName || "",
@@ -58,8 +59,6 @@ const UpdateUserPage = () => {
             email: data.Email || data.email || "",
             status: data.status || "Active",
           });
-        } else {
-          Swal.fire("Error", data.message || "Failed to load user data", "error");
         }
       } catch (err) {
         Swal.fire("Error", "Failed to fetch user details", "error");
@@ -89,26 +88,20 @@ const UpdateUserPage = () => {
       return Swal.fire("Error", "All fields are required", "error");
     }
 
-    // Check for vendorUserId state (which is set from localStorage)
+    // Check for vendorUserId state
     if (!vendorUserId) {
       setIsSubmitting(false);
-      return Swal.fire("Error", "No user ID found in localStorage", "error");
+      return Swal.fire("Error", "No user ID found in session", "error");
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/vendor-users/profile/${vendorUserId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ companyName, personName, phoneNumber, Email: email, status }),
+      const result = await updateVendorUserById(vendorUserId, {
+        companyName,
+        personName,
+        phoneNumber,
+        Email: email,
+        status,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Failed to update user");
-      }
 
       await Swal.fire({
         title: "Success!",

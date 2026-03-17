@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import { CustomerAddUser } from "@/app/Components/auth/CustomerAddUser";
 import { PasswordSection } from "@/app/Components/auth/PasswordSection";
@@ -10,9 +9,13 @@ import { useRouter } from "next/navigation";
 import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
 import { UserPlus } from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { createCustomerUser, fetchCustomerAdminCompanyName } from "@/app/services/customerAdminService";
 
 const Page = () => {
   const router = useRouter();
+  useEffect(() => {
+    ["/customer-admin/user-profile"].forEach((path) => router.prefetch(path));
+  }, []);
   const { validateForm } = useUserFormValidation();
   const { auth } = useAuth();
   const [adminID, setAdminId] = useState(null);
@@ -30,22 +33,16 @@ const Page = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    const storedCustomer = sessionStorage.getItem("customer");
-    try {
-      const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
-      if (customerData?.id) {
-        setAdminId(customerData.id);
-        setFormValues((prev) => ({
-          ...prev,
-          adminID: customerData.id,
-        }));
-      }
-    } catch (err) {
-      console.error("Invalid customer data in localStorage:", err);
+    const customerData = auth.customer;
+    if (customerData?.id) {
+      setAdminId(customerData.id);
+      setFormValues((prev) => ({
+        ...prev,
+        adminID: customerData.id,
+      }));
     }
-  }, []);
+  }, [auth.customer]);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
   const toggleConfirmPasswordVisibility = () =>
@@ -73,18 +70,8 @@ const Page = () => {
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/customer-users/customerUser`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formValues),
-        }
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
+      const result = await createCustomerUser(formValues);
+      if (result) {
         Swal.fire({
           title: "Success!",
           text: "User created successfully",
@@ -92,13 +79,6 @@ const Page = () => {
           confirmButtonColor: "#4BB543",
         }).then(() => {
           router.push("/customer-admin/user-profile");
-        });
-      } else {
-        Swal.fire({
-          title: "Error",
-          text: result.message || "Failed to create user",
-          icon: "error",
-          confirmButtonColor: "#D9534F",
         });
       }
     } catch (error) {
@@ -113,40 +93,29 @@ const Page = () => {
     }
   };
 
-
-  useEffect(() => {
+useEffect(() => {
     const fetchAdminData = async () => {
-      const storedCustomer = sessionStorage.getItem("customer");
       try {
-        const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
+        const customerData = auth.customer;
         if (customerData?.id) {
           setAdminId(customerData.id);
 
-          // Fetch admin's company details
-          const response = await fetch(
-            `${API_BASE_URL}/api/customer-users/company-name/${customerData.id}`
-          );
-
-          if (response.ok) {
-            const data = await response.json();
+          const data = await fetchCustomerAdminCompanyName(customerData.id);
+          if (data?.companyName) {
             setFormValues((prev) => ({
               ...prev,
               companyName: data.companyName,
               adminID: customerData.id,
             }));
-          } else {
-            console.error("Failed to fetch admin details");
           }
         }
-      } catch (err) {
-        console.error("Error:", err);
-      } finally {
-        setIsLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch admin data:", error);
       }
-    };
+    };  // ← fetchAdminData closes here
 
     fetchAdminData();
-  }, []);
+  }, [auth.customer]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

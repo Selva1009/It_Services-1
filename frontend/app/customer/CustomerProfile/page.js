@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/api/config";
 import Swal from "sweetalert2";
 import "./itUserProfile.css";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchItUserProfile, updateItUserProfile } from "@/app/services/profileService";
 
 /* ─── Field Config ───────────────────────────────────────── */
 const PROFILE_FIELDS = [
@@ -17,11 +17,6 @@ const PROFILE_FIELDS = [
 ];
 
 /* ─── Helpers ────────────────────────────────────────────── */
-const getAuthToken = () =>
-  typeof window !== "undefined"
-    ? sessionStorage.getItem("token")
-    : null;
-
 const getInitials = (name) =>
   name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "IT";
 
@@ -62,6 +57,9 @@ function FormField({ label, fieldKey, value, onChange, editable = true, type = "
 /* ─── Main Component ─────────────────────────────────────── */
 export default function ITUserProfilePage() {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
   const { getAuthToken: getAuthTokenFromContext } = useAuth();
 
   const [profile, setProfile]     = useState(null);
@@ -72,21 +70,11 @@ export default function ITUserProfilePage() {
 
   /* ── Fetch profile ── */
   const fetchProfile = useCallback(async () => {
-    const token = getAuthTokenFromContext() || getAuthToken();
+    const token = getAuthTokenFromContext();
     if (!token) { router.push("/SignIn"); return; }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/it-user-employee/profile`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) { router.push("/SignIn"); return; }
-        throw new Error("Failed to fetch profile");
-      }
-
-      const data = await res.json();
+      const data = await fetchItUserProfile(token);
       setProfile(data.profile);
       setFormData(data.profile);
     } catch (err) {
@@ -95,7 +83,7 @@ export default function ITUserProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [getAuthTokenFromContext, router]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
@@ -111,24 +99,12 @@ export default function ITUserProfilePage() {
     setIsSaving(true);
 
     try {
-      const token = getAuthTokenFromContext() || getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/api/it-user-employee/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name:        formData.name,
-          mobile:      formData.mobile,
-          designation: formData.designation,
-        }),
+      const token = getAuthTokenFromContext();
+      await updateItUserProfile(token, {
+        name: formData.name,
+        mobile: formData.mobile,
+        designation: formData.designation,
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Update failed");
-      }
 
       await fetchProfile();
       setIsEditing(false);

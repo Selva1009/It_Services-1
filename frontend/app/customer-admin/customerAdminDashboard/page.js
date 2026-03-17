@@ -1,6 +1,5 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { format, subDays, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import {
@@ -23,7 +22,9 @@ import {
 } from "lucide-react";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import Swal from "sweetalert2";
-import { Line, Bar, Doughnut } from "react-chartjs-2";
+const Line = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Line })));
+const Bar = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Bar })));
+const Doughnut = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Doughnut })));
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -38,6 +39,7 @@ import {
   Filler,
 } from "chart.js";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchCustomerAdminNotifications } from "@/app/services/notificationsService";
 
 ChartJS.register(
   CategoryScale,
@@ -55,6 +57,9 @@ ChartJS.register(
 const CustomerAdminDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
+  useEffect(() => {
+    ["/customer-admin/add-user", "/customer-admin/user-profile"].forEach((path) => router.prefetch(path));
+  }, []);
   const { auth } = useAuth();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -464,14 +469,11 @@ const CustomerAdminDashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/admin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminID, limit: NOTIFICATION_LIMIT }),
+      if (!adminID) return;
+      const data = await fetchCustomerAdminNotifications({
+        adminId: adminID,
+        limit: NOTIFICATION_LIMIT,
       });
-
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-      const data = await response.json();
       setNotifications(data.notifications);
 
     } catch (error) {
@@ -480,16 +482,10 @@ const CustomerAdminDashboard = () => {
   };
 
   useEffect(() => {
-    const storedCustomer = sessionStorage.getItem("customer");
-    try {
-      const customerData = storedCustomer ? JSON.parse(storedCustomer) : auth.customer;
-      if (customerData?.id) {
-        setAdminID(customerData.id);
-      }
-    } catch (err) {
-      console.error("Invalid customer data:", err);
+    if (auth.customer?.id) {
+      setAdminID(auth.customer.id);
     }
-  }, []);
+  }, [auth.customer]);
 
   // useEffect(() => {
   //   if (!adminID) return;
@@ -640,10 +636,12 @@ const CustomerAdminDashboard = () => {
           >
             <div className="h-64">
               { users.length > 0 ? (
-                <Line
-                  data={ prepareChartData(users) }
-                  options={ lineChartOptions }
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
+                  <Line
+                    data={ prepareChartData(users) }
+                    options={ lineChartOptions }
+                  />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Clock
@@ -666,10 +664,12 @@ const CustomerAdminDashboard = () => {
           >
             <div className="h-64">
               { notifications.length > 0 ? (
-                <Bar
-                  data={ prepareNotificationChartData() }
-                  options={ barChartOptions }
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
+                  <Bar
+                    data={ prepareNotificationChartData() }
+                    options={ barChartOptions }
+                  />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <Bell
@@ -695,10 +695,12 @@ const CustomerAdminDashboard = () => {
           >
             <div className="h-64">
               { notifications.length > 0 ? (
-                <Doughnut
-                  data={ prepareProductDistributionData() }
-                  options={ doughnutChartOptions }
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
+                  <Doughnut
+                    data={ prepareProductDistributionData() }
+                    options={ doughnutChartOptions }
+                  />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <PieChart

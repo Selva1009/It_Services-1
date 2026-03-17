@@ -19,12 +19,17 @@ export default function Navbar() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [activeLink, setActiveLink] = useState("");
   const router = useRouter();
-
+ 
   useEffect(() => {
-    router.prefetch("/customer-signup");
-    router.prefetch("/vendor-signup");
-    router.prefetch("/SignIn");
-  }, [router]);
+    [
+      "/",
+      "/#services",
+      "/#ContactSection",
+      "/customer-signup",
+      "/vendor-signup",
+      "/SignIn",
+    ].forEach((path) => router.prefetch(path));
+  }, []);
 
   useEffect(() => {
     if (isSidebarOpen || isSignupCardOpen) {

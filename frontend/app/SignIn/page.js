@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import ImageSlider from "./ImageSlider";
 import Link from "next/link";
 import Image from "next/image";
@@ -35,6 +35,13 @@ export default function LoginPage() {
   });
   const { setAuthFromLogin } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    [
+      ...Object.values(ROLE_REDIRECT),
+      "../ForgotPassword",
+      "/LandingPage",
+    ].forEach((path) => router.prefetch(path));
+  }, []);
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
   const handleLogin = async () => {
@@ -85,68 +92,6 @@ export default function LoginPage() {
         userId: userIdFromResponse || undefined,
         parentId: parentIdFromResponse || undefined,
       });
-      
-      sessionStorage.setItem("authToken", authToken);
-      sessionStorage.setItem("userToken", userToken);
-      sessionStorage.setItem("role", normalizedRole);
-      sessionStorage.setItem("token", authToken);
-
-      if (normalizedRole === "vendor_admin") {
-        sessionStorage.setItem("vendorToken", userToken);
-        if (userIdFromResponse) {
-          sessionStorage.setItem(
-            "vendor",
-            JSON.stringify({
-              id: Number(userIdFromResponse),
-              ...user,
-            })
-          );
-        }
-      }
-
-      if (normalizedRole === "vendor_user") {
-        if (userIdFromResponse) {
-          sessionStorage.setItem("vendorUserId", userIdFromResponse);
-          sessionStorage.setItem(
-            "vendorUser",
-            JSON.stringify({
-              id: Number(userIdFromResponse),
-              ...user,
-            })
-          );
-        }
-        if (parentIdFromResponse) {
-          sessionStorage.setItem("vendorId", String(parentIdFromResponse));
-        }
-      }
-
-      if (normalizedRole === "it_admin") {
-        if (userIdFromResponse) {
-          sessionStorage.setItem(
-            "customer",
-            JSON.stringify({
-              id: Number(userIdFromResponse),
-              ...user,
-            })
-          );
-        }
-      }
-
-      if (normalizedRole === "it_user") {
-        if (userIdFromResponse) {
-          sessionStorage.setItem("customerUserId", userIdFromResponse);
-          sessionStorage.setItem(
-            "customerUser",
-            JSON.stringify({
-              id: Number(userIdFromResponse),
-              ...user,
-            })
-          );
-        }
-        if (parentIdFromResponse) {
-          sessionStorage.setItem("adminId", String(parentIdFromResponse));
-        }
-      }
 
       Swal.fire({
         title: "Login Successful!",

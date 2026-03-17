@@ -1,6 +1,6 @@
 ﻿"use client";
 import { API_BASE_URL } from "@/lib/api/config";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,9 @@ const schema = yup.object().shape({
 
 export default function ForgotPassOtp() {
   const router = useRouter();
+  useEffect(() => {
+    ["/ResetPassword", "/ForgotPassword"].forEach((path) => router.prefetch(path));
+  }, []);
   const {
     register,
     handleSubmit,

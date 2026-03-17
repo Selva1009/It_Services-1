@@ -1,6 +1,5 @@
 ﻿"use client";
-import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/lib/api/config";
+import { useState, useEffect, useMemo } from "react";
 import Navbar from "../components/navbar";
 import {
   Table,
@@ -20,6 +19,7 @@ import {
 import { Search, GroupOutlined } from "@mui/icons-material";
 import "./vendorUsers.css";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { apiRequest } from "@/app/services/apiClient";
 
 const VendorUsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -34,19 +34,15 @@ const VendorUsersPage = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const token = getAuthTokenFromContext() || sessionStorage.getItem("token");
-        const response = await fetch(
-          `${API_BASE_URL}/api/vendor-admin/vendor-users`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        if (!response.ok) throw new Error("Failed to fetch users");
-        const data = await response.json();
+        const token = getAuthTokenFromContext();
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        const data = await apiRequest({
+          path: "/api/vendor-admin/vendor-users",
+          token,
+        });
         setUsers(data.users);
         setTotal(data.total);
       } catch (error) {
@@ -58,17 +54,25 @@ const VendorUsersPage = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.mobile?.includes(searchTerm)
+  const filteredUsers = useMemo(
+    () =>
+      users.filter(
+        (user) =>
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.mobile?.includes(searchTerm)
+      ),
+    [users, searchTerm]
   );
 
-  const paginatedUsers = filteredUsers.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+  const paginatedUsers = useMemo(
+    () =>
+      filteredUsers.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+      ),
+    [filteredUsers, page, rowsPerPage]
   );
 
   const formatDate = (dateStr) =>

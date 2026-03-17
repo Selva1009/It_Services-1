@@ -110,14 +110,6 @@ export function AuthProvider({ children }) {
     setAuth((prev) => ({ ...prev, ...buildAuthSnapshot() }));
   }, []);
 
-  useEffect(() => {
-    const handleStorage = () => {
-      setAuth((prev) => ({ ...prev, ...buildAuthSnapshot() }));
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-
   // ✅ Main login handler — maps data.user to correct role bucket
   const setAuthFromLogin = useCallback((loginData = {}) => {
     const {
@@ -223,6 +215,7 @@ export function AuthProvider({ children }) {
       userName: vendorUserData?.name || prev.userName,
       vendorName: vendorUserData?.company_name || prev.vendorName,
       vendorUserId: vendorUserData?.id ? String(vendorUserData.id) : prev.vendorUserId,
+      userId: vendorUserData?.id ? String(vendorUserData.id) : prev.userId,
     }));
   }, []);
 
@@ -245,6 +238,7 @@ export function AuthProvider({ children }) {
       userName: customerUserData?.name || prev.userName,
       customerName: customerUserData?.company_name || prev.customerName,
       customerUserId: customerUserData?.id ? String(customerUserData.id) : prev.customerUserId,
+      userId: customerUserData?.id ? String(customerUserData.id) : prev.userId,
     }));
   }, []);
 
@@ -258,14 +252,14 @@ export function AuthProvider({ children }) {
     setAuth(buildAuthSnapshot());
   }, []);
 
-  const getAuthToken     = useCallback(() => auth.authToken     || readStorageValue("authToken"), [auth.authToken]);
-  const getUserToken     = useCallback(() => auth.userToken     || readStorageValue("userToken"), [auth.userToken]);
-  const getRole          = useCallback(() => auth.role          || readStorageValue("role"), [auth.role]);
-  const getUserId        = useCallback(() => auth.userId        || readStorageValue("userId"), [auth.userId]);
-  const getParentId      = useCallback(() => auth.parentId      || readStorageValue("parentId"), [auth.parentId]);
-  const getVendorId      = useCallback(() => auth.vendorId      || readStorageValue("vendorId"), [auth.vendorId]);
-  const getVendorUserId  = useCallback(() => auth.vendorUserId  || readStorageValue("vendorUserId"), [auth.vendorUserId]);
-  const getCustomerUserId= useCallback(() => auth.customerUserId|| readStorageValue("customerUserId"), [auth.customerUserId]);
+  const getAuthToken     = useCallback(() => auth.authToken, [auth.authToken]);
+  const getUserToken     = useCallback(() => auth.userToken, [auth.userToken]);
+  const getRole          = useCallback(() => auth.role, [auth.role]);
+  const getUserId        = useCallback(() => auth.userId, [auth.userId]);
+  const getParentId      = useCallback(() => auth.parentId, [auth.parentId]);
+  const getVendorId      = useCallback(() => auth.vendorId, [auth.vendorId]);
+  const getVendorUserId  = useCallback(() => auth.vendorUserId, [auth.vendorUserId]);
+  const getCustomerUserId= useCallback(() => auth.customerUserId, [auth.customerUserId]);
   const getUserName      = useCallback(() => auth.userName, [auth.userName]);
   const getVendorName    = useCallback(() => auth.vendorName, [auth.vendorName]);
   const getCustomerName  = useCallback(() => auth.customerName, [auth.customerName]);

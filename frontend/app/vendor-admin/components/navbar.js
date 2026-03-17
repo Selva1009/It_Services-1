@@ -1,9 +1,8 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, useState,useEffect } from "react";
 import {
   Users,
   User,
@@ -18,154 +17,30 @@ import {
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
 
-const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
-
 export default function Navbar() {
-  const NOTIFICATION_LIMIT = 50;
-  const { auth, getAuthToken: getAuthTokenFromContext, setVendor: setAuthVendor } = useAuth();
-  const [vendor, setVendor] = useState(auth.vendor || null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { auth, clearAuth } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [vendorAdminID, setVendorAdminID] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
-  const getAuthToken = () =>
-    getAuthTokenFromContext() ||
-    sessionStorage.getItem("token");
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 
-  const vendorDisplayName =
-    vendor?.personName ||
-    vendor?.name ||
-    vendor?.companyName ||
-    vendor?.company_name ||
-    vendor?.vendor_name ||
-    vendor?.email ||
-    null;
+useEffect(() => {
+  ["/SignIn", "/vendor-admin", "/vendor-admin/addUser", "/vendor-admin/usersprofile", "/vendor-admin/myProfile"]
+    .forEach((path) => router.prefetch(path));
+}, []);
+  const vendorDisplayName = useMemo(
+    () =>
+      auth.vendor?.personName ||
+      auth.vendor?.name ||
+      auth.vendor?.companyName ||
+      auth.vendor?.company_name ||
+      auth.vendor?.vendor_name ||
+      auth.vendor?.email ||
+      null,
+    [auth.vendor]
+  );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadVendor = async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const storedVendor = sessionStorage.getItem("vendor");
-        const vendorData = storedVendor ? JSON.parse(storedVendor) : auth.vendor;
-        if (!vendorData) {
-          return;
-        }
-        if (isMounted) {
-          setVendor(vendorData);
-          setVendorAdminID(vendorData.id);
-        }
-
-        if (!vendorData?.id) {
-          return;
-        }
-
-        const lastSync = Number(sessionStorage.getItem("vendorProfileLastSync") || 0);
-        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-
-        if (shouldSync) {
-          try {
-            const authToken = getAuthToken();
-            const response = await fetch(
-              `${API_BASE_URL}/api/vendors/profile`,
-              {
-                cache: "no-store",
-                headers: authToken
-                  ? { Authorization: `Bearer ${authToken}` }
-                  : undefined,
-              }
-            );
-
-            if (response.ok) {
-              const payload = await response.json();
-              const latestVendor = payload.vendor || payload;
-              if (isMounted) {
-                setVendor(latestVendor);
-                setVendorAdminID(latestVendor.id);
-                setAuthVendor(latestVendor);
-                sessionStorage.setItem("vendor", JSON.stringify(latestVendor));
-                sessionStorage.setItem("vendorProfileLastSync", String(Date.now()));
-              }
-            }
-          } catch (fetchError) {
-            console.error("Failed to fetch latest vendor details:", fetchError);
-          }
-        }
-      } catch (err) {
-        setError("Failed to load vendor details");
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadVendor();
-
-    const handleStorage = () => {
-      void loadVendor();
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
-
-  const fetchNotifications = async () => {
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/vendor-admin`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getAuthToken() || sessionStorage.getItem("vendorToken") || ""}`,
-          },
-          body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch notifications");
-      }
-
-      const data = await response.json();
-      setNotifications(data.notifications);
-      setUnreadCount(
-        data.notifications.filter((n) => n.status === "unread").length
-      );
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!vendorAdminID) return;
-    fetchNotifications();
-
-    // Refresh notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [vendorAdminID]);
+  // Notifications intentionally handled elsewhere to avoid redundant polling.
 
   const handleLogout = () => {
     Swal.fire({
@@ -186,13 +61,18 @@ export default function Navbar() {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        sessionStorage.clear();
+        clearAuth();
         router.push("/SignIn");
       }
     });
   };
 
-  if (!vendor) return null;
+  if (!auth.vendor) return null;
+
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 
   return (
     <>
@@ -258,14 +138,13 @@ export default function Navbar() {
                 className="text-gray-800 group-hover:text-blue-700 transition-colors"
               />
               <div className="hidden sm:block text-[14px]">
-                { loading && <span>Loading...</span> }
-                { error && <span className="text-red-500">{ error }</span> }
-                { vendor && (
-                  <span>
-                    { vendorDisplayName || `${vendor.firstName || ""} ${vendor.lastName || ""}`.trim() || "Vendor Admin" }
-                    <br />
+                { vendorDisplayName ? (
+                  <>
+                    <p className="text-[14px] font-medium">{ vendorDisplayName }</p>
                     <p className="text-[#999999] text-[12px]">Vendor Admin</p>
-                  </span>
+                  </>
+                ) : (
+                  <span className="text-sm">Loading...</span>
                 ) }
               </div>
             </div>
@@ -342,7 +221,7 @@ export default function Navbar() {
                 </div>
                 <div>
                   <p className="font-medium">
-                    { vendorDisplayName || `${vendor.firstName || ""} ${vendor.lastName || ""}`.trim() || "Vendor Admin" }
+                    { vendorDisplayName || `${auth.vendor?.firstName || ""} ${auth.vendor?.lastName || ""}`.trim() || "Vendor Admin" }
                   </p>
                   <p className="text-sm text-gray-500">Vendor Admin</p>
                 </div>
