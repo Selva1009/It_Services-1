@@ -1,4 +1,5 @@
 "use client";
+
 import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -13,166 +14,95 @@ import {
   UserRoundPen,
   Menu,
   X,
+  ChevronDown,
+  Bell,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
+import "./VendorAdminNavbar.css";
 
-const getInitials = (first = "", last = "") =>
-  `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase() || "VA";
+const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+const NOTIFICATION_LIMIT  = 50;
 
 export default function Navbar() {
-  const NOTIFICATION_LIMIT = 50;
   const { auth, getAuthToken: getAuthTokenFromContext, setVendor: setAuthVendor } = useAuth();
-  const [vendor, setVendor] = useState(auth.vendor || null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [vendorAdminID, setVendorAdminID] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const router = useRouter();
-  const getAuthToken = () =>
-    getAuthTokenFromContext() ||
-    sessionStorage.getItem("token");
+  const pathname = usePathname();
+  const router   = useRouter();
 
-  const NOTIFICATION_LIMIT = 50;
+  const [vendor,         setVendor]         = useState(auth.vendor || null);
+  const [loading,        setLoading]        = useState(true);
+  const [dropdownOpen,   setDropdownOpen]   = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadCount,    setUnreadCount]    = useState(0);
+  const [vendorAdminID,  setVendorAdminID]  = useState(null);
+
+  const getAuthToken = () =>
+    getAuthTokenFromContext() || sessionStorage.getItem("token");
 
   const vendorDisplayName =
-    vendor?.personName ||
-    vendor?.name ||
-    vendor?.companyName ||
-    vendor?.company_name ||
-    vendor?.vendor_name ||
-    vendor?.email ||
+    vendor?.personName    ||
+    vendor?.name          ||
+    vendor?.companyName   ||
+    vendor?.company_name  ||
+    vendor?.vendor_name   ||
+    vendor?.email         ||
     null;
 
+  // ── Load vendor profile ───────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
 
     const loadVendor = async () => {
       setLoading(true);
-
-      // Show cached data immediately
-      const raw = localStorage.getItem("vendor");
-      if (raw) {
-        try {
-          const cached = JSON.parse(raw);
-          if (isMounted) {
-            setVendor(cached);
-            setVendorAdminID(cached.id || cached._id);
-          }
-        } catch (_) {}
-      }
-
-      // Always fetch fresh from API
-      const token = getAuthToken();
-      if (!token) { setLoading(false); return; }
-
       try {
         const storedVendor = sessionStorage.getItem("vendor");
-        const vendorData = storedVendor ? JSON.parse(storedVendor) : auth.vendor;
-        if (!vendorData) {
-          return;
-        }
-        if (isMounted) {
+        const vendorData   = storedVendor ? JSON.parse(storedVendor) : auth.vendor;
+
+        if (vendorData && isMounted) {
           setVendor(vendorData);
           setVendorAdminID(vendorData.id);
         }
 
-        if (!vendorData?.id) {
-          return;
-        }
-
-        const lastSync = Number(sessionStorage.getItem("vendorProfileLastSync") || 0);
-        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
+        const lastSync   = Number(sessionStorage.getItem("vendorProfileLastSync") || 0);
+        const shouldSync = !vendorData || Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
 
         if (shouldSync) {
-          try {
-            const authToken = getAuthToken();
-            const response = await fetch(
-              `${API_BASE_URL}/api/vendors/profile`,
-              {
-                cache: "no-store",
-                headers: authToken
-                  ? { Authorization: `Bearer ${authToken}` }
-                  : undefined,
-              }
-            );
-
-            if (response.ok) {
-              const payload = await response.json();
-              const latestVendor = payload.vendor || payload;
+          const token = getAuthToken();
+          if (token) {
+            const res = await fetch(`${API_BASE_URL}/api/vendors/profile`, {
+              cache:   "no-store",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              const payload = await res.json();
+              const latest  = payload.vendor || payload.profile || payload.data || payload;
               if (isMounted) {
-                setVendor(latestVendor);
-                setVendorAdminID(latestVendor.id);
-                setAuthVendor(latestVendor);
-                sessionStorage.setItem("vendor", JSON.stringify(latestVendor));
+                setVendor(latest);
+                setVendorAdminID(latest.id);
+                setAuthVendor(latest);
+                sessionStorage.setItem("vendor", JSON.stringify(latest));
                 sessionStorage.setItem("vendorProfileLastSync", String(Date.now()));
               }
             }
-            if (isMounted) {
-              setVendor(latest);
-              setVendorAdminID(latest.id || latest._id);
-              localStorage.setItem("vendor", JSON.stringify(latest));
-            }
-            fetched = true;
-            break;
           }
-        } catch (_) {}
+        }
+      } catch (err) {
+        console.error("[VendorNavbar] load error:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-
-      if (!fetched) {
-        console.error("[VendorNavbar] All profile endpoints failed");
-      }
-    } catch (err) {
-      console.error("[VendorNavbar] load error:", err);
-    } finally {
-      if (isMounted) setLoading(false);
-    }
     };
 
     void loadVendor();
     return () => { isMounted = false; };
   }, []);
 
-  const fetchNotifications = async () => {
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/vendor-admin`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getAuthToken() || sessionStorage.getItem("vendorToken") || ""}`,
-          },
-          body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch notifications");
-      }
-
-      const data = await response.json();
-      setNotifications(data.notifications);
-      setUnreadCount(
-        data.notifications.filter((n) => n.status === "unread").length
-      );
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    }
-  };
-
+  // ── Notification unread count ─────────────────────────────────────────────
   useEffect(() => {
     if (!vendorAdminID) return;
 
     const fetchUnread = async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const res = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
           method:  "POST",
@@ -213,17 +143,18 @@ export default function Navbar() {
     setDropdownOpen(false);
     setMobileMenuOpen(false);
     Swal.fire({
-      title:             "Are you sure want to logout?",
-      imageUrl:          "/logout.gif",
-      imageWidth:        127,
-      imageHeight:       151,
-      imageAlt:          "Logout",
-      showCancelButton:  true,
-      confirmButtonColor:"#10b981",
-      cancelButtonColor: "#94a3b8",
-      confirmButtonText: "<b>Yes</b>",
-      cancelButtonText:  "<b>Cancel</b>",
-      customClass:       { popup: "rounded-alert" },
+      title:              "Are you sure want to logout?",
+      imageUrl:           "/logout.gif",
+      imageWidth:         127,
+      imageHeight:        151,
+      imageAlt:           "Logout",
+      showCancelButton:   true,
+      reverseButtons:     true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor:  "#94a3b8",
+      confirmButtonText:  "<b>Yes</b>",
+      cancelButtonText:   "<b>Cancel</b>",
+      customClass:        { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
         sessionStorage.clear();
@@ -233,28 +164,25 @@ export default function Navbar() {
   };
 
   const menuItems = [
-    { href: "/vendor-admin",                   icon: <LayoutDashboard size={16} />, label: "Dashboard"    },
-    { href: "/vendor-admin/addUser",           icon: <UserPlus         size={16} />, label: "Add User"     },
-    { href: "/vendor-admin/usersprofile",      icon: <Users            size={16} />, label: "User Profiles"},
+    { href: "/vendor-admin",              icon: <LayoutDashboard size={16} />, label: "Dashboard"     },
+    { href: "/vendor-admin/addUser",      icon: <UserPlus        size={16} />, label: "Add User"      },
+    { href: "/vendor-admin/usersprofile", icon: <Users           size={16} />, label: "User Profiles" },
   ];
 
   const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  // Resolve name — API may return firstName/first_name
-  const firstName = vendor?.firstName || vendor?.first_name || vendor?.FirstName || "";
-  const lastName  = vendor?.lastName  || vendor?.last_name  || vendor?.LastName  || "";
-  const profileName = [firstName, lastName].filter(Boolean).join(" ").trim() || vendor?.name || "";
+  const firstName   = vendor?.firstName || vendor?.first_name || "";
+  const lastName    = vendor?.lastName  || vendor?.last_name  || "";
+  const profileName = [firstName, lastName].filter(Boolean).join(" ").trim() || vendorDisplayName || "";
   const initials    = profileName
     ? profileName.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("")
     : "VA";
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       {/* ════════════════ DESKTOP NAVBAR ════════════════ */}
       <nav className="va-nav">
 
-        {/* Left: logo + divider + links */}
         <div className="va-nav-left">
           <Link href="/vendor-admin" className="va-logo">
             <div className="va-logo-mark">
@@ -266,56 +194,56 @@ export default function Navbar() {
             <span className="va-logo-text">M-Place</span>
           </Link>
 
-          {/* Center: Nav Items (Desktop) */ }
-          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-700">
-            <Link
-              href="/vendor-admin"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <Link
-              href="/vendor-admin/addUser"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add User
-            </Link>
-            <Link
-              href="/vendor-admin/usersprofile"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              Users Profiles
-            </Link>
-          </div>
+          <div className="va-nav-divider" />
+
+          <nav className="va-nav-links">
+            {menuItems.slice(0, 3).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`va-nav-link${isActive(item.href) ? " active" : ""}`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        {/* Right: date · bell · profile */}
         <div className="va-nav-right">
 
-          {/* Vendor Admin Name & Dropdown */ }
-          <div className="relative">
-            <div
-              className="group flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors cursor-pointer"
-              onClick={ () => setDropdownOpen(!dropdownOpen) }
-            >
-              <User
-                size={ 32 }
-                className="text-gray-800 group-hover:text-blue-700 transition-colors"
-              />
-              <div className="hidden sm:block text-[14px]">
-                { loading && <span>Loading...</span> }
-                { error && <span className="text-red-500">{ error }</span> }
-                { vendor && (
-                  <span>
-                    { vendorDisplayName || `${vendor.firstName || ""} ${vendor.lastName || ""}`.trim() || "Vendor Admin" }
-                    <br />
-                    <p className="text-[#999999] text-[12px]">Vendor Admin</p>
-                  </span>
-                ) }
-              </div>
+          <div className="va-nav-date">
+            <Calendar size={13} />
+            {currentDate}
+          </div>
+
+          <button
+            className="va-nav-icon-btn"
+            aria-label="Notifications"
+            onClick={() => router.push("/vendor-admin/AdminNotification")}
+          >
+            <Bell size={16} />
+            {unreadCount > 0
+              ? <span className="va-nav-bell-count">{unreadCount > 99 ? "99+" : unreadCount}</span>
+              : <div className="va-nav-bell-dot" />
+            }
+          </button>
+
+          <div
+            className={`va-nav-profile${dropdownOpen ? " open" : ""}`}
+            onClick={() => setDropdownOpen((o) => !o)}
+          >
+            <div className="va-nav-avatar">{initials}</div>
+
+            <div className="va-nav-profile-info">
+              {loading ? (
+                <span className="va-nav-profile-name">Loading…</span>
+              ) : (
+                <>
+                  <span className="va-nav-profile-name">{profileName || "Vendor Admin"}</span>
+                  <span className="va-nav-profile-role">Vendor Admin</span>
+                </>
+              )}
             </div>
 
             <ChevronDown size={14} className="va-nav-chevron" />
@@ -369,44 +297,13 @@ export default function Navbar() {
               <div className="va-mobile-drawer-profile">
                 <div className="va-mobile-drawer-avatar">{initials}</div>
                 <div>
-                  <p className="font-medium">
-                    { vendorDisplayName || `${vendor.firstName || ""} ${vendor.lastName || ""}`.trim() || "Vendor Admin" }
-                  </p>
-                  <p className="text-sm text-gray-500">Vendor Admin</p>
+                  <div className="va-mobile-drawer-name">{profileName || "Vendor Admin"}</div>
+                  <div className="va-mobile-drawer-role">Vendor Admin</div>
                 </div>
               </div>
 
-              {/* Navigation Links */ }
-              <div className="p-4 space-y-2">
-                <Link
-                  href="/vendor-admin"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <LayoutDashboard size={ 20 } />
-                  <span>Dashboard</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/addUser"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <UserPlus size={ 20 } />
-                  <span>Add User</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/usersprofile"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Users size={ 20 } />
-                  <span>Users Profiles</span>
-                </Link>
-              </div>
-
-              {/* Bottom Section */ }
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-                <div className="space-y-2">
+              <div className="va-mobile-nav-links">
+                {menuItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}

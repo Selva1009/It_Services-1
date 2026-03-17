@@ -1,15 +1,26 @@
 ﻿"use client";
+
 import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus } from "lucide-react";
-import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
+import Swal from "sweetalert2";
+import {
+  UserPlus, User, Phone, Mail, Briefcase,
+  Lock, Eye, EyeOff, CheckCircle2, ArrowRight,
+} from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import "./vendor-addUser.css";
+
+/* ── Validation helpers ── */
+const validateMobile   = (mobile)   => /^[6-9]\d{9}$/.test(mobile);
+const validateEmail    = (email)    => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validatePassword = (password) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
 
 const Page = () => {
   const router = useRouter();
-  const { validateForm } = useUserFormValidation();
   const { auth, getUserToken } = useAuth();
+
   const [formValues, setFormValues] = useState({
     name:            "",
     mobile:          "",
@@ -24,27 +35,24 @@ const Page = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [focused,             setFocused]             = useState(null);
   const [vendorId,            setVendorId]            = useState(null);
-  const [adminId,             setAdminId]             = useState(null);
   const [isSubmitting,        setIsSubmitting]        = useState(false);
   const [submitted,           setSubmitted]           = useState(false);
 
-  /* ── Load vendor from localStorage ── */
+  /* ── Load vendor from session/auth ── */
   useEffect(() => {
     const storedVendor = sessionStorage.getItem("vendor");
     if (storedVendor) {
       try {
         const vendorData = JSON.parse(storedVendor);
-        setVendorId(vendorData.id);
-        setAdminId(vendorData.id);
+        if (vendorData?.id) setVendorId(vendorData.id);
       } catch (err) {
         console.error("Invalid vendor data:", err);
       }
     }
-
     if (auth.vendor?.id) {
       setVendorId(auth.vendor.id);
     }
-  }, []);
+  }, [auth.vendor]);
 
   /* ── Per-field validation ── */
   const validateField = (name, value) => {
@@ -88,7 +96,6 @@ const Page = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Block non-digits for mobile & enforce 10 char limit
     if (name === "mobile") {
       if (!/^\d*$/.test(value)) return;
       if (value.length > 10) return;
@@ -96,11 +103,9 @@ const Page = () => {
 
     setFormValues((prev) => ({ ...prev, [name]: value }));
 
-    // Validate on the fly
     const error = validateField(name, value);
     setErrors((prev) => ({ ...prev, [name]: error }));
 
-    // Re-validate confirmPassword when password changes
     if (name === "password") {
       const cpError = formValues.confirmPassword
         ? value !== formValues.confirmPassword ? "Passwords do not match." : ""
@@ -126,11 +131,11 @@ const Page = () => {
     return Object.values(newErrors).every((e) => e === "");
   };
 
+  /* ── Submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-
-    if (!validateAll()) return; // Stop if any field is invalid
+    if (!validateAll()) return;
 
     setIsSubmitting(true);
 
@@ -139,7 +144,7 @@ const Page = () => {
         title: "Error",
         text: "Vendor session not found. Please login again.",
         icon: "error",
-        confirmButtonColor: "#1a56db",
+        confirmButtonColor: "#10b981",
       });
       setIsSubmitting(false);
       return;
@@ -159,7 +164,7 @@ const Page = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${getUserToken() || sessionStorage.getItem("vendorToken")}`
+          Authorization: `Bearer ${getUserToken?.() || sessionStorage.getItem("vendorToken") || ""}`,
         },
         body: JSON.stringify(payload),
       });
@@ -172,7 +177,7 @@ const Page = () => {
           title: "Success!",
           text: "User created successfully.",
           icon: "success",
-          confirmButtonColor: "#1a56db",
+          confirmButtonColor: "#10b981",
           timer: 2000,
           showConfirmButton: false,
         }).then(() => {
@@ -183,7 +188,7 @@ const Page = () => {
           title: "Error",
           text: result.message || "Failed to create user",
           icon: "error",
-          confirmButtonColor: "#1a56db",
+          confirmButtonColor: "#10b981",
         });
       }
     } catch (error) {
@@ -191,14 +196,14 @@ const Page = () => {
         title: "Error",
         text: error.message || "Network error occurred",
         icon: "error",
-        confirmButtonColor: "#1a56db",
+        confirmButtonColor: "#10b981",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /* ── Text field config ── */
+  /* ── Field config ── */
   const fields = [
     { name: "name",        label: "Full Name",     icon: User,      placeholder: "Enter full name",       type: "text",  col: 1 },
     { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter 10-digit number", type: "tel",   col: 1 },
@@ -229,7 +234,6 @@ const Page = () => {
         <div className="vau-body">
           <form onSubmit={handleSubmit} autoComplete="off">
 
-            {/* Dummy fields to prevent browser autofill */}
             <input type="text"     style={{ display: "none" }} />
             <input type="password" style={{ display: "none" }} />
 
@@ -297,7 +301,6 @@ const Page = () => {
                 {errors.password && (
                   <span className="vau-error-msg">{errors.password}</span>
                 )}
-                {/* Password strength hint */}
                 {focused === "password" && !errors.password && (
                   <span className="vau-hint-msg">
                     Min 8 chars · Uppercase · Lowercase · Number · Special (@$!%*?&)
@@ -346,6 +349,7 @@ const Page = () => {
                 type="button"
                 className="vau-btn-cancel"
                 onClick={() => router.push("/vendor-admin")}
+                disabled={isSubmitting}
               >
                 Cancel
               </button>

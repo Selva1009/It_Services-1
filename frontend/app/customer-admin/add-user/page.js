@@ -1,8 +1,10 @@
 ﻿"use client";
+
 import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
+import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import {
   Eye, EyeOff,
   User, Mail, Phone, Briefcase,
@@ -16,8 +18,8 @@ const getAuthToken = () =>
     : null;
 
 /* ── Validation helpers ── */
-const validateMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
-const validateEmail  = (email)  => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validateMobile   = (mobile)   => /^[6-9]\d{9}$/.test(mobile);
+const validateEmail    = (email)    => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const validatePassword = (password) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
 
@@ -52,8 +54,6 @@ const CustomerAddUserPage = () => {
       } catch (err) {
         console.error("Failed to decode token:", err);
       }
-    } catch (err) {
-      console.error("Invalid customer data in localStorage:", err);
     }
   }, []);
 
@@ -98,7 +98,6 @@ const CustomerAddUserPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Block non-digits for mobile & enforce 10 char limit
     if (name === "mobile") {
       if (!/^\d*$/.test(value)) return;
       if (value.length > 10) return;
@@ -106,11 +105,9 @@ const CustomerAddUserPage = () => {
 
     setFormValues((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error on change, re-validate on the fly
     const error = validateField(name, value);
     setErrors((prev) => ({ ...prev, [name]: error }));
 
-    // Re-validate confirmPassword when password changes
     if (name === "password") {
       const cpError = formValues.confirmPassword
         ? value !== formValues.confirmPassword ? "Passwords do not match." : ""
@@ -141,8 +138,7 @@ const CustomerAddUserPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-
-    if (!validateAll()) return; // Stop if any field is invalid
+    if (!validateAll()) return;
 
     setIsSubmitting(true);
 
@@ -202,7 +198,7 @@ const CustomerAddUserPage = () => {
 
   const fields = [
     { name: "name",        label: "Full Name",     icon: User,      placeholder: "Enter full name",     type: "text",  col: 1 },
-    { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter mobile number", type: "tel", col: 1 },
+    { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter mobile number", type: "tel",   col: 1 },
     { name: "email",       label: "Email Address", icon: Mail,      placeholder: "Enter email address", type: "email", col: 2 },
     { name: "designation", label: "Designation",   icon: Briefcase, placeholder: "Enter designation",   type: "text",  col: 2 },
   ];
@@ -214,167 +210,169 @@ const CustomerAddUserPage = () => {
   ].filter(Boolean).join(" ");
 
   return (
-    <div className="cau-page">
-      <div className="cau-card">
+    <>
+      <CustomerAdminNavbar />
+      <div className="cau-page">
+        <div className="cau-card">
 
-        {/* ── Header ── */}
-        <div className="cau-header">
-          <div className="cau-header-inner">
-            <div className="cau-avatar">
-              <UserPlus size={22} color="rgba(255,255,255,0.85)" />
-            </div>
-            <div className="cau-header-text">
-              <h1>Create User</h1>
-              <p>Add a new member to your team</p>
+          {/* ── Header ── */}
+          <div className="cau-header">
+            <div className="cau-header-inner">
+              <div className="cau-avatar">
+                <UserPlus size={22} color="rgba(255,255,255,0.85)" />
+              </div>
+              <div className="cau-header-text">
+                <h1>Create User</h1>
+                <p>Add a new member to your team</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Form ── */}
-        <div className="cau-body">
-          <form onSubmit={handleSubmit} autoComplete="off">
+          {/* ── Form ── */}
+          <div className="cau-body">
+            <form onSubmit={handleSubmit} autoComplete="off">
 
-            {/* Dummy fields to prevent browser autofill */}
-            <input type="text"     style={{ display: "none" }} />
-            <input type="password" style={{ display: "none" }} />
+              {/* Dummy fields to prevent browser autofill */}
+              <input type="text"     style={{ display: "none" }} />
+              <input type="password" style={{ display: "none" }} />
 
-            <div className="cau-grid">
+              <div className="cau-grid">
 
-              {/* Text fields */}
-              {fields.map(({ name, label, icon: Icon, placeholder, type, col }) => (
-                <div
-                  key={name}
-                  className={`cau-field cau-col-${col}${focused === name ? " focused" : ""}${errors[name] ? " error" : ""}`}
-                >
-                  <label htmlFor={name}>{label}</label>
-                  <div className="cau-input-wrap">
-                    <span className="cau-input-icon"><Icon size={15} /></span>
-                    <input
-                      id={name}
-                      name={name}
-                      type={type}
-                      value={formValues[name]}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      placeholder={placeholder}
-                      onFocus={() => setFocused(name)}
-                      className="cau-input"
-                      autoComplete="off"
-                      maxLength={name === "mobile" ? 10 : undefined}
-                    />
-                    {formValues[name] && !errors[name] && (
-                      <span className="cau-input-check">
-                        <CheckCircle2 size={14} />
-                      </span>
+                {/* Text fields */}
+                {fields.map(({ name, label, icon: Icon, placeholder, type, col }) => (
+                  <div
+                    key={name}
+                    className={`cau-field cau-col-${col}${focused === name ? " focused" : ""}${errors[name] ? " error" : ""}`}
+                  >
+                    <label htmlFor={name}>{label}</label>
+                    <div className="cau-input-wrap">
+                      <span className="cau-input-icon"><Icon size={15} /></span>
+                      <input
+                        id={name}
+                        name={name}
+                        type={type}
+                        value={formValues[name]}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        placeholder={placeholder}
+                        onFocus={() => setFocused(name)}
+                        className="cau-input"
+                        autoComplete="off"
+                        maxLength={name === "mobile" ? 10 : undefined}
+                      />
+                      {formValues[name] && !errors[name] && (
+                        <span className="cau-input-check">
+                          <CheckCircle2 size={14} />
+                        </span>
+                      )}
+                    </div>
+                    {errors[name] && (
+                      <span className="cau-error-msg">{errors[name]}</span>
                     )}
                   </div>
-                  {errors[name] && (
-                    <span className="cau-error-msg">{errors[name]}</span>
+                ))}
+
+                {/* Password */}
+                <div className={`cau-field cau-col-1${focused === "password" ? " focused" : ""}${errors.password ? " error" : ""}`}>
+                  <label htmlFor="password">Password</label>
+                  <div className="cau-input-wrap">
+                    <span className="cau-input-icon"><Lock size={15} /></span>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formValues.password}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="••••••••"
+                      onFocus={() => setFocused("password")}
+                      className="cau-input cau-input-password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="cau-toggle-btn"
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <span className="cau-error-msg">{errors.password}</span>
+                  )}
+                  {focused === "password" && !errors.password && (
+                    <span className="cau-hint-msg">
+                      Min 8 chars · Uppercase · Lowercase · Number · Special (@$!%*?&)
+                    </span>
                   )}
                 </div>
-              ))}
 
-              {/* Password */}
-              <div className={`cau-field cau-col-1${focused === "password" ? " focused" : ""}${errors.password ? " error" : ""}`}>
-                <label htmlFor="password">Password</label>
-                <div className="cau-input-wrap">
-                  <span className="cau-input-icon"><Lock size={15} /></span>
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formValues.password}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="••••••••"
-                    onFocus={() => setFocused("password")}
-                    className="cau-input cau-input-password"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="cau-toggle-btn"
-                  >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
+                {/* Confirm Password */}
+                <div className={`cau-field cau-col-1${focused === "confirmPassword" ? " focused" : ""}${errors.confirmPassword ? " error" : ""}`}>
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <div className="cau-input-wrap">
+                    <span className="cau-input-icon"><Lock size={15} /></span>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formValues.confirmPassword}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="••••••••"
+                      onFocus={() => setFocused("confirmPassword")}
+                      className="cau-input cau-input-password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      className="cau-toggle-btn"
+                    >
+                      {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <span className="cau-error-msg">{errors.confirmPassword}</span>
+                  )}
                 </div>
-                {errors.password && (
-                  <span className="cau-error-msg">{errors.password}</span>
-                )}
-                {/* Password strength hint */}
-                {focused === "password" && !errors.password && (
-                  <span className="cau-hint-msg">
-                    Min 8 chars · Uppercase · Lowercase · Number · Special (@$!%*?&)
-                  </span>
-                )}
+
               </div>
 
-              {/* Confirm Password */}
-              <div className={`cau-field cau-col-1${focused === "confirmPassword" ? " focused" : ""}${errors.confirmPassword ? " error" : ""}`}>
-                <label htmlFor="confirmPassword">Confirm Password</label>
-                <div className="cau-input-wrap">
-                  <span className="cau-input-icon"><Lock size={15} /></span>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={formValues.confirmPassword}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="••••••••"
-                    onFocus={() => setFocused("confirmPassword")}
-                    className="cau-input cau-input-password"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="cau-toggle-btn"
-                  >
-                    {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <span className="cau-error-msg">{errors.confirmPassword}</span>
-                )}
+              {/* Divider */}
+              <div className="cau-divider" />
+
+              {/* Actions */}
+              <div className="cau-actions">
+                <button
+                  type="button"
+                  className="cau-btn-cancel"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={btnClass}
+                >
+                  {submitted ? (
+                    <><CheckCircle2 size={15} /> Created!</>
+                  ) : isSubmitting ? (
+                    <><div className="cau-spinner" /> Creating...</>
+                  ) : (
+                    <>Create User <ArrowRight size={15} /></>
+                  )}
+                </button>
               </div>
 
-            </div>
+            </form>
+          </div>
 
-            {/* Divider */}
-            <div className="cau-divider" />
-
-            {/* Actions */}
-            <div className="cau-actions">
-              <button
-                type="button"
-                className="cau-btn-cancel"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={btnClass}
-              >
-                {submitted ? (
-                  <><CheckCircle2 size={15} /> Created!</>
-                ) : isSubmitting ? (
-                  <><div className="cau-spinner" /> Creating...</>
-                ) : (
-                  <>Create User <ArrowRight size={15} /></>
-                )}
-              </button>
-            </div>
-
-          </form>
         </div>
-
       </div>
-    </div>
+    </>
   );
 };
 

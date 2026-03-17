@@ -86,7 +86,7 @@ const VendorUsersPage = () => {
 
   return (
     <div className="vu-page">
-      <Navbar />
+      {/* <Navbar /> */}
       <div className="vu-container">
 
         {/* Header */}

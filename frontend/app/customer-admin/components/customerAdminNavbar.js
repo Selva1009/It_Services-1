@@ -13,10 +13,12 @@ import {
   Calendar,
   Menu,
   X,
-  UserRoundPen
+  ChevronDown,
+  UserRoundPen,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
+import "./customerAdminNavbar.css";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
@@ -38,28 +40,13 @@ export default function CustomerAdminNavbar() {
     auth.customer?.vendor_name ||
     auth.customer?.email ||
     null;
+
   const customerRole = auth.role || auth.customer?.role || null;
 
   const getAuthToken = () =>
     getAuthTokenFromContext() || sessionStorage.getItem("token");
 
-export default function CustomerAdminNavbar() {
-  const pathname  = usePathname();
-  const router    = useRouter();
-
-  const [customer,        setCustomer]        = useState(null);
-  const [dropdownOpen,    setDropdownOpen]    = useState(false);
-  const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
-  const [loading,         setLoading]         = useState(false);
-  const [error,           setError]           = useState("");
-
-  const getAuthToken = () =>
-    localStorage.getItem("token")      ||
-    localStorage.getItem("authToken")  ||
-    localStorage.getItem("userToken")  ||
-    sessionStorage.getItem("token");
-
-  // ── Load profile from API using token ────────────────────────────────────
+  // ── Sync profile ──────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
 
@@ -68,7 +55,6 @@ export default function CustomerAdminNavbar() {
 
       const lastSync = Number(sessionStorage.getItem("customerProfileLastSync") || 0);
       const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-
       if (!shouldSync) return;
 
       setLoading(true);
@@ -94,7 +80,6 @@ export default function CustomerAdminNavbar() {
     };
 
     void syncProfile();
-
     return () => { isMounted = false; };
   }, [auth.customer?.id]);
 
@@ -115,17 +100,18 @@ export default function CustomerAdminNavbar() {
     setDropdownOpen(false);
     setMobileMenuOpen(false);
     Swal.fire({
-      title:             "Are you sure want to logout?",
-      imageUrl:          "/logout.gif",
-      imageWidth:        127,
-      imageHeight:       151,
-      imageAlt:          "Logout",
-      showCancelButton:  true,
-      confirmButtonColor:"#3085D6",
-      cancelButtonColor: "#3085D6",
-      confirmButtonText: "<b>Yes</b>",
-      cancelButtonText:  "<b>Cancel</b>",
-      customClass:       { popup: "rounded-alert" },
+      title:              "Are you sure want to logout?",
+      imageUrl:           "/logout.gif",
+      imageWidth:         127,
+      imageHeight:        151,
+      imageAlt:           "Logout",
+      showCancelButton:   true,
+      reverseButtons:     true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor:  "#94a3b8",
+      confirmButtonText:  "<b>Yes</b>",
+      cancelButtonText:   "<b>Cancel</b>",
+      customClass:        { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
         clearAuth();
@@ -135,41 +121,18 @@ export default function CustomerAdminNavbar() {
   };
 
   const menuItems = [
-    {
-      href: "/customer-admin/customerAdminDashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      label: "Dashboard",
-    },
-    {
-      href: "/customer-admin/add-user",
-      icon: <UserPlus className="h-5 w-5" />,
-      label: "Add User",
-    },
-    {
-      href: "/customer-admin/user-profile",
-      icon: <Users className="h-5 w-5" />,
-      label: "User Profiles",
-    },
+    { href: "/customer-admin/customerAdminDashboard", icon: <LayoutDashboard size={16} />, label: "Dashboard"     },
+    { href: "/customer-admin/add-user",               icon: <UserPlus         size={16} />, label: "Add User"      },
+    { href: "/customer-admin/user-profile",           icon: <Users            size={16} />, label: "User Profiles" },
   ];
 
   const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  // Resolve name from all possible key formats
-  // DEBUG: remove this log once name shows correctly
-  if (customer && process.env.NODE_ENV === "development") {
-    console.log("[Navbar] customer keys:", Object.keys(customer));
-    console.log("[Navbar] customer values:", customer);
-  }
-
-  // API returns first_name / last_name (snake_case)
-  const firstName = customer?.first_name || customer?.firstName || "";
-  const lastName  = customer?.last_name  || customer?.lastName  || "";
-  const profileName = [firstName, lastName].filter(Boolean).join(" ").trim() || "";
-  const initials = profileName
-    ? profileName.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("")
+  const initials = customerName
+    ? customerName.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("")
     : "CA";
 
-    return (
+  return (
     <>
       {/* ════════════════ DESKTOP NAVBAR ════════════════ */}
       <nav className="ca-nav">
@@ -179,8 +142,8 @@ export default function CustomerAdminNavbar() {
           <Link href="/customer-admin/customerAdminDashboard" className="ca-logo">
             <div className="ca-logo-mark">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M6 10.5H12" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </div>
             <span className="ca-logo-text">M-Place</span>
@@ -202,42 +165,35 @@ export default function CustomerAdminNavbar() {
           </nav>
         </div>
 
-        {/* RIGHT: Date & Profile */}
-        <div className="flex items-center space-x-6">
-          {/* Date */}
-          <div className="hidden sm:flex items-center">
-            <Calendar className="text-black-900" />
-            <span className="ml-2">{currentDate}</span>
+        {/* Right: date · profile */}
+        <div className="ca-nav-right">
+
+          <div className="ca-nav-date">
+            <Calendar size={13} />
+            {currentDate}
           </div>
 
-          <div className="h-10 w-[1px] bg-gray-300" />
+          <div
+            className={`ca-nav-profile${dropdownOpen ? " open" : ""}`}
+            onClick={() => setDropdownOpen((o) => !o)}
+          >
+            <div className="ca-nav-avatar">{initials}</div>
 
-          {/* Profile Dropdown */}
-          <div className="relative">
-            <div
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition cursor-pointer"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              <User size={32} className="text-gray-800" />
-              <div className="hidden sm:block">
-                {loading ? (
-                  <span className="text-sm">Loading...</span>
-                ) : (
-                  <>
-                    <p className="text-[14px] font-medium">
-                      {customerName}
-                    </p>
-                    <p className="text-[#999999] text-[12px] capitalize">
-                      {customerRole?.replace(/_/g, " ")}
-                    </p>
-                  </>
-                )}
-              </div>
+            <div className="ca-nav-profile-info">
+              {loading ? (
+                <span className="ca-nav-profile-name">Loading…</span>
+              ) : (
+                <>
+                  <span className="ca-nav-profile-name">{customerName || "Customer Admin"}</span>
+                  <span className="ca-nav-profile-role">
+                    {customerRole?.replace(/_/g, " ") || "Customer Admin"}
+                  </span>
+                </>
+              )}
             </div>
 
             <ChevronDown size={14} className="ca-nav-chevron" />
 
-            {/* Dropdown menu */}
             {dropdownOpen && (
               <div className="ca-dropdown">
                 <Link
@@ -260,19 +216,16 @@ export default function CustomerAdminNavbar() {
         </div>
       </nav>
 
-      {/* Mobile Navbar */}
-      <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
-              <img
-                src="/Logo.png"
-                alt="M-Place Logo"
-                className="w-7 h-7 object-contain"
-              />
-            </div>
+      {/* ════════════════ MOBILE NAVBAR ════════════════ */}
+      <nav className="ca-nav-mobile">
+        <div className="ca-nav-mobile-brand">
+          <div className="ca-nav-mobile-logo">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 10.5H12" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
           </div>
-          <span className="font-medium text-sm">Customer Admin</span>
+          <span className="ca-nav-mobile-title">Customer Admin</span>
         </div>
 
         <button
@@ -283,26 +236,21 @@ export default function CustomerAdminNavbar() {
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Mobile Slide Menu */}
         {mobileMenuOpen && (
           <div className="ca-mobile-overlay" onClick={() => setMobileMenuOpen(false)}>
             <div className="ca-mobile-drawer" onClick={(e) => e.stopPropagation()}>
 
-              {/* Profile strip */}
               <div className="ca-mobile-drawer-profile">
                 <div className="ca-mobile-drawer-avatar">{initials}</div>
                 <div>
-                  <p className="font-medium">
-                    {customerName || "Admin"}
-                  </p>
-                  <p className="text-sm text-gray-500 capitalize">
-                    {customerRole?.replace(/_/g, " ") || "IT Admin"}
-                  </p>
+                  <div className="ca-mobile-drawer-name">{customerName || "Customer Admin"}</div>
+                  <div className="ca-mobile-drawer-role">
+                    {customerRole?.replace(/_/g, " ") || "Customer Admin"}
+                  </div>
                 </div>
               </div>
 
-              {/* Nav Links */}
-              <div className="p-4 space-y-2">
+              <div className="ca-mobile-nav-links">
                 {menuItems.map((item) => (
                   <Link
                     key={item.href}
@@ -316,25 +264,23 @@ export default function CustomerAdminNavbar() {
                 ))}
               </div>
 
-              {/* Bottom Actions */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-                <div className="space-y-2">
-                  <Link
-                    href="/customer-admin/customerAdminProfile"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <UserRoundPen size={20} />
-                    <span>My Profile</span>
-                  </Link>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
+              <div className="ca-mobile-drawer-footer">
+                <Link
+                  href="/customer-admin/customerAdminProfile"
+                  className="ca-mobile-nav-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <UserRoundPen size={17} />
+                  My Profile
+                </Link>
+                <button
+                  className="ca-mobile-nav-link"
+                  style={{ color: "var(--red)" }}
+                  onClick={handleLogout}
+                >
+                  <LogOut size={17} />
+                  Logout
+                </button>
               </div>
 
             </div>

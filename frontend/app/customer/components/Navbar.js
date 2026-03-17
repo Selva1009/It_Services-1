@@ -2,170 +2,124 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  User,
-  LogOut,
-  Calendar,
-  Menu,
-  X,
-} from "lucide-react";
+import { Search, User, LogOut, Calendar, Menu, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { API_BASE_URL } from "@/lib/api/config";
-import {
-  CUSTOMER_USER_UPDATED_EVENT,
-} from "@/lib/events";
+import { CUSTOMER_USER_UPDATED_EVENT } from "@/lib/events";
 import { useAuth } from "@/app/contexts/AuthContext";
+import "./customerNavbar.css";
 
 const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
 
-const Navbar = ({
-  setSearchQuery,
-  setCategoryFilter,
-  disableSearch,
-}) => {
-  const [search, setSearch] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+const Navbar = ({ setSearchQuery, setCategoryFilter, disableSearch }) => {
+  const [search,         setSearch]         = useState("");
+  const [dropdownOpen,   setDropdownOpen]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [customerUser, setCustomerUser] = useState(null);
+  const [customerUser,   setCustomerUser]   = useState(null);
   const router = useRouter();
   const { auth, getAuthToken: getAuthTokenFromContext, setCustomerUser: setAuthCustomerUser } = useAuth();
-  console.log(auth,"auth")
+
   const getAuthToken = useCallback(
-    () =>
-      getAuthTokenFromContext() ||
-      sessionStorage.getItem("token"),
+    () => getAuthTokenFromContext() || sessionStorage.getItem("token"),
     [getAuthTokenFromContext]
   );
-  const name=auth?.userName
+
+  const name = auth?.userName;
+
   const readCustomerUser = useCallback(() => {
     if (typeof window === "undefined") return null;
-
     if (auth.customerUser) return auth.customerUser;
-
-    const storedCustomerUser = sessionStorage.getItem("customerUser");
-    if (!storedCustomerUser) return null;
-
-    try {
-      return JSON.parse(storedCustomerUser);
-    } catch (error) {
-      console.error("Failed to parse customer user from localStorage:", error);
-      return null;
-    }
-  }, []);
+    const stored = sessionStorage.getItem("customerUser");
+    if (!stored) return null;
+    try { return JSON.parse(stored); } catch { return null; }
+  }, [auth.customerUser]);
 
   const syncCustomerState = useCallback(() => {
-    const currentUser = readCustomerUser();
-    setCustomerUser(currentUser);
+    setCustomerUser(readCustomerUser());
   }, [readCustomerUser]);
 
   const customerDisplayName =
-    customerUser?.name ||
+    customerUser?.name       ||
     customerUser?.personName ||
-    customerUser?.company_name ||
     customerUser?.companyName ||
-    customerUser?.email ||
+    customerUser?.email      ||
     null;
 
+  const initials = customerDisplayName
+    ? customerDisplayName.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("")
+    : "CU";
+
+  // ── Sync on mount & events ──────────────────────────────────────────────
   useEffect(() => {
     syncCustomerState();
+    const onStorage    = () => syncCustomerState();
+    const onUpdated    = () => syncCustomerState();
+    const onVisibility = () => { if (document.visibilityState === "visible") syncCustomerState(); };
 
-    const handleStorageChange = () => {
-      syncCustomerState();
-    };
-
-    const handleCustomerUserUpdated = () => {
-      syncCustomerState();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        syncCustomerState();
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener(CUSTOMER_USER_UPDATED_EVENT, handleCustomerUserUpdated);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
+    window.addEventListener("storage",                   onStorage);
+    window.addEventListener(CUSTOMER_USER_UPDATED_EVENT, onUpdated);
+    document.addEventListener("visibilitychange",        onVisibility);
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener(CUSTOMER_USER_UPDATED_EVENT, handleCustomerUserUpdated);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("storage",                   onStorage);
+      window.removeEventListener(CUSTOMER_USER_UPDATED_EVENT, onUpdated);
+      document.removeEventListener("visibilitychange",        onVisibility);
     };
-  }, [readCustomerUser, syncCustomerState]);
+  }, [syncCustomerState]);
 
+  // ── Profile sync ────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
-
-    const fetchLatestCustomer = async () => {
-      const currentUser = readCustomerUser();
-      if (!currentUser?.id) return;
-      const lastSync = Number(
-        sessionStorage.getItem("customerUserProfileLastSync") || 0
-      );
-      const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-      if (!shouldSync) return;
-
+    const fetchLatest = async () => {
+      const current = readCustomerUser();
+      if (!current?.id) return;
+      const lastSync   = Number(sessionStorage.getItem("customerUserProfileLastSync") || 0);
+      if (Date.now() - lastSync <= PROFILE_SYNC_TTL_MS) return;
       try {
-        const authToken = getAuthToken();
-        const response = await fetch(
-          `${API_BASE_URL}/api/customer-users/profile`,
-          {
-            headers: authToken
-              ? { Authorization: `Bearer ${authToken}` }
-              : undefined,
-          }
-        );
-
-        if (!response.ok) return;
-
-        const latestUser = await response.json();
-        const mergedUser = {
-          ...currentUser,
-          ...latestUser,
-        };
-
-        if (!isMounted) return;
-
-        setCustomerUser(mergedUser);
-        setAuthCustomerUser(mergedUser);
-        sessionStorage.setItem("customerUser", JSON.stringify(mergedUser));
-        sessionStorage.setItem(
-          "customerUserProfileLastSync",
-          String(Date.now())
-        );
-      } catch (error) {
-        console.error("Failed to fetch latest customer profile for navbar:", error);
+        const token = getAuthToken();
+        const res   = await fetch(`${API_BASE_URL}/api/customer-users/profile`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!res.ok || !isMounted) return;
+        const latest = await res.json();
+        const merged = { ...current, ...latest };
+        setCustomerUser(merged);
+        setAuthCustomerUser(merged);
+        sessionStorage.setItem("customerUser",                  JSON.stringify(merged));
+        sessionStorage.setItem("customerUserProfileLastSync",   String(Date.now()));
+      } catch (err) {
+        console.error("Profile sync failed:", err);
       }
     };
-
-    void fetchLatestCustomer();
-
-    return () => {
-      isMounted = false;
-    };
+    void fetchLatest();
+    return () => { isMounted = false; };
   }, [getAuthToken, readCustomerUser]);
 
-  // Logout function
+  // ── Close dropdown on outside click ────────────────────────────────────
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const close = (e) => { if (!e.target.closest(".cu-nav-profile")) setDropdownOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [dropdownOpen]);
+
+  // ── Logout ──────────────────────────────────────────────────────────────
   const handleLogout = () => {
+    setDropdownOpen(false);
+    setMobileMenuOpen(false);
     Swal.fire({
-      title: "Are you sure want to logout?",
-      imageUrl: "/logout.gif",
-      imageWidth: 127,
-      imageHeight: 151,
-      imageAlt: "Logout Image",
-      showCancelButton: true,
-      confirmButtonColor: "#3085D6",
-      cancelButtonColor: "#3085D6",
-      confirmButtonText: "<b>Yes</b>",
-      cancelButtonText: "<b>Cancel</b>",
-      customClass: {
-        confirmButton: "swal-button",
-        cancelButton: "swal-button",
-        popup: "rounded-alert",
-      },
+      title:              "Are you sure want to logout?",
+      imageUrl:           "/logout.gif",
+      imageWidth:         127,
+      imageHeight:        151,
+      imageAlt:           "Logout",
+      showCancelButton:   true,
+      reverseButtons:     true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor:  "#94a3b8",
+      confirmButtonText:  "<b>Yes</b>",
+      cancelButtonText:   "<b>Cancel</b>",
+      customClass:        { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
         sessionStorage.clear();
@@ -175,190 +129,141 @@ const Navbar = ({
     });
   };
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <>
-      {/* Desktop Navbar */ }
-      <nav className="hidden sm:flex fixed top-0 left-0 w-full bg-white shadow-md p-4 h-20 items-center justify-between z-50">
-        {/* Left Section - Logo */ }
-        <div className="flex items-center space-x-4">
-          <Link href="/customer/products" >
-            <div className="cursor-pointer w-12 h-12 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-              <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
-                <img
-                  src="/Logo.png"
-                  alt="M-Place Logo"
-                  className="w-10 h-10 object-contain"
-                />
-              </div>
-            </div>
-          </Link>
-        </div>
+      {/* ════════════════ DESKTOP NAVBAR ════════════════ */}
+      <nav className="cu-nav">
 
-        {/* Middle Section - Search and Filters */ }
-        <div className="flex items-center flex-1 mx-8">
-          {/* Search Bar */ }
-          { !disableSearch && (
-            <div className="flex items-center w-full max-w-md p-2 border-2 hover:border-blue-500 rounded-lg">
-              <Search className="text-gray-500 mr-2" size={ 24 } />
+        {/* Left: logo + divider + search */}
+        <div className="cu-nav-left">
+          <Link href="/customer/products" className="cu-logo">
+            <div className="cu-logo-mark">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span className="cu-logo-text">M-Place</span>
+          </Link>
+
+          <div className="cu-nav-divider" />
+
+          {!disableSearch && (
+            <div className="cu-search-wrap">
+              <Search size={15} />
               <input
                 type="text"
                 placeholder="Search for products..."
-                className="w-full bg-transparent outline-none text-sm"
-                value={ search }
-                onChange={ (e) => {
+                className="cu-search-input"
+                value={search}
+                onChange={(e) => {
                   setSearch(e.target.value);
-                  setSearchQuery && setSearchQuery(e.target.value);
-                } }
+                  setSearchQuery?.(e.target.value);
+                }}
               />
             </div>
-          ) }
-
+          )}
         </div>
 
-        {/* Right Section - Profile, Date, Cart */ }
-        <div className="flex items-center space-x-4">
-          {/* Date Section */ }
-          <div className="flex items-center">
-            <Calendar className="text-black" />
-            <span className="ml-2">{ currentDate }</span>
+        {/* Right: date · profile */}
+        <div className="cu-nav-right">
+
+          <div className="cu-nav-date">
+            <Calendar size={13} />
+            {currentDate}
           </div>
 
-          {/* Divider */ }
-          <div className="w-[1px] h-10 bg-gray-200"></div>
-
-          {/* User Profile Section */ }
-          <div className="flex relative space-x-2">
-            <button onClick={ () => setDropdownOpen(!dropdownOpen) }>
-              <User className="cursor-pointer text-black" size={ 32 } />
-            </button>
-            { dropdownOpen && (
-              <div className="absolute right-[-2] left-[-4] top-full mt-4 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
-                <ul className="py-2 text-sm text-gray-700 font-medium">
-                  <li>
-                    <Link
-                      href="/customer/CustomerProfile"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors"
-                    >
-                      <User size={ 20 } className="text-gray-600" />
-                      <span>My Profile</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      onClick={ handleLogout }
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
-                    >
-                      <LogOut size={ 20 } className="text-red-500" />
-                      <span>Logout</span>
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            ) }
-            <div className="mt-1">
-              { customerUser && (
-                <span className="text-sm">
-                  { name }
-                  <p className="text-[#999999] text-[12px] -mt-1">
-                    Customer User
-                  </p>
-                </span>
-              ) }
-            </div>
-          </div>
-
-          {/* Cart removed */ }
-        </div>
-      </nav>
-
-      {/* Mobile Navbar */ }
-      <nav className="sm:hidden fixed top-0 left-0 w-full bg-white shadow-md p-4 h-16 flex items-center justify-between z-50">
-        {/* Left Section - Logo */ }
-        <div className="flex items-center space-x-2">
-          <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
-              <img
-                src="/Logo.png"
-                alt="M-Place Logo"
-                className="w-7 h-7 object-contain"
-              />
-            </div>
-          </div>
-          <span className="font-medium text-sm">Customer</span>
-        </div>
-
-        {/* Right Section - Menu Button */ }
-        <div className="flex items-center space-x-4">
-          {/* Mobile Menu Button */ }
-          <button
-            onClick={ () => setMobileMenuOpen(!mobileMenuOpen) }
-            className="p-2 rounded-md hover:bg-gray-100"
-          >
-            { mobileMenuOpen ? <X size={ 24 } /> : <Menu size={ 24 } /> }
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Menu */ }
-      { mobileMenuOpen && (
-        <div
-          className="sm:hidden fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
-          onClick={ () => setMobileMenuOpen(false) }
-        >
           <div
-            className="absolute right-0 top-0 h-full w-72 bg-white shadow-xl"
-            onClick={ (e) => e.stopPropagation() }
+            className={`cu-nav-profile${dropdownOpen ? " open" : ""}`}
+            onClick={() => setDropdownOpen((o) => !o)}
           >
-            {/* Profile Info */ }
-            <div className="flex items-center gap-4 p-4 border-b">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <User size={ 24 } className="text-gray-600" />
-              </div>
-              <div>
-                <p className="font-medium">
-                  { customerDisplayName || "Customer User" }
-                </p>
-                <p className="text-sm text-gray-500">Customer User</p>
-              </div>
+            <div className="cu-nav-avatar">{initials}</div>
+
+            <div className="cu-nav-profile-info">
+              <span className="cu-nav-profile-name">{name || customerDisplayName || "Customer"}</span>
+              <span className="cu-nav-profile-role">Customer User</span>
             </div>
 
-            {/* Navigation Links */ }
-            <div className="p-4 space-y-2">
-              <Link
-                href="/customer/CustomerProfile"
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 w-full text-left"
-                onClick={ () => setMobileMenuOpen(false) }
-              >
-                <User size={ 20 } />
-                <span>My Profile</span>
-              </Link>
+            <ChevronDown size={14} className="cu-nav-chevron" />
 
-              {/* Cart and PO tracking removed */ }
-            </div>
+            {dropdownOpen && (
+              <div className="cu-dropdown">
+                <Link
+                  href="/customer/CustomerProfile"
+                  className="cu-dropdown-item"
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  <User size={15} />
+                  My Profile
+                </Link>
+                <div className="cu-dropdown-divider" />
+                <button className="cu-dropdown-item danger" onClick={handleLogout}>
+                  <LogOut size={15} />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
 
+        </div>
+      </nav>
 
+      {/* ════════════════ MOBILE NAVBAR ════════════════ */}
+      <nav className="cu-nav-mobile">
+        <div className="cu-nav-mobile-brand">
+          <div className="cu-nav-mobile-logo">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <span className="cu-nav-mobile-title">M-Place</span>
+        </div>
 
-            {/* Bottom Section */ }
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-              <button
-                onClick={ () => {
-                  setMobileMenuOpen(false);
-                  handleLogout();
-                } }
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
-              >
-                <LogOut size={ 20 } />
-                <span>Logout</span>
-              </button>
+        <button
+          className="cu-nav-mobile-menu-btn"
+          onClick={() => setMobileMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+
+        {mobileMenuOpen && (
+          <div className="cu-mobile-overlay" onClick={() => setMobileMenuOpen(false)}>
+            <div className="cu-mobile-drawer" onClick={(e) => e.stopPropagation()}>
+
+              <div className="cu-mobile-drawer-profile">
+                <div className="cu-mobile-drawer-avatar">{initials}</div>
+                <div>
+                  <div className="cu-mobile-drawer-name">{name || customerDisplayName || "Customer"}</div>
+                  <div className="cu-mobile-drawer-role">Customer User</div>
+                </div>
+              </div>
+
+              <div className="cu-mobile-nav-links">
+                <Link
+                  href="/customer/CustomerProfile"
+                  className="cu-mobile-nav-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User size={17} />
+                  My Profile
+                </Link>
+              </div>
+
+              <div className="cu-mobile-drawer-footer">
+                <button className="cu-mobile-nav-link danger" onClick={handleLogout}>
+                  <LogOut size={17} />
+                  Logout
+                </button>
+              </div>
+
             </div>
           </div>
-        </div>
-      ) }
+        )}
+      </nav>
     </>
   );
 };

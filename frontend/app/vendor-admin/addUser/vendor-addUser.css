@@ -6,40 +6,41 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
 :root {
-  --primary:       #10b981;
-  --primary-dark:  #059669;
+  --primary: #10b981;
+  --primary-dark: #059669;
   --primary-light: #d1fae5;
-  --success:       #10b981;
-  --danger:        #ef4444;
+  --success: #10b981;
+  --danger: #ef4444;
 
-  --bg-page:    #f8fafc;
-  --bg-card:    #ffffff;
-  --bg-header:  linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-header: linear-gradient(135deg, #10b981 0%, #34d399 100%);
 
-  --text-primary:   #0f172a;
+  --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --text-white:     #ffffff;
+  --text-muted: #94a3b8;
+  --text-white: #ffffff;
 
-  --border:       #e2e8f0;
+  --border: #e2e8f0;
   --border-focus: #10b981;
-  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-lg:    0 8px 32px rgba(16, 185, 129, 0.12);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(16, 185, 129, 0.12);
 
-  --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-lg:   20px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
   --radius-full: 9999px;
 
-  --font-body:    'DM Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
   --font-heading: 'Syne', sans-serif;
-  --transition:   0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Navbar height — keeps page flush, no colour gap */
   --navbar-h: 64px;
 }
 
 /* ── Page ── */
+/* After */
 .vau-page {
   min-height: 100vh;
   background-color: var(--bg-page);
@@ -48,8 +49,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Push content below sticky navbar, no extra gap */
-  padding: calc(var(--navbar-h) + 32px) 16px 64px;
+  padding: 32px 16px 64px;
 }
 
 /* ── Card ── */
@@ -65,8 +65,15 @@
 }
 
 @keyframes vauFadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Card Header ── */
@@ -172,9 +179,17 @@
   gap: 6px;
 }
 
-.vau-field.full-width { grid-column: span 2; }
-.vau-col-1            { grid-column: span 1; }
-.vau-col-2            { grid-column: span 2; }
+.vau-field.full-width {
+  grid-column: span 2;
+}
+
+.vau-col-1 {
+  grid-column: span 1;
+}
+
+.vau-col-2 {
+  grid-column: span 2;
+}
 
 .vau-field label {
   font-size: 12px;
@@ -201,7 +216,9 @@
   transition: color var(--transition);
 }
 
-.vau-field.focused .vau-input-icon { color: var(--primary); }
+.vau-field.focused .vau-input-icon {
+  color: var(--primary);
+}
 
 /* ── Check icon ── */
 .vau-input-check {
@@ -227,8 +244,14 @@
   transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
-.vau-input::placeholder { color: var(--text-muted); font-size: 13px; }
-.vau-input:hover        { background: #f1f5f9; }
+.vau-input::placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.vau-input:hover {
+  background: #f1f5f9;
+}
 
 .vau-input:focus {
   border-color: var(--border-focus);
@@ -248,7 +271,9 @@
 }
 
 /* ── Password input ── */
-.vau-input-password { padding-right: 40px; }
+.vau-input-password {
+  padding-right: 40px;
+}
 
 /* ── Toggle password button ── */
 .vau-toggle-btn {
@@ -264,7 +289,9 @@
   transition: color var(--transition);
 }
 
-.vau-toggle-btn:hover { color: var(--text-primary); }
+.vau-toggle-btn:hover {
+  color: var(--text-primary);
+}
 
 /* ── Kill autofill bg ── */
 .vau-input:-webkit-autofill,
@@ -360,7 +387,11 @@
   flex-shrink: 0;
 }
 
-@keyframes vauSpin { to { transform: rotate(360deg); } }
+@keyframes vauSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ── Error states ── */
 .vau-field.error .vau-input-wrap {
@@ -386,20 +417,35 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  /* Mobile navbar is 56px */
-  .vau-page { padding-top: calc(56px + 24px); }
+  .vau-page {
+    padding-top: 24px;
+  }
 }
 
 @media (max-width: 560px) {
-  .vau-header  { padding: 24px 20px; }
-  .vau-body    { padding: 20px 16px; }
+  .vau-header {
+    padding: 24px 20px;
+  }
 
-  .vau-grid { grid-template-columns: 1fr; }
+  .vau-body {
+    padding: 20px 16px;
+  }
 
-  .vau-field.full-width { grid-column: span 1; }
+  .vau-grid {
+    grid-template-columns: 1fr;
+  }
 
-  .vau-actions { flex-direction: column-reverse; }
+  .vau-field.full-width {
+    grid-column: span 1;
+  }
+
+  .vau-actions {
+    flex-direction: column-reverse;
+  }
 
   .vau-btn-cancel,
-  .vau-btn-submit { width: 100%; justify-content: center; }
+  .vau-btn-submit {
+    width: 100%;
+    justify-content: center;
+  }
 }

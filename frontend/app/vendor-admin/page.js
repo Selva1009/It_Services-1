@@ -1,49 +1,23 @@
 ﻿"use client";
+
 import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, subMonths, startOfWeek } from "date-fns";
-import navbar from "./components/navbar";
 import Swal from "sweetalert2";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
-import {
-  CheckCircle,
-  XCircle,
-  Building2,
-  User,
-  ChevronRight,
-  Clock,
-  TrendingUp,
-  Edit,
-  Bell,
-  Package,
-  Plus,
-  Activity,
-  Users,
-  UserPlus,
-  UserX,
-  Sun,
-  Moon
-} from "lucide-react";
-import { Pie, Line, Bar, Doughnut } from "react-chartjs-2";
-import { useAuth } from "@/app/contexts/AuthContext";
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Filler
-} from "chart.js";
 import {
   Users, Activity, UserX, UserPlus, Edit,
   Bell, Package, ShoppingCart, Clock, Plus,
 } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  Chart as ChartJS,
+  ArcElement, Tooltip, Legend,
+  CategoryScale, LinearScale,
+  PointElement, LineElement,
+  BarElement, Title, Filler,
+} from "chart.js";
 import "./VendorAdminDashboard.css";
 
 ChartJS.register(
@@ -66,8 +40,8 @@ const C = {
   blueLight:  "#dbeafe",
 };
 
-const DONUT_COLORS  = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
-const AVATAR_VARS   = ["v0", "v1", "v2", "v3", "v4"];
+const DONUT_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
+const AVATAR_VARS  = ["v0", "v1", "v2", "v3", "v4"];
 
 const getInitials = (name = "") =>
   name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
@@ -130,15 +104,7 @@ const makeDoughnutOptions = () => ({
 const VendorDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
-  const { getAuthToken: getAuthTokenFromContext } = useAuth();
-  const [vendors, setVendors] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [vendorID, setVendorID] = useState(null);
-  const [timeRange, setTimeRange] = useState("week");
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [stats, setStats] = useState({ week: 0, month: 0 });
-  const [darkMode, setDarkMode] = useState(false);
+  const { auth, getAuthToken: getAuthTokenFromContext } = useAuth();
 
   const [vendors,           setVendors]           = useState([]);
   const [notifications,     setNotifications]     = useState([]);
@@ -154,7 +120,7 @@ const VendorDashboard = () => {
     localStorage.getItem("userToken") ||
     sessionStorage.getItem("token");
 
-  // ── Date helpers ────────────────────────────────────────────────────────────
+  // ── Date helpers ──────────────────────────────────────────────────────────
   const getTimeRangeDates = () => {
     const now = new Date();
     return timeRange === "week"
@@ -162,31 +128,7 @@ const VendorDashboard = () => {
       : { start: subMonths(now, 1), end: now };
   };
 
-  // Fetch notifications data
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${getAuthTokenFromContext() || sessionStorage.getItem("token") || sessionStorage.getItem("vendorToken") || ""}`
-        },
-        body: JSON.stringify({ vendorAdminID: vendorID, limit: NOTIFICATION_LIMIT }),
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch notifications");
-      const data = await response.json();
-
-      setNotifications(data.notifications);
-      console.log(data.notifications)
-
-
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    }
-  };
-
-  const filterVendorsByTimeRange = (vendors) => {
+  const filterVendorsByTimeRange = (list) => {
     const { start } = getTimeRangeDates();
     return list.filter((v) => v.createdAt && new Date(v.createdAt) >= start);
   };
@@ -209,7 +151,7 @@ const VendorDashboard = () => {
     return labels;
   };
 
-  // ── Chart data builders ─────────────────────────────────────────────────────
+  // ── Chart data builders ───────────────────────────────────────────────────
   const prepareGrowthData = (list) => {
     const { start, end } = getTimeRangeDates();
     const labels  = getDayLabels();
@@ -276,7 +218,7 @@ const VendorDashboard = () => {
     };
   };
 
-  // ── Data fetching ───────────────────────────────────────────────────────────
+  // ── Data fetching ─────────────────────────────────────────────────────────
   const fetchNotifications = async (vid) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/notifications/vendor-admin`, {
@@ -309,16 +251,14 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => {
-    const storedVendor = sessionStorage.getItem("vendor");
-    if (storedVendor) {
-      try {
-        const v = JSON.parse(raw);
-        if (v?.id) { setVendorID(v.id); return; }
-      } catch (_) {}
+    const resolvedVendorId = auth.vendor?.id || auth.vendorId || auth.userId;
+    if (resolvedVendorId) {
+      setVendorID(resolvedVendorId);
+      return;
     }
     setLoading(false);
     router.replace("/SignIn");
-  }, [router]);
+  }, [auth.vendor, auth.vendorId, auth.userId, router]);
 
   useEffect(() => {
     if (!vendorID) return;
@@ -343,7 +283,6 @@ const VendorDashboard = () => {
     load();
   }, [vendorID]);
 
-  // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="vd-loading">
@@ -359,8 +298,6 @@ const VendorDashboard = () => {
 
   return (
     <div className="vd-page">
-      <navbar />
-
       <main className="vd-main">
 
         {/* ── Page Header ── */}
@@ -382,26 +319,43 @@ const VendorDashboard = () => {
           </div>
         </div>
 
-        {/* Stat Cards */ }
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Total Vendors"
-            value={ vendors.length }
-            icon={ <Users /> }
-            darkMode={ darkMode }
-          />
-          <StatCard
-            title="Active Vendors"
-            value={ activeVendors }
-            icon={ <Activity /> }
-            darkMode={ darkMode }
-          />
-          <StatCard
-            title="Inactive Vendors"
-            value={ inactiveVendors }
-            icon={ <UserX /> }
-            darkMode={ darkMode }
-          />
+        {/* ── Stat Cards ── */}
+        <div className="vd-stats-grid">
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Total Vendors</span>
+              <div className="vd-stat-icon green"><Users size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{vendors.length}</div>
+            <div className="vd-stat-meta"><span className="vd-badge up">↑ 12%</span>&nbsp;vs last period</div>
+          </div>
+
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Active Vendors</span>
+              <div className="vd-stat-icon blue"><Activity size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{activeVendors}</div>
+            <div className="vd-stat-meta"><span className="vd-badge up">↑ 8%</span>&nbsp;vs last period</div>
+          </div>
+
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Inactive Vendors</span>
+              <div className="vd-stat-icon red"><UserX size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{inactiveVendors}</div>
+            <div className="vd-stat-meta"><span className="vd-badge down">↑ 3%</span>&nbsp;vs last period</div>
+          </div>
+
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Total Orders</span>
+              <div className="vd-stat-icon amber"><ShoppingCart size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{notificationStats.total}</div>
+            <div className="vd-stat-meta"><span className="vd-badge up">↑ 21%</span>&nbsp;vs last period</div>
+          </div>
         </div>
 
         {/* ── Charts Row ── */}
@@ -429,7 +383,6 @@ const VendorDashboard = () => {
 
         {/* ── Bottom Row ── */}
         <div className="vd-bottom-row">
-          {/* Donut */}
           <div className="vd-card">
             <div className="vd-card-title">Top Products</div>
             <div className="vd-card-sub">By quantity ordered</div>
@@ -440,7 +393,6 @@ const VendorDashboard = () => {
             </div>
           </div>
 
-          {/* Activity */}
           <div className="vd-card">
             <div className="vd-card-title" style={{ marginBottom: 16 }}>Recent Activity</div>
             <div className="vd-activity-list">

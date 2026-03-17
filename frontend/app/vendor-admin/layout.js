@@ -11,7 +11,7 @@ export default function VendorAdminLayout({ children }) {
   return (
     <div>
       <Navbar />
-      <main className="p-6 mt-16">{children}</main> {/* added mt-16 */}
+      <main className="p-6">{children}</main> {/* added mt-16 */}
     </div>
   );
 }
