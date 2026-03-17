@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
 import {
   Table,
@@ -19,7 +19,7 @@ import {
 import { Search, GroupOutlined } from "@mui/icons-material";
 import "./vendorUsers.css";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { apiRequest } from "@/app/services/apiClient";
+import { fetchVendorAdminUsers } from "@/app/services/vendorAdminService";
 
 const VendorUsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -36,15 +36,13 @@ const VendorUsersPage = () => {
         setLoading(true);
         const token = getAuthTokenFromContext();
         if (!token) {
-          setLoading(false);
+          setUsers([]);
+          setTotal(0);
           return;
         }
-        const data = await apiRequest({
-          path: "/api/vendor-admin/vendor-users",
-          token,
-        });
-        setUsers(data.users);
-        setTotal(data.total);
+        const data = await fetchVendorAdminUsers(token);
+        setUsers(data?.users || []);
+        setTotal(data?.total || (data?.users ? data.users.length : 0));
       } catch (error) {
         console.error("Error fetching vendor users:", error);
       } finally {
@@ -52,27 +50,19 @@ const VendorUsersPage = () => {
       }
     };
     fetchUsers();
-  }, []);
+  }, [getAuthTokenFromContext]);
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter(
-        (user) =>
-          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.mobile?.includes(searchTerm)
-      ),
-    [users, searchTerm]
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.mobile?.includes(searchTerm)
   );
 
-  const paginatedUsers = useMemo(
-    () =>
-      filteredUsers.slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-      ),
-    [filteredUsers, page, rowsPerPage]
+  const paginatedUsers = filteredUsers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
   );
 
   const formatDate = (dateStr) =>
@@ -90,7 +80,7 @@ const VendorUsersPage = () => {
 
   return (
     <div className="vu-page">
-      <Navbar />
+      {/* <Navbar /> */}
       <div className="vu-container">
 
         {/* Header */}

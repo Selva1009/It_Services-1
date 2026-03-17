@@ -108,8 +108,8 @@ export default function VendorAdminProducts() {
       text: "This product will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
+      confirmButtonColor: "#1a56db",
+      cancelButtonColor: "#ef4444",
       confirmButtonText: "Yes, delete it!",
     });
 

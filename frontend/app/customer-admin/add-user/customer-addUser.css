@@ -1,0 +1,393 @@
+/* ============================================
+   CUSTOMER ADD USER PAGE - EXTERNAL CSS
+   Emerald green theme
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+
+:root {
+  --primary:       #10b981;
+  --primary-dark:  #059669;
+  --primary-light: #d1fae5;
+  --success:       #10b981;
+
+  --bg-page:    #f0f4fa;
+  --bg-card:    #ffffff;
+  --bg-header:  linear-gradient(135deg, #10b981 0%, #34d399 100%);
+
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --text-white:     #ffffff;
+
+  --border:       #e2e8f0;
+  --border-focus: #10b981;
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg:    0 8px 32px rgba(16, 185, 129, 0.12);
+
+  --radius-sm:   8px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+
+  --font-body:    'DM Sans', sans-serif;
+  --font-heading: 'Syne', sans-serif;
+  --transition:   0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Page ── */
+.cau-page {
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px 64px;
+}
+
+/* ── Card ── */
+.cau-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 620px;
+  animation: cardFadeIn 0.4s ease;
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card Header ── */
+.cau-header {
+  background: var(--bg-header);
+  padding: 32px 32px 26px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cau-header::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+}
+
+.cau-header::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  right: 80px;
+  width: 160px;
+  height: 160px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+}
+
+/* ── Header Inner ── */
+.cau-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Avatar ── */
+.cau-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Header Text ── */
+.cau-header-text h1 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0 0 3px;
+  letter-spacing: -0.3px;
+}
+
+.cau-header-text p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ── Card Body ── */
+.cau-body {
+  padding: 32px;
+}
+
+/* ── Grid ── */
+.cau-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+}
+
+.cau-col-1 { grid-column: span 1; }
+.cau-col-2 { grid-column: span 2; }
+
+/* ── Field ── */
+.cau-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cau-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.4px;
+}
+
+/* ── Input Wrapper ── */
+.cau-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Input Icon ── */
+.cau-input-icon {
+  position: absolute;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--transition);
+}
+
+.cau-field.focused .cau-input-icon {
+  color: var(--primary);
+}
+
+/* ── Input ── */
+.cau-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #f8fafc;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.cau-input::placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.cau-input:hover {
+  background: #f1f5f9;
+}
+
+.cau-input:focus {
+  border-color: var(--border-focus);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+/* ── Password input ── */
+.cau-input-password {
+  padding-right: 40px;
+}
+
+/* ── Toggle password button ── */
+.cau-toggle-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: color var(--transition);
+}
+
+.cau-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ── Check icon (field filled) ── */
+.cau-input-check {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  color: var(--success);
+  pointer-events: none;
+}
+
+/* ── Divider ── */
+.cau-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 28px 0;
+}
+
+/* ── Actions ── */
+.cau-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* ── Cancel Button ── */
+.cau-btn-cancel {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.cau-btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--text-primary);
+}
+
+/* ── Submit Button ── */
+.cau-btn-submit {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  transition: all var(--transition);
+  min-width: 140px;
+  justify-content: center;
+}
+
+.cau-btn-submit:hover:not(:disabled) {
+  background: var(--primary-dark);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.cau-btn-submit:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cau-btn-submit.success {
+  background: var(--success);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.30);
+}
+
+/* ── Spinner ── */
+.cau-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 540px) {
+  .cau-header {
+    padding: 24px 20px;
+  }
+
+  .cau-body {
+    padding: 20px 16px;
+  }
+
+  .cau-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cau-col-1,
+  .cau-col-2 {
+    grid-column: span 1;
+  }
+
+  .cau-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cau-btn-cancel,
+  .cau-btn-submit {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── Kill browser autofill background ── */
+.cau-input:-webkit-autofill,
+.cau-input:-webkit-autofill:hover,
+.cau-input:-webkit-autofill:focus,
+.cau-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ── Error state ── */
+.cau-field.error .cau-input-wrap {
+  border-color: #e53e3e;
+}
+
+.cau-error-msg {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #e53e3e;
+}
+
+.cau-hint-msg {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState,useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users,
   User,
@@ -13,52 +13,143 @@ import {
   UserRoundPen,
   Menu,
   X,
+  ChevronDown,
+  Bell,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchVendorProfile } from "@/app/services/profileService";
+import { fetchVendorAdminNotifications } from "@/app/services/notificationsService";
+import "./VendorAdminNavbar.css";
+
+const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+const NOTIFICATION_LIMIT  = 50;
 
 export default function Navbar() {
-  const { auth, clearAuth } = useAuth();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const router = useRouter();
-
-
+  const {
+    auth,
+    clearAuth,
+    getAuthToken: getAuthTokenFromContext,
+    setVendor: setAuthVendor,
+  } = useAuth();
+  const pathname = usePathname();
+  const router   = useRouter();
 useEffect(() => {
-  ["/SignIn", "/vendor-admin", "/vendor-admin/addUser", "/vendor-admin/usersprofile", "/vendor-admin/myProfile"]
+  ["/vendor-admin", "/vendor-admin/addUser", "/vendor-admin/usersprofile", "/vendor-admin/myProfile"]
     .forEach((path) => router.prefetch(path));
 }, []);
+
+
+  const [vendor,         setVendor]         = useState(auth.vendor || null);
+  const [loading,        setLoading]        = useState(true);
+  const [dropdownOpen,   setDropdownOpen]   = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadCount,    setUnreadCount]    = useState(0);
+  const [vendorAdminID,  setVendorAdminID]  = useState(null);
+  const lastSyncRef = useRef(0);
+
   const vendorDisplayName = useMemo(
     () =>
       auth.vendor?.personName ||
       auth.vendor?.name ||
-      auth.vendor?.companyName ||
-      auth.vendor?.company_name ||
+      auth.vendor?.contactPerson ||
       auth.vendor?.vendor_name ||
       auth.vendor?.email ||
       null,
     [auth.vendor]
   );
 
-  // Notifications intentionally handled elsewhere to avoid redundant polling.
+  // ── Load vendor profile ───────────────────────────────────────────────────
+  // useEffect(() => {
+  //   let isMounted = true;
 
+  //   const loadVendor = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const vendorData = auth.vendor || null;
+  //       if (vendorData && isMounted) {
+  //         setVendor(vendorData);
+  //         setVendorAdminID(vendorData.id);
+  //       }
+
+  //       const shouldSync = !vendorData || Date.now() - lastSyncRef.current > PROFILE_SYNC_TTL_MS;
+  //       const token = getAuthTokenFromContext();
+  //       if (shouldSync && token) {
+  //         const payload = await fetchVendorProfile(token);
+  //         const latest  = payload?.vendor || payload?.profile || payload?.data || payload;
+  //         if (latest && isMounted) {
+  //           setVendor(latest);
+  //           setVendorAdminID(latest.id);
+  //           setAuthVendor(latest);
+  //           lastSyncRef.current = Date.now();
+  //         }
+  //       }
+  //     } catch (err) {
+  //       console.error("[VendorNavbar] load error:", err);
+  //     } finally {
+  //       if (isMounted) setLoading(false);
+  //     }
+  //   };
+
+  //   void loadVendor();
+  //   return () => { isMounted = false; };
+  // }, [auth.vendor, getAuthTokenFromContext, setAuthVendor]);
+
+  // ── Notification unread count ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!vendorAdminID) return;
+
+    const fetchUnread = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const token = getAuthTokenFromContext();
+        if (!token) return;
+        const data = await fetchVendorAdminNotifications({
+          token,
+          vendorAdminId: vendorAdminID,
+          limit: NOTIFICATION_LIMIT,
+        });
+        const list = data?.notifications || [];
+        setUnreadCount(list.filter((n) => n.status === "unread").length);
+      } catch (err) {
+        console.error("Notifications fetch failed:", err);
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [vendorAdminID, getAuthTokenFromContext]);
+
+  // ── Close dropdown on outside click ──────────────────────────────────────
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const close = (e) => {
+      if (!e.target.closest(".va-nav-profile")) setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [dropdownOpen]);
+
+  const isActive = (path) => pathname === path;
+
+  // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
+    setDropdownOpen(false);
+    setMobileMenuOpen(false);
     Swal.fire({
-      title: "Are you sure want to logout?",
-      imageUrl: "/logout.gif",
-      imageWidth: 127,
-      imageHeight: 151,
-      imageAlt: "Logout Image",
-      showCancelButton: true,
-      confirmButtonColor: "#3085D6",
-      cancelButtonColor: "#3085D6",
-      confirmButtonText: "<b>Yes</b>",
-      cancelButtonText: "<b>Cancel</b>",
-      customClass: {
-        confirmButton: "swal-button",
-        cancelButton: "swal-button",
-        popup: "rounded-alert",
-      },
+      title:              "Are you sure want to logout?",
+      imageUrl:           "/logout.gif",
+      imageWidth:         127,
+      imageHeight:        151,
+      imageAlt:           "Logout",
+      showCancelButton:   true,
+      reverseButtons:     false,
+      confirmButtonColor: "#1a56db",
+      cancelButtonColor:  "#ef4444",
+      confirmButtonText:  "<b>Yes</b>",
+      cancelButtonText:   "<b>Cancel</b>",
+      customClass:        { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
         clearAuth();
@@ -67,77 +158,75 @@ useEffect(() => {
     });
   };
 
-  if (!auth.vendor) return null;
+  const menuItems = [
+    { href: "/vendor-admin",              icon: <LayoutDashboard size={16} />, label: "Dashboard"     },
+    { href: "/vendor-admin/addUser",      icon: <UserPlus        size={16} />, label: "Add User"      },
+    { href: "/vendor-admin/usersprofile", icon: <Users           size={16} />, label: "User Profiles" },
+  ];
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+ // Replace with
+const initials = useMemo(() => {
+  const name = vendorDisplayName || "";
+  if (!name) return "VA";
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+}, [vendorDisplayName]) ;
 
   return (
     <>
-      {/* Desktop Navbar */ }
-      <nav className="hidden sm:flex fixed top-0 left-0 w-full h-20 bg-white border-b shadow-sm items-center justify-between px-4 sm:px-6 z-50">
-        {/* Left: Brand Name */ }
-        <div className="flex items-center gap-4">
-          <Link href="/vendor-admin" >
-            <div className="cursor-pointer w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-              <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
-                <img
-                  src="/Logo.png"
-                  alt="M-Place Logo"
-                  className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
-                />
-              </div>
-            </div>
+      {/* ════════════════ DESKTOP NAVBAR ════════════════ */}
+      <nav className="va-nav">
+
+        <div className="va-nav-left">
+         <Link href="/customer-admin/customerAdminDashboard" className="ca-logo">
+           
+            <span className="ca-logo-text">L1-L3</span>
           </Link>
 
-          {/* Center: Nav Items (Desktop) */ }
-          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-700">
-            <Link
-              href="/vendor-admin"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <Link
-              href="/vendor-admin/addUser"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add User
-            </Link>
-            <Link
-              href="/vendor-admin/usersprofile"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              Users Profiles
-            </Link>
-          </div>
+          <div className="va-nav-divider" />
+
+          <nav className="va-nav-links">
+            {menuItems.slice(0, 3).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`va-nav-link${isActive(item.href) ? " active" : ""}`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        {/* Right: Date, Notifications and Vendor Profile */ }
-        <div className="flex items-center gap-4 sm:gap-6">
-          {/* Date (Desktop) */ }
-          <div className="hidden sm:flex items-center gap-2">
-            <Calendar className="text-black-900" />
-            <span className="ml-2">{ currentDate }</span>
-          </div>
-          <div className="hidden sm:block h-10 w-[1px] bg-gray-300"></div>
+        <div className="va-nav-right">
 
-          {/* Vendor Admin Name & Dropdown */ }
-          <div className="relative">
-            <div
-              className="group flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors cursor-pointer"
-              onClick={ () => setDropdownOpen(!dropdownOpen) }
-            >
-              <User
-                size={ 32 }
-                className="text-gray-800 group-hover:text-blue-700 transition-colors"
-              />
-              <div className="hidden sm:block text-[14px]">
+          <div className="va-nav-date">
+            <Calendar size={13} />
+            {currentDate}
+          </div>
+
+          <button
+            className="va-nav-icon-btn"
+            aria-label="Notifications"
+            onClick={() => router.push("/vendor-admin/AdminNotification")}
+          >
+            <Bell size={16} />
+            {unreadCount > 0
+              ? <span className="va-nav-bell-count">{unreadCount > 99 ? "99+" : unreadCount}</span>
+              : <div className="va-nav-bell-dot" />
+            }
+          </button>
+
+          <div
+            className={`va-nav-profile${dropdownOpen ? " open" : ""}`}
+            onClick={() => setDropdownOpen((o) => !o)}
+          >
+            <div className="va-nav-avatar">{initials}</div>
+
+            <div className="va-nav-profile-info">
+             
                 { vendorDisplayName ? (
                   <>
                     <p className="text-[14px] font-medium">{ vendorDisplayName }</p>
@@ -146,141 +235,101 @@ useEffect(() => {
                 ) : (
                   <span className="text-sm">Loading...</span>
                 ) }
-              </div>
+           
             </div>
 
-            {/* Dropdown Menu */ }
-            { dropdownOpen && (
-              <div className="absolute right-0 left-2 top-full mt-3 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
-                <ul className="py-2 text-sm text-gray-700 font-medium">
-                  <li>
-                    <Link
-                      href="/vendor-admin/myProfile"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors"
-                    >
-                      <User size={ 20 } className="text-gray-600" />
-                      <span>My Profile</span>
-                    </Link>
-                  </li>
+            <ChevronDown size={14} className="va-nav-chevron" />
 
-                  <li>
-                    <button
-                      onClick={ handleLogout }
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
-                    >
-                      <LogOut size={ 20 } className="text-red-500" />
-                      <span>Logout</span>
-                    </button>
-                  </li>
-                </ul>
+            {dropdownOpen && (
+              <div className="va-dropdown">
+                <Link
+                  href="/vendor-admin/myProfile"
+                  className="va-dropdown-item"
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  <User size={15} />
+                  My Profile
+                </Link>
+                <div className="va-dropdown-divider" />
+                <button className="va-dropdown-item danger" onClick={handleLogout}>
+                  <LogOut size={15} />
+                  Logout
+                </button>
               </div>
-            ) }
+            )}
           </div>
+
         </div>
       </nav>
 
-      {/* Mobile Navbar */ }
-      <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        {/* Left: Brand Name and Mobile Menu Button */ }
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
-              <img
-                src="/Logo.png"
-                alt="M-Place Logo"
-                className="w-7 h-7 object-contain"
-              />
-            </div>
+      {/* ════════════════ MOBILE NAVBAR ════════════════ */}
+      <nav className="va-nav-mobile">
+        <div className="va-nav-mobile-brand">
+          <div className="va-nav-mobile-logo">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 10.5H12"       stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
           </div>
-
-          <span className="font-medium text-sm">Vendor Admin</span>
+          <span className="va-nav-mobile-title">Vendor Admin</span>
         </div>
 
-        {/* Right: Menu Button */ }
         <button
-          className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-          onClick={ () => setMobileMenuOpen(!mobileMenuOpen) }
+          className="va-nav-mobile-menu-btn"
+          onClick={() => setMobileMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
         >
-          { mobileMenuOpen ? <X size={ 24 } /> : <Menu size={ 24 } /> }
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Mobile Menu */ }
-        { mobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
-            onClick={ () => setMobileMenuOpen(false) }
-          >
-            <div
-              className="absolute right-0 top-0 h-full w-72 bg-white shadow-xl"
-              onClick={ (e) => e.stopPropagation() }
-            >
-              {/* Profile Info */ }
-              <div className="flex items-center gap-4 p-4 border-b">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <User size={ 24 } className="text-gray-600" />
-                </div>
+        {mobileMenuOpen && (
+          <div className="va-mobile-overlay" onClick={() => setMobileMenuOpen(false)}>
+            <div className="va-mobile-drawer" onClick={(e) => e.stopPropagation()}>
+
+              <div className="va-mobile-drawer-profile">
+                <div className="va-mobile-drawer-avatar">{initials}</div>
                 <div>
-                  <p className="font-medium">
-                    { vendorDisplayName || `${auth.vendor?.firstName || ""} ${auth.vendor?.lastName || ""}`.trim() || "Vendor Admin" }
-                  </p>
-                  <p className="text-sm text-gray-500">Vendor Admin</p>
+                  <div className="va-mobile-drawer-name">{vendorDisplayName || "Vendor Admin"}</div>
+                  <div className="va-mobile-drawer-role">Vendor Admin</div>
                 </div>
               </div>
 
-              {/* Navigation Links */ }
-              <div className="p-4 space-y-2">
-                <Link
-                  href="/vendor-admin"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <LayoutDashboard size={ 20 } />
-                  <span>Dashboard</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/addUser"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <UserPlus size={ 20 } />
-                  <span>Add User</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/usersprofile"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Users size={ 20 } />
-                  <span>Users Profiles</span>
-                </Link>
-              </div>
-
-              {/* Bottom Section */ }
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-                <div className="space-y-2">
+              <div className="va-mobile-nav-links">
+                {menuItems.map((item) => (
                   <Link
-                    href="/vendor-admin/myProfile"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
-                    onClick={ () => setMobileMenuOpen(false) }
+                    key={item.href}
+                    href={item.href}
+                    className={`va-mobile-nav-link${isActive(item.href) ? " active" : ""}`}
+                    onClick={() => setMobileMenuOpen(false)}
                   >
-                    <UserRoundPen size={ 20 } />
-                    <span>My Profile</span>
+                    {item.icon}
+                    {item.label}
                   </Link>
-                  <button
-                    onClick={ () => {
-                      setMobileMenuOpen(false);
-                      handleLogout();
-                    } }
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
-                  >
-                    <LogOut size={ 20 } />
-                    <span>Logout</span>
-                  </button>
-                </div>
+                ))}
               </div>
+
+              <div className="va-mobile-drawer-footer">
+                <Link
+                  href="/vendor-admin/myProfile"
+                  className="va-mobile-nav-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <UserRoundPen size={17} />
+                  My Profile
+                </Link>
+                <button
+                  className="va-mobile-nav-link"
+                  style={{ color: "var(--red)" }}
+                  onClick={handleLogout}
+                >
+                  <LogOut size={17} />
+                  Logout
+                </button>
+              </div>
+
             </div>
           </div>
-        ) }
+        )}
       </nav>
     </>
   );

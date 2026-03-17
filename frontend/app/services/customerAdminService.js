@@ -20,6 +20,14 @@ export const createCustomerUser = (payload) =>
     body: payload,
   });
 
+export const createItUserEmployee = (token, payload) =>
+  apiRequest({
+    path: "/api/it-user-employee/signup",
+    method: "POST",
+    token,
+    body: payload,
+  });
+
 export const updateCustomerUserProfile = (customerUserId, token, payload) =>
   apiRequest({
     path: `/api/customer-users/profile/${customerUserId}`,

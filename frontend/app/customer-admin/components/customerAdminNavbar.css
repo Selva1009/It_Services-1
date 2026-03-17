@@ -1,0 +1,492 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Root tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --em:           #10b981;
+  --em-light:     #d1fae5;
+  --em-dark:      #065f46;
+  --nav-bg:       #ffffff;
+  --nav-border:   transparent;
+  --nav-shadow:   0 1px 12px rgba(0, 0, 0, 0.06);
+  --text:         #0f172a;
+  --text-2:       #475569;
+  --text-3:       #94a3b8;
+  --sl-light:     #f1f5f9;
+  --border:       #e2e8f0;
+  --blue:         #3b82f6;
+  --blue-light:   #dbeafe;
+  --blue-dark:    #1d4ed8;
+  --red:          #ef4444;
+  --red-light:    #fee2e2;
+  --red-dark:     #991b1b;
+  --white:        #ffffff;
+  --font:         'DM Sans', sans-serif;
+  --mono:         'DM Mono', monospace;
+  --r:            10px;
+}
+
+/* ── Desktop navbar ──────────────────────────────────────────────────────── */
+.ca-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 64px;
+  background: var(--nav-bg);
+  border-bottom: none;                        /* remove the black line */
+  box-shadow: var(--nav-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  font-family: var(--font);
+}
+
+/* ── Left cluster ────────────────────────────────────────────────────────── */
+.ca-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+.ca-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.ca-logo-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  flex-shrink: 0;
+}
+
+.ca-logo-mark svg {
+  display: block;
+}
+
+.ca-logo-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+/* ── Nav divider ─────────────────────────────────────────────────────────── */
+.ca-nav-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Nav links ───────────────────────────────────────────────────────────── */
+.ca-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ca-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.ca-nav-link svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.ca-nav-link:hover {
+  background: var(--sl-light);
+  color: var(--text);
+}
+
+.ca-nav-link:hover svg {
+  opacity: 1;
+}
+
+.ca-nav-link.active {
+  background: var(--em-light);
+  color: var(--em-dark);
+}
+
+.ca-nav-link.active svg {
+  opacity: 1;
+}
+
+/* ── Right cluster ───────────────────────────────────────────────────────── */
+.ca-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Date pill ───────────────────────────────────────────────────────────── */
+.ca-nav-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  background: var(--sl-light);
+  border: 1px solid var(--border);
+  padding: 5px 11px;
+  border-radius: 8px;
+}
+
+.ca-nav-date svg {
+  flex-shrink: 0;
+}
+
+/* ── Icon button (bell) ──────────────────────────────────────────────────── */
+.ca-nav-icon-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sl-light);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text-2);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.ca-nav-icon-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.ca-nav-bell-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  background: var(--em);
+  border-radius: 50%;
+  border: 1.5px solid var(--white);
+}
+
+/* ── Profile button ──────────────────────────────────────────────────────── */
+.ca-nav-profile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  font-family: var(--font);
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.ca-nav-profile:hover {
+  background: var(--sl-light);
+  border-color: var(--border);
+}
+
+.ca-nav-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--em-light) 0%, #a7f3d0 100%);
+  border: 1.5px solid var(--em);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--em-dark);
+  flex-shrink: 0;
+}
+
+.ca-nav-profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ca-nav-profile-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ca-nav-profile-role {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.2;
+}
+
+.ca-nav-chevron {
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.ca-nav-profile.open .ca-nav-chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown ────────────────────────────────────────────────────────────── */
+.ca-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+  z-index: 200;
+  animation: dropIn 0.15s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.ca-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  font-family: var(--font);
+  transition: background 0.12s, color 0.12s;
+}
+
+.ca-dropdown-item:hover {
+  background: var(--sl-light);
+  color: var(--text);
+}
+
+.ca-dropdown-item.danger {
+  color: var(--red);
+}
+
+.ca-dropdown-item.danger:hover {
+  background: var(--red-light);
+  color: var(--red-dark);
+}
+
+.ca-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ── Mobile navbar ───────────────────────────────────────────────────────── */
+.ca-nav-mobile {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 56px;
+  background: var(--white);
+  border-bottom: none;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.07);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  font-family: var(--font);
+}
+
+.ca-nav-mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ca-nav-mobile-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.ca-nav-mobile-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ca-nav-mobile-menu-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sl-light);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+/* ── Mobile slide-in drawer ──────────────────────────────────────────────── */
+.ca-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 140;
+  margin-top: 56px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.ca-mobile-drawer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 280px;
+  background: var(--white);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+
+.ca-mobile-drawer-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ca-mobile-drawer-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--em-light) 0%, #a7f3d0 100%);
+  border: 1.5px solid var(--em);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--em-dark);
+  flex-shrink: 0;
+}
+
+.ca-mobile-drawer-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ca-mobile-drawer-role {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.ca-mobile-nav-links {
+  flex: 1;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.ca-mobile-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  width: 100%;
+  text-align: left;
+}
+
+.ca-mobile-nav-link:hover,
+.ca-mobile-nav-link.active {
+  background: var(--sl-light);
+  color: var(--text);
+}
+
+.ca-mobile-nav-link.active {
+  background: var(--em-light);
+  color: var(--em-dark);
+}
+
+.ca-mobile-drawer-footer {
+  padding: 12px 8px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Responsive: hide desktop, show mobile ───────────────────────────────── */
+@media (max-width: 640px) {
+  .ca-nav         { display: none !important; }
+  .ca-nav-mobile  { display: flex !important; }
+}

@@ -1,487 +1,231 @@
 ﻿"use client";
-import React, { useState, useEffect, Suspense } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { format, subDays, subMonths, startOfWeek, endOfWeek } from "date-fns";
+import { format, subMonths, startOfWeek } from "date-fns";
 import {
-  Users,
-  CheckCircle,
-  XCircle,
-  Activity,
-  UserPlus,
-  UserX,
-  Plus,
-  Edit,
-  Bell,
-  BarChart2,
-  PieChart,
-  TrendingUp,
-  Search,
-  Clock,
-  Sun,
-  Moon,
+  Users, Activity, UserX, UserPlus, Edit,
+  Bell, PieChart, Plus, Clock, ShoppingCart,
 } from "lucide-react";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import Swal from "sweetalert2";
-const Line = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Line })));
-const Bar = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Bar })));
-const Doughnut = React.lazy(() => import("react-chartjs-2").then((mod) => ({ default: mod.Doughnut })));
+import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  ArcElement,
-  Tooltip,
-  Legend,
-  PointElement,
-  LineElement,
-  Filler,
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement,
+  Title, ArcElement, Tooltip, Legend, PointElement, LineElement, Filler,
 } from "chart.js";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchCustomerAdminNotifications } from "@/app/services/notificationsService";
+import "./customerAdminDashboard.css";
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  ArcElement,
-  Tooltip,
-  Legend,
-  PointElement,
-  LineElement,
-  Filler
+  CategoryScale, LinearScale, BarElement, Title, ArcElement,
+  Tooltip, Legend, PointElement, LineElement, Filler
 );
 
+// ─── Chart colours ────────────────────────────────────────────────────────────
+const C = {
+  em:      "#10b981",
+  emLight: "#d1fae5",
+  border:  "#e2e8f0",
+  text:    "#0f172a",
+  text2:   "#475569",
+  text3:   "#94a3b8",
+  white:   "#ffffff",
+};
+
+const DONUT_COLORS    = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
+const AVATAR_VARIANTS = ["v0", "v1", "v2", "v3", "v4"];
+
+const getInitials = (name = "") =>
+  name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+
+// ─── Chart option factories ───────────────────────────────────────────────────
+const makeLineOptions = () => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false }, title: { display: false },
+    tooltip: {
+      backgroundColor: C.white, titleColor: C.text, bodyColor: C.text2,
+      borderColor: C.border, borderWidth: 1, cornerRadius: 8, displayColors: false,
+      callbacks: { label: (ctx) => ` ${ctx.parsed.y} new users` },
+    },
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: C.text3, font: { size: 11 } } },
+    y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { color: C.text3, stepSize: 1, font: { size: 11 } } },
+  },
+});
+
+const makeBarOptions = () => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false }, title: { display: false },
+    tooltip: {
+      backgroundColor: C.white, titleColor: C.text, bodyColor: C.text2,
+      borderColor: C.border, borderWidth: 1, cornerRadius: 8,
+    },
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: C.text3, font: { size: 11 } } },
+    y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { color: C.text3, font: { size: 11 } } },
+  },
+});
+
+const makeDoughnutOptions = () => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: "right",
+      labels: { color: C.text, font: { size: 12 }, padding: 16, usePointStyle: true, pointStyle: "circle" },
+    },
+    title: { display: false },
+    tooltip: {
+      backgroundColor: C.white, titleColor: C.text, bodyColor: C.text2,
+      borderColor: C.border, borderWidth: 1, cornerRadius: 8,
+      callbacks: {
+        label: (ctx) => {
+          const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+          return `${ctx.label}: ${ctx.raw} (${Math.round((ctx.raw / total) * 100)}%)`;
+        },
+      },
+    },
+  },
+  cutout: "65%", borderRadius: 6,
+});
+
+// ─── Main component ───────────────────────────────────────────────────────────
 const CustomerAdminDashboard = () => {
   const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
-  useEffect(() => {
+  const { auth } = useAuth();
+   useEffect(() => {
     ["/customer-admin/add-user", "/customer-admin/user-profile"].forEach((path) => router.prefetch(path));
   }, []);
-  const { auth } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [adminID, setAdminID] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState("week");
+  const [users,          setUsers]          = useState([]);
+  const [filteredUsers,  setFilteredUsers]  = useState([]);
+  const [notifications,  setNotifications]  = useState([]);
+  const [adminID,        setAdminID]        = useState(null);
+  const [loading,        setLoading]        = useState(false);
+  const [timeRange,      setTimeRange]      = useState("week");
   const [recentActivity, setRecentActivity] = useState([]);
-  const [stats, setStats] = useState({ week: 0, month: 0 });
-  const [darkMode, setDarkMode] = useState(false);
+  const [notificationStats, setNotificationStats] = useState({ total: 0, unread: 0, read: 0 });
 
-  // Color palettes for both themes
-  const colors = {
-    dark: {
-      primary: "#FF0000", // YouTube Red
-      secondary: "#282828", // Dark Gray
-      accent: "#3EA6FF", // YouTube Blue
-      background: "#0F0F0F", // Dark Background
-      card: "#212121", // Card Background
-      text: "#FFFFFF", // White Text
-      textSecondary: "#AAAAAA", // Gray Text
-      success: "#00C853", // Green
-      warning: "#FFAB00", // Amber
-      danger: "#FF1744", // Red
-      border: "#333333",
-    },
-    light: {
-      primary: "#FF0000", // YouTube Red
-      secondary: "#F8F9FA", // Light Gray
-      accent: "#1A73E8", // Google Blue
-      background: "#FFFFFF", // White Background
-      card: "#FFFFFF", // Card Background
-      text: "#202124", // Dark Text
-      textSecondary: "#5F6368", // Gray Text
-      success: "#34A853", // Green
-      warning: "#FBBC05", // Amber
-      danger: "#EA4335", // Red
-      border: "#DADCE0",
-    },
-  };
-
-  const currentColors = darkMode ? colors.dark : colors.light;
-
-  // Toggle theme function
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-  };
-
-  // Chart data preparation functions (same as before)
+  // ── Date helpers ──────────────────────────────────────────────────────────
   const getTimeRangeDates = () => {
     const now = new Date();
-    if (timeRange === "week") {
-      return {
-        start: startOfWeek(now),
-        end: now,
-      };
-    } else {
-      return {
-        start: subMonths(now, 1),
-        end: now,
-      };
-    }
+    return timeRange === "week"
+      ? { start: startOfWeek(now), end: now }
+      : { start: subMonths(now, 1), end: now };
   };
 
-  const filterUsersByTimeRange = (users) => {
+  const filterUsersByTimeRange = (list) => {
     const { start } = getTimeRangeDates();
-    return users.filter((user) => {
-      if (!user.createdAt) return false;
-      const userDate = new Date(user.createdAt);
-      return userDate >= start;
-    });
+    return list.filter((u) => u.createdAt && new Date(u.createdAt) >= start);
   };
 
   const getDayLabels = () => {
     const { start, end } = getTimeRangeDates();
     const labels = [];
-    let current = new Date(start);
-
     if (timeRange === "week") {
-      while (current <= end) {
-        labels.push(format(current, "EEE"));
-        current = new Date(current.setDate(current.getDate() + 1));
-      }
+      const cur = new Date(start);
+      while (cur <= end) { labels.push(format(cur, "EEE")); cur.setDate(cur.getDate() + 1); }
     } else {
-      const weekStart = new Date(start);
-      while (weekStart <= end) {
-        let weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        if (weekEnd > end) weekEnd = new Date(end);
-
-        labels.push(
-          `Week ${format(weekStart, "d")}-${format(weekEnd, "d MMM")}`
-        );
-        weekStart.setDate(weekStart.getDate() + 7);
+      const ws = new Date(start);
+      while (ws <= end) {
+        const we = new Date(ws); we.setDate(we.getDate() + 6);
+        if (we > end) we.setTime(end.getTime());
+        labels.push(`Week ${format(ws, "d")}-${format(we, "d MMM")}`);
+        ws.setDate(ws.getDate() + 7);
       }
     }
     return labels;
   };
 
-  const prepareChartData = (users) => {
+  // ── Chart data builders ───────────────────────────────────────────────────
+  const prepareChartData = (list) => {
     const { start, end } = getTimeRangeDates();
-    const labels = getDayLabels();
-    const dataMap = {};
-
-    labels.forEach((label) => {
-      dataMap[label] = 0;
+    const labels  = getDayLabels();
+    const dataMap = Object.fromEntries(labels.map((l) => [l, 0]));
+    list.forEach((u) => {
+      if (!u.createdAt) return;
+      const d = new Date(u.createdAt);
+      if (d < start || d > end) return;
+      const label = timeRange === "week"
+        ? format(d, "EEE")
+        : labels[Math.min(Math.floor((d - start) / (7 * 864e5)), labels.length - 1)];
+      dataMap[label] = (dataMap[label] || 0) + 1;
     });
-
-    users.forEach((user) => {
-      if (user.createdAt) {
-        const userDate = new Date(user.createdAt);
-        if (userDate >= start && userDate <= end) {
-          let label;
-          if (timeRange === "week") {
-            label = format(userDate, "EEE");
-          } else {
-            const weekNumber = Math.floor(
-              (userDate - start) / (7 * 24 * 60 * 60 * 1000)
-            );
-            label = labels[Math.min(weekNumber, labels.length - 1)];
-          }
-          dataMap[label] = (dataMap[label] || 0) + 1;
-        }
-      }
-    });
-
     return {
       labels,
-      datasets: [
-        {
-          label: "New Users",
-          data: labels.map((label) => dataMap[label]),
-          backgroundColor: darkMode
-            ? "rgba(62, 166, 255, 0.2)"
-            : "rgba(26, 115, 232, 0.2)",
-          borderColor: currentColors.accent,
-          borderWidth: 2,
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: currentColors.primary,
-          pointBorderColor: currentColors.card,
-          pointBorderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-        },
-      ],
+      datasets: [{
+        label: "New Users", data: labels.map((l) => dataMap[l]),
+        backgroundColor: "rgba(16,185,129,0.08)", borderColor: C.em,
+        borderWidth: 2, tension: 0.4, fill: true,
+        pointBackgroundColor: C.em, pointBorderColor: C.white,
+        pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      }],
     };
   };
 
   const prepareNotificationChartData = () => {
-    const now = new Date();
+    const now  = new Date();
     const days = timeRange === "week" ? 7 : 30;
-    const labels = [];
-    const data = [];
-
+    const labels = [], data = [];
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      labels.push(format(date, "MMM d"));
-
-      const count = notifications.filter((n) => {
-        const notificationDate = new Date(n.created_at);
-        return (
-          notificationDate.getDate() === date.getDate() &&
-          notificationDate.getMonth() === date.getMonth() &&
-          notificationDate.getFullYear() === date.getFullYear()
-        );
-      }).length;
-
-      data.push(count);
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      labels.push(format(d, "MMM d"));
+      data.push(notifications.filter((n) => {
+        const nd = new Date(n.created_at);
+        return nd.getDate() === d.getDate() && nd.getMonth() === d.getMonth() && nd.getFullYear() === d.getFullYear();
+      }).length);
     }
-
     return {
       labels,
-      datasets: [
-        {
-          label: "Notifications",
-          data,
-          backgroundColor: labels.map((_, i) =>
-            darkMode
-              ? `hsl(${i * (360 / labels.length)}, 70%, 50%)`
-              : `hsl(${i * (360 / labels.length)}, 80%, 60%)`
-          ),
-          borderRadius: 6,
-          borderWidth: 0,
-        },
-      ],
+      datasets: [{
+        label: "Orders", data,
+        backgroundColor: C.emLight, hoverBackgroundColor: C.em,
+        borderRadius: 5, borderWidth: 0,
+      }],
     };
   };
 
   const prepareProductDistributionData = () => {
-    const productCounts = {};
+    const counts = {};
     notifications.forEach((n) => {
-      if (n.productName) {
-        const qty = typeof n.quantity === 'string'
-          ? parseInt(n.quantity.replace(/[^\d]/g, '')) // extract only digits
-          : (n.quantity || 1); // fallback in case it's already a number or undefined
-
-        productCounts[n.productName] = (productCounts[n.productName] || 0) + qty;
-      }
+      if (!n.productName) return;
+      const qty = typeof n.quantity === "string"
+        ? parseInt(n.quantity.replace(/[^\d]/g, ""), 10)
+        : n.quantity || 1;
+      counts[n.productName] = (counts[n.productName] || 0) + qty;
     });
-
-    const sortedProducts = Object.entries(productCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    const backgroundColors = darkMode
-      ? [
-        "rgba(255, 0, 0, 0.7)", // Red
-        "rgba(62, 166, 255, 0.7)", // Blue
-        "rgba(255, 204, 0, 0.75)", // Yellow
-        "rgba(29, 185, 84, 0.7)", // Green
-        "rgba(255, 102, 0, 0.95)", // Orange
-      ]
-      : [
-        "rgba(234, 67, 53, 0.7)", // Red
-        "rgba(66, 133, 244, 0.7)", // Blue
-        "rgba(251, 189, 5, 0.8)", // Yellow
-        "rgba(52, 168, 83, 0.7)", // Green
-        "rgba(255, 102, 0, 0.95)", // Orange
-      ];
-
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
     return {
-      labels: sortedProducts.map((p) => p[0]),
-      datasets: [
-        {
-          label: "Total Quantity Ordered",
-          data: sortedProducts.map((p) => p[1]),
-          backgroundColor: backgroundColors,
-          borderColor: backgroundColors.map((color) =>
-            color.replace("0.7", "1")
-          ),
-          borderWidth: 1,
-          hoverOffset: 20,
-        },
-      ],
+      labels: sorted.map((p) => p[0]),
+      datasets: [{
+        label: "Total Quantity Ordered", data: sorted.map((p) => p[1]),
+        backgroundColor: DONUT_COLORS, borderColor: C.white, borderWidth: 2, hoverOffset: 12,
+      }],
     };
   };
 
-  // Chart options with theme support
-  const lineChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: true,
-        text: "📈 User Growth Trend",
-        color: currentColors.text,
-        font: {
-          size: 16,
-          weight: "bold",
-          family: "'Roboto', sans-serif",
-        },
-        padding: {
-          top: 10,
-          bottom: 20,
-        },
-      },
-      tooltip: {
-        backgroundColor: currentColors.card,
-        titleColor: currentColors.text,
-        bodyColor: currentColors.textSecondary,
-        borderColor: currentColors.accent,
-        borderWidth: 1,
-        cornerRadius: 8,
-        displayColors: false,
-        callbacks: {
-          label: (context) => {
-            return ` ${context.parsed.y} new users`;
-          },
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-          drawBorder: false,
-        },
-        ticks: {
-          color: currentColors.textSecondary,
-          font: {
-            size: 12,
-          },
-        },
-      },
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: darkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
-          drawBorder: false,
-        },
-        ticks: {
-          color: currentColors.textSecondary,
-          stepSize: 1,
-          font: {
-            size: 12,
-          },
-        },
-      },
-    },
-  };
-
-  const barChartOptions = {
-    ...lineChartOptions,
-    plugins: {
-      ...lineChartOptions.plugins,
-      title: {
-        ...lineChartOptions.plugins.title,
-        text: "📊 Notification Activity",
-      },
-    },
-  };
-
-  const doughnutChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "right",
-        labels: {
-          color: currentColors.text,
-          font: {
-            size: 12,
-            family: "'Roboto', sans-serif",
-          },
-          padding: 20,
-          usePointStyle: true,
-          pointStyle: "circle",
-        },
-      },
-      title: {
-        display: true,
-        text: " Top Ordered Products",
-        color: currentColors.text,
-        font: {
-          size: 16,
-          weight: "bold",
-          family: "'Roboto', sans-serif",
-        },
-        padding: {
-          top: 10,
-          bottom: 20,
-        },
-      },
-      tooltip: {
-        backgroundColor: currentColors.card,
-        titleColor: currentColors.text,
-        bodyColor: currentColors.textSecondary,
-        borderColor: currentColors.accent,
-        borderWidth: 1,
-        cornerRadius: 8,
-        callbacks: {
-          label: (context) => {
-            const label = context.label || "";
-            const value = context.raw || 0;
-            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const percentage = Math.round((value / total) * 100);
-            return `${label}: ${value} (${percentage}%)`;
-          },
-        },
-      },
-    },
-    cutout: "65%",
-    borderRadius: 8,
-  };
-
-  // StatCard component with theme support
-  const StatCard = ({ title, value, icon, trend, percentage }) => {
-    return (
-      <div
-        className={ `p-5 rounded-xl shadow-sm transition-all hover:scale-[1.02] ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-          }` }
-      >
-        <div className="flex justify-between">
-          <div>
-            <p
-              className={ `text-sm font-medium ${darkMode ? "text-gray-400" : "text-gray-600"
-                }` }
-            >
-              { title }
-            </p>
-            <p
-              className={ `text-2xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"
-                }` }
-            >
-              { value }
-            </p>
-
-          </div>
-          <div
-            className={ `h-12 w-12 rounded-full flex items-center justify-center ${darkMode ? "bg-black bg-opacity-20" : "bg-gray-100"
-              }` }
-          >
-            { React.cloneElement(icon, {
-              className: "h-6 w-6",
-              style: { color: darkMode ? "#FFFFFF" : "#5F6368" },
-            }) }
-          </div>
-        </div>
-      </div>
-    );
-  };
-
+  // ── Data fetching ─────────────────────────────────────────────────────────
   const fetchNotifications = async () => {
     try {
-      if (!adminID) return;
       const data = await fetchCustomerAdminNotifications({
         adminId: adminID,
         limit: NOTIFICATION_LIMIT,
       });
-      setNotifications(data.notifications);
-
+      const list = data?.notifications || [];
+      const unread = list.filter((n) => n.status === "unread").length;
+      setNotifications(list);
+      setNotificationStats({ total: list.length, unread, read: list.length - unread });
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
   };
 
-  useEffect(() => {
+   useEffect(() => {
     if (auth.customer?.id) {
       setAdminID(auth.customer.id);
     }
@@ -489,55 +233,6 @@ const CustomerAdminDashboard = () => {
 
   // useEffect(() => {
   //   if (!adminID) return;
-
-  //   const fetchUsers = async () => {
-  //     try {
-  //       setLoading(true);
-  //       const response = await fetch(
-  //         `${API_BASE_URL}/api/customer-users/user-profile`,
-  //         {
-  //           method: "POST",
-  //           headers: { "Content-Type": "application/json" },
-  //           body: JSON.stringify({ adminID }),
-  //         }
-  //       );
-
-  //       if (!response.ok) throw new Error("Failed to fetch users");
-  //       const data = await response.json();
-  //       setUsers(data);
-  //       setFilteredUsers(filterUsersByTimeRange(data));
-  //     } catch (error) {
-  //       console.error("Error fetching users:", error);
-  //       Swal.fire("Error", "Failed to load users", "error");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   const fetchNewUserSummary = async () => {
-  //     try {
-  //       const response = await fetch(
-  //         `${API_BASE_URL}/api/customer-users/new-users-summary?adminID=${adminID}`
-  //       );
-  //       const data = await response.json();
-  //       setStats(data);
-  //     } catch (error) {
-  //       console.error("Error fetching activity:", error);
-  //     }
-  //   };
-
-  //   const fetchRecentActivity = async () => {
-  //     try {
-  //       const response = await fetch(
-  //         `${API_BASE_URL}/api/customer-users/recent-activity?adminID=${adminID}`
-  //       );
-  //       const data = await response.json();
-  //       setRecentActivity(data);
-  //     } catch (error) {
-  //       console.error("Error fetching activity:", error);
-  //     }
-  //   };
-
   //   fetchUsers();
   //   fetchNewUserSummary();
   //   fetchRecentActivity();
@@ -545,423 +240,221 @@ const CustomerAdminDashboard = () => {
   // }, [adminID]);
 
   useEffect(() => {
-    if (users.length > 0) {
-      setFilteredUsers(filterUsersByTimeRange(users));
-    }
+    if (users.length > 0) setFilteredUsers(filterUsersByTimeRange(users));
   }, [timeRange, users]);
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div
-      className={ `min-h-screen ${darkMode ? "bg-black" : "bg-gray-50"
-        } transition-colors duration-200` }
-    >
-      <CustomerAdminNavbar darkMode={ darkMode } />
+    <div className="vd-page">
+      <CustomerAdminNavbar />
 
-      <div className="p-6 max-w-7xl mx-auto">
-        {/* Header Section with Theme Toggle */ }
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+      <main className="vd-main">
+
+        {/* ── Page Header ── */}
+        <div className="vd-page-header">
           <div>
-            <h1
-              className={ `text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"
-                }` }
-            >
-              Dashboard Overview
-            </h1>
-            <p
-              className={ `mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}` }
-            >
-              Welcome back! Here&apos;s what&apos;s happening with your business.
-            </p>
+            <h1 className="vd-page-title">Customer Dashboard</h1>
+            <p className="vd-page-sub">Welcome back — here's what's happening with your business.</p>
           </div>
-          <div className="flex gap-3 mt-4 md:mt-0 items-center">
-            <button
-              onClick={ toggleTheme }
-              className={ `p-2 rounded-full ${darkMode
-                  ? "bg-gray-800 hover:bg-gray-700"
-                  : "bg-gray-200 hover:bg-gray-300"
-                } transition-colors` }
-              aria-label="Toggle theme"
-            >
-              { darkMode ? (
-                <Sun className="h-5 w-5 text-yellow-400" />
-              ) : (
-                <Moon className="h-5 w-5 text-gray-700" />
-              ) }
-            </button>
-            { ["week", "month"].map((range) => (
+          <div className="vd-range-tabs">
+            {["week", "month"].map((r) => (
               <button
-                key={ range }
-                onClick={ () => setTimeRange(range) }
-                className={ `px-4 py-2 text-sm font-medium rounded-lg transition-all ${timeRange === range
-                    ? "bg-blue-700 text-white shadow-md"
-                    : darkMode
-                      ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600"
-                      : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                  }` }
+                key={r}
+                className={`vd-range-tab${timeRange === r ? " active" : ""}`}
+                onClick={() => setTimeRange(r)}
               >
-                { range.charAt(0).toUpperCase() + range.slice(1) }
+                {r.charAt(0).toUpperCase() + r.slice(1)}
               </button>
-            )) }
+            ))}
           </div>
         </div>
 
-        {/* Stat Cards */ }
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Total Users"
-            value={ users.length }
-            icon={ <Users /> }
+        {/* ── Stat Cards ── */}
+        <div className="vd-stats-grid">
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Total Users</span>
+              <div className="vd-stat-icon green"><Users size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{users.length}</div>
+            <div className="vd-stat-meta"><span className="vd-badge up">↑ 12%</span>&nbsp;vs last period</div>
+          </div>
 
-          />
-          <StatCard
-            title="Active Users"
-            value={ users.filter((u) => u.status === "Active").length }
-            icon={ <Activity /> }
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Active Users</span>
+              <div className="vd-stat-icon blue"><Activity size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{users.filter((u) => u.status === "Active").length}</div>
+            <div className="vd-stat-meta"><span className="vd-badge up">↑ 8%</span>&nbsp;vs last period</div>
+          </div>
 
-          />
-          <StatCard
-            title="Inactive Users"
-            value={ users.filter((u) => u.status === "Inactive").length }
-            icon={ <UserX /> }
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Inactive Users</span>
+              <div className="vd-stat-icon red"><UserX size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{users.filter((u) => u.status === "Inactive").length}</div>
+            <div className="vd-stat-meta"><span className="vd-badge down">↑ 3%</span>&nbsp;vs last period</div>
+          </div>
 
-          />
+          <div className="vd-stat-card">
+            <div className="vd-stat-header">
+              <span className="vd-stat-label">Total Orders</span>
+              <div className="vd-stat-icon amber"><ShoppingCart size={16} /></div>
+            </div>
+            <div className="vd-stat-value">{notificationStats.total}</div>
+            <div className="vd-stat-meta"><span className="vd-badge up">↑ 21%</span>&nbsp;vs last period</div>
+          </div>
         </div>
 
-        {/* Charts Section */ }
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* User Growth Chart */ }
-          <div
-            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-              }` }
-          >
-            <div className="h-64">
-              { users.length > 0 ? (
-                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
-                  <Line
-                    data={ prepareChartData(users) }
-                    options={ lineChartOptions }
-                  />
-                </Suspense>
+        {/* ── Charts Row ── */}
+        <div className="vd-charts-row">
+          <div className="vd-card">
+            <div className="vd-card-title">User Growth</div>
+            <div className="vd-card-sub">New registrations {timeRange === "week" ? "this week" : "this month"}</div>
+            <div className="vd-chart-wrap">
+              {users.length > 0 ? (
+                <Line data={prepareChartData(users)} options={makeLineOptions()} />
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Clock
-                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  />
-                  <p
-                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  >
-                    Loading user data...
-                  </p>
-                </div>
-              ) }
+                <div className="vd-chart-empty"><Clock size={18} /> Loading user data…</div>
+              )}
             </div>
           </div>
 
-          {/* Notification Chart */ }
-          <div
-            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-              }` }
-          >
-            <div className="h-64">
-              { notifications.length > 0 ? (
-                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
-                  <Bar
-                    data={ prepareNotificationChartData() }
-                    options={ barChartOptions }
-                  />
-                </Suspense>
+          <div className="vd-card">
+            <div className="vd-card-title">Order Activity</div>
+            <div className="vd-card-sub">Daily order volume {timeRange === "week" ? "this week" : "this month"}</div>
+            <div className="vd-chart-wrap">
+              {notifications.length > 0 ? (
+                <Bar data={prepareNotificationChartData()} options={makeBarOptions()} />
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Bell
-                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  />
-                  <p
-                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  >
-                    Loading notifications...
-                  </p>
-                </div>
-              ) }
+                <div className="vd-chart-empty"><Bell size={18} /> Loading order data…</div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Bottom Section */ }
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Product Distribution */ }
-          <div
-            className={ `rounded-xl p-6 ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-              }` }
-          >
-            <div className="h-64">
-              { notifications.length > 0 ? (
-                <Suspense fallback={<div className="flex items-center justify-center h-full">Loading chart...</div>}>
-                  <Doughnut
-                    data={ prepareProductDistributionData() }
-                    options={ doughnutChartOptions }
-                  />
-                </Suspense>
+        {/* ── Bottom Row ── */}
+        <div className="vd-bottom-row">
+          <div className="vd-card">
+            <div className="vd-card-title">Top Products</div>
+            <div className="vd-card-sub">By quantity ordered</div>
+            <div className="vd-chart-wrap">
+              {notifications.length > 0 ? (
+                <Doughnut data={prepareProductDistributionData()} options={makeDoughnutOptions()} />
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <PieChart
-                    className={ `h-8 w-8 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  />
-                  <p
-                    className={ `ml-2 ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  >
-                    Loading product data...
-                  </p>
-                </div>
-              ) }
+                <div className="vd-chart-empty"><PieChart size={18} /> Loading product data…</div>
+              )}
             </div>
           </div>
 
-          {/* Recent Activity */ }
-
-          <div
-            className={ `rounded-xl overflow-hidden ${darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-              }` }
-          >
-            <div className="p-6">
-              <h2
-                className={ `text-xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"
-                  }` }
-              >
-                Recent Activity
-              </h2>
-              <div className="space-y-4">
-                { recentActivity.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Activity
-                      className={ `h-10 w-10 mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                    />
-                    <p className={ darkMode ? "text-gray-400" : "text-gray-500" }>
-                      No recent activity
-                    </p>
-                  </div>
-                ) : (
-                  recentActivity.slice(0, 5).map((activity) => (
-                    <div
-                      key={ activity.id }
-                      className={ `flex items-start pb-4 ${darkMode
-                          ? "border-b border-gray-700"
-                          : "border-b border-gray-200"
-                        } last:border-0` }
-                    >
-                      <div
-                        className={ `p-2 rounded-lg mr-3 ${darkMode ? "bg-blue-900 bg-opacity-30" : "bg-blue-100"
-                          }` }
-                      >
-                        { activity.updated_at ? (
-                          <Edit
-                            className={ `h-4 w-4 ${darkMode ? "text-amber-400" : "text-amber-500"}` }
-                          />
-                        ) : (
-                          <UserPlus
-                            className={ `h-4 w-4 ${darkMode ? "text-blue-400" : "text-blue-600"}` }
-                          />
-                        ) }
-                      </div>
-                      <div className="flex-1">
-                        <p
-                          className={ `text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"
-                            }` }
-                        >
-                          <span className="font-semibold">
-                            { activity.personName }
-                          </span>{ " " }
-                          from{ " " }
-                          <span
-                            className={ darkMode ? "text-blue-400" : "text-blue-600" }
-                          >
-                            { activity.companyName }
-                          </span>
-                        </p>
-                        <p
-                          className={ `text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"
-                            }` }
-                        >
-                          { format(
-                            new Date(activity.activity_time),
-                            "MMM d, h:mm a"
-                          ) }
-                        </p>
-                      </div>
-                      <span
-                        className={ `text-xs px-2 py-1 rounded-full ${darkMode
-                            ? "bg-gray-700 text-gray-300"
-                            : "bg-gray-100 text-gray-600"
-                          }` }
-                      >
-                        { activity.updated_at ? "Updated" : "Created" }
-                      </span>
+          <div className="vd-card">
+            <div className="vd-card-title" style={{ marginBottom: 16 }}>Recent Activity</div>
+            <div className="vd-activity-list">
+              {recentActivity.length === 0 ? (
+                <div className="vd-activity-empty">
+                  <Activity size={28} />
+                  No recent activity
+                </div>
+              ) : (
+                recentActivity.slice(0, 5).map((act) => (
+                  <div key={act.id} className="vd-activity-item">
+                    <div className={`vd-activity-icon ${act.updated_at ? "update" : "create"}`}>
+                      {act.updated_at ? <Edit size={13} /> : <UserPlus size={13} />}
                     </div>
-                  ))
-                ) }
-              </div>
+                    <div className="vd-activity-body">
+                      <p className="vd-activity-text">
+                        <strong>{act.personName}</strong> from{" "}
+                        <span className="vd-activity-company">{act.companyName}</span>
+                      </p>
+                      <p className="vd-activity-time">
+                        {format(new Date(act.activity_time), "MMM d, h:mm a")}
+                      </p>
+                    </div>
+                    <span className={`vd-activity-tag ${act.updated_at ? "updated" : "created"}`}>
+                      {act.updated_at ? "Updated" : "Created"}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
-        {/* User Management Table */ }
-        <div
-          className={ `rounded-xl shadow-sm overflow-hidden ${darkMode
-              ? "bg-gray-800 border border-gray-700"
-              : "bg-white border border-gray-200"
-            }` }
-        >
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2
-                className={ `text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"
-                  }` }
-              >
-                User Management (
-                { timeRange === "week" ? "This Week" : "This Month" })
-              </h2>
-              <div className="flex space-x-3">
-                <button
-                  onClick={ () => router.push("/customer-admin/add-user") }
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition flex items-center"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add User
-                </button>
-                <button
-                  onClick={ () => router.push("/customer-admin/user-profile") }
-                  className={ `px-4 py-2 text-sm font-medium rounded-lg transition ${darkMode
-                      ? "border border-gray-600 hover:bg-gray-700 text-gray-300"
-                      : "border border-gray-300 hover:bg-gray-100 text-gray-700"
-                    }` }
-                >
-                  View All
-                </button>
+        {/* ── User Table ── */}
+        <div className="vd-table-card">
+          <div className="vd-table-header">
+            <div className="vd-table-header-text">
+              <div className="vd-card-title">
+                User Management{" "}
+                <span>({timeRange === "week" ? "This Week" : "This Month"})</span>
               </div>
+              <div className="vd-card-sub" style={{ marginBottom: 0 }}>Recent registrations</div>
             </div>
-
-            <div className="overflow-x-auto">
-              <table
-                className={ `min-w-full divide-y ${darkMode ? "divide-gray-700" : "divide-gray-200"
-                  }` }
-              >
-                <thead className={ darkMode ? "bg-gray-700" : "bg-gray-50" }>
-                  <tr>
-                    { ["User", "Company", "Status", "Joined"].map((head) => (
-                      <th
-                        key={ head }
-                        className={ `px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? "text-gray-300" : "text-gray-500"
-                          }` }
-                      >
-                        { head }
-                      </th>
-                    )) }
-                  </tr>
-                </thead>
-                <tbody
-                  className={ `divide-y ${darkMode
-                      ? "divide-gray-700 bg-gray-800"
-                      : "divide-gray-200 bg-white"
-                    }` }
-                >
-                  { filteredUsers
-                    .sort(
-                      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                    )
-                    .slice(0, 5)
-                    .map((user) => (
-                      <tr
-                        key={ user.id }
-                        className={
-                          darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                        }
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div
-                              className={ `flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${darkMode
-                                  ? "bg-blue-900 bg-opacity-30"
-                                  : "bg-blue-100"
-                                }` }
-                            >
-                              <span
-                                className={ `font-medium ${darkMode ? "text-blue-400" : "text-blue-600"}` }
-                              >
-                                { user.personName?.charAt(0) || "U" }
-                              </span>
-                            </div>
-                            <div className="ml-4">
-                              <div
-                                className={ `text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"
-                                  }` }
-                              >
-                                { user.personName }
-                              </div>
-                              <div
-                                className={ `text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
-                                  }` }
-                              >
-                                { user.Email }
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div
-                            className={ `text-sm ${darkMode ? "text-white" : "text-gray-900"
-                              }` }
-                          >
-                            { user.companyName || "N/A" }
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={ `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === "Active"
-                                ? darkMode
-                                  ? "bg-green-900 text-green-300"
-                                  : "bg-green-100 text-green-800"
-                                : darkMode
-                                  ? "bg-red-900 text-red-300"
-                                  : "bg-red-100 text-red-800"
-                              }` }
-                          >
-                            { user.status === "Active" ? (
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                            ) : (
-                              <XCircle className="h-3 w-3 mr-1" />
-                            ) }
-                            { user.status }
-                          </span>
-                        </td>
-                        <td
-                          className={ `px-6 py-4 whitespace-nowrap text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
-                            }` }
-                        >
-                          { user.createdAt
-                            ? format(new Date(user.createdAt), "MMM d, yyyy")
-                            : "N/A" }
-                        </td>
-                      </tr>
-                    )) }
-                </tbody>
-              </table>
-              { filteredUsers.length === 0 && (
-                <div className="text-center py-8">
-                  <UserX
-                    className={ `h-10 w-10 mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}` }
-                  />
-                  <p className={ darkMode ? "text-gray-400" : "text-gray-500" }>
-                    No users found for this time period
-                  </p>
-                </div>
-              ) }
+            <div className="vd-table-actions">
+              <button className="vd-btn-primary" onClick={() => router.push("/customer-admin/add-user")}>
+                <Plus size={13} /> Add User
+              </button>
+              <button className="vd-btn-ghost" onClick={() => router.push("/customer-admin/user-profile")}>
+                View All
+              </button>
             </div>
           </div>
+
+          <div className="vd-table-scroll">
+            <table className="vd-data-table">
+              <thead>
+                <tr>
+                  {["User", "Company", "Status", "Joined"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .slice(0, 5)
+                  .map((user, idx) => (
+                    <tr key={user.id}>
+                      <td>
+                        <div className="vd-user-cell">
+                          <div className={`vd-user-avatar ${AVATAR_VARIANTS[idx % AVATAR_VARIANTS.length]}`}>
+                            {getInitials(user.personName)}
+                          </div>
+                          <div>
+                            <div className="vd-user-name">{user.personName}</div>
+                            <div className="vd-user-email">{user.Email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="muted">{user.companyName || "N/A"}</td>
+                      <td>
+                        <span className={`vd-status-chip ${user.status === "Active" ? "active" : "inactive"}`}>
+                          <span className={`vd-status-dot ${user.status === "Active" ? "active" : "inactive"}`} />
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="date">
+                        {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "N/A"}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+
+            {filteredUsers.length === 0 && (
+              <div className="vd-table-empty">
+                <UserX size={28} />
+                No users found for this time period
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+
+      </main>
     </div>
   );
 };
 
 export default CustomerAdminDashboard;
-
-

@@ -48,8 +48,8 @@ const Navbar = ({
       imageHeight: 151,
       imageAlt: "Logout Image",
       showCancelButton: true,
-      confirmButtonColor: "#3085D6",
-      cancelButtonColor: "#3085D6",
+      confirmButtonColor: "#1a56db",
+      cancelButtonColor: "#ef4444",
       confirmButtonText: "<b>Yes</b>",
       cancelButtonText: "<b>Cancel</b>",
       customClass: {

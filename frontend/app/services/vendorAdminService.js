@@ -9,6 +9,12 @@ export const fetchVendorUsers = (vendorId) =>
     body: { vendorId },
   });
 
+export const fetchVendorAdminUsers = (token) =>
+  apiRequest({
+    path: "/api/vendor-admin/vendor-users",
+    token,
+  });
+
 export const fetchVendorCompanyName = (vendorId) =>
   apiRequest({
     path: `/api/vendor-users/company-name/${vendorId}`,

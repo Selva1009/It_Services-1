@@ -1,0 +1,451 @@
+/* ============================================
+   VENDOR ADD USER PAGE - EXTERNAL CSS
+   Emerald green theme — matches dashboard design
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+
+:root {
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --primary-light: #d1fae5;
+  --success: #10b981;
+  --danger: #ef4444;
+
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-header: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-white: #ffffff;
+
+  --border: #e2e8f0;
+  --border-focus: #10b981;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(16, 185, 129, 0.12);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  --font-body: 'DM Sans', sans-serif;
+  --font-heading: 'Syne', sans-serif;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Navbar height — keeps page flush, no colour gap */
+  --navbar-h: 64px;
+}
+
+/* ── Page ── */
+/* After */
+.vau-page {
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px 64px;
+}
+
+/* ── Card ── */
+.vau-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 640px;
+  animation: vauFadeIn 0.4s ease;
+}
+
+@keyframes vauFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Card Header ── */
+.vau-header {
+  background: var(--bg-header);
+  padding: 32px 32px 26px;
+  position: relative;
+  overflow: hidden;
+}
+
+.vau-header::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+}
+
+.vau-header::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  right: 80px;
+  width: 160px;
+  height: 160px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+}
+
+/* ── Header Inner ── */
+.vau-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Avatar Icon ── */
+.vau-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Header Text ── */
+.vau-header-text h1 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0 0 3px;
+  letter-spacing: -0.3px;
+}
+
+.vau-header-text p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ── Card Body ── */
+.vau-body {
+  padding: 32px;
+}
+
+/* ── Section Label ── */
+.vau-section-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary-light);
+}
+
+/* ── Form Grid ── */
+.vau-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+  margin-bottom: 20px;
+}
+
+/* ── Field ── */
+.vau-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vau-field.full-width {
+  grid-column: span 2;
+}
+
+.vau-col-1 {
+  grid-column: span 1;
+}
+
+.vau-col-2 {
+  grid-column: span 2;
+}
+
+.vau-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.4px;
+}
+
+/* ── Input Wrapper ── */
+.vau-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Input Icon ── */
+.vau-input-icon {
+  position: absolute;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--transition);
+}
+
+.vau-field.focused .vau-input-icon {
+  color: var(--primary);
+}
+
+/* ── Check icon ── */
+.vau-input-check {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  color: var(--success);
+  pointer-events: none;
+}
+
+/* ── Input ── */
+.vau-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #f8fafc;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.vau-input::placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.vau-input:hover {
+  background: #f1f5f9;
+}
+
+.vau-input:focus {
+  border-color: var(--border-focus);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.vau-input:disabled {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.vau-input.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.10);
+}
+
+/* ── Password input ── */
+.vau-input-password {
+  padding-right: 40px;
+}
+
+/* ── Toggle password button ── */
+.vau-toggle-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: color var(--transition);
+}
+
+.vau-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ── Kill autofill bg ── */
+.vau-input:-webkit-autofill,
+.vau-input:-webkit-autofill:hover,
+.vau-input:-webkit-autofill:focus,
+.vau-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ── Divider ── */
+.vau-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 28px 0;
+}
+
+/* ── Actions ── */
+.vau-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+/* ── Cancel Button ── */
+.vau-btn-cancel {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.vau-btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--text-primary);
+}
+
+/* ── Submit Button ── */
+.vau-btn-submit {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  transition: all var(--transition);
+  min-width: 148px;
+  justify-content: center;
+}
+
+.vau-btn-submit:hover:not(:disabled) {
+  background: var(--primary-dark);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.vau-btn-submit:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.vau-btn-submit.success {
+  background: var(--success);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.30);
+}
+
+/* ── Spinner ── */
+.vau-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: vauSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes vauSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Error states ── */
+.vau-field.error .vau-input-wrap {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+.vau-error-msg {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #e53e3e;
+  padding-left: 2px;
+}
+
+.vau-hint-msg {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+  padding-left: 2px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .vau-page {
+    padding-top: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .vau-header {
+    padding: 24px 20px;
+  }
+
+  .vau-body {
+    padding: 20px 16px;
+  }
+
+  .vau-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vau-field.full-width {
+    grid-column: span 1;
+  }
+
+  .vau-actions {
+    flex-direction: column-reverse;
+  }
+
+  .vau-btn-cancel,
+  .vau-btn-submit {
+    width: 100%;
+    justify-content: center;
+  }
+}
