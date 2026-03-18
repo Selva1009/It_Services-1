@@ -9,10 +9,16 @@ import {
   Calendar,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/app/services/notificationsService";
 
 const Navbar = ({
   setSearchQuery,
@@ -22,6 +28,10 @@ const Navbar = ({
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifFilter, setNotifFilter] = useState("all");
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
   useEffect(() => {
     ["/SignIn", "/customer/products", "/customer/CustomerProfile"].forEach((path) => router.prefetch(path));
@@ -69,6 +79,54 @@ const Navbar = ({
     month: "short",
     day: "numeric",
   });
+
+  const loadNotifications = async () => {
+    try {
+      const token = auth?.authToken;
+      if (!token) return;
+      const data = await fetchNotifications({ token, limit: 50 });
+      const list = data?.notifications || [];
+      setNotifications(list);
+      setUnreadCount(list.filter((n) => !n.is_read).length);
+    } catch (err) {
+      console.error("Failed to load notifications", err);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [auth?.authToken]);
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "all") return notifications;
+    return notifications.filter((n) => (notifFilter === "read" ? Boolean(n.is_read) : !n.is_read));
+  }, [notifFilter, notifications]);
+
+  const handleMarkRead = async (id) => {
+    try {
+      const token = auth?.authToken;
+      if (!token || !id) return;
+      await markNotificationRead(id, token);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = auth?.authToken;
+      if (!token) return;
+      await markAllNotificationsRead(token);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications", err);
+    }
+  };
 
   return (
     <>
@@ -120,6 +178,19 @@ const Navbar = ({
 
           {/* Divider */ }
           <div className="w-[1px] h-10 bg-gray-200"></div>
+
+          <button
+            className="relative p-2 rounded-md hover:bg-gray-100"
+            onClick={() => setNotificationOpen((prev) => !prev)}
+            aria-label="Notifications"
+          >
+            <Bell className="text-black" size={22} />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            ) : null}
+          </button>
 
           {/* User Profile Section */ }
           <div className="flex relative space-x-2">
@@ -249,6 +320,65 @@ const Navbar = ({
           </div>
         </div>
       ) }
+
+      {notificationOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-40"
+            onClick={() => setNotificationOpen(false)}
+          />
+          <aside className="fixed top-0 right-0 w-full sm:w-[360px] h-full bg-white z-50 border-l shadow-xl flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-base font-semibold">Notifications</h3>
+              <button onClick={() => setNotificationOpen(false)} className="text-xl leading-none">×</button>
+            </div>
+            <div className="flex items-center gap-2 p-3 border-b">
+              <select
+                className="flex-1 border rounded-md px-2 py-2 text-sm"
+                value={notifFilter}
+                onChange={(e) => setNotifFilter(e.target.value)}
+              >
+                <option value="all">All</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+              </select>
+              <button
+                onClick={handleMarkAllRead}
+                className="text-xs font-semibold px-3 py-2 rounded-md border bg-gray-50"
+              >
+                Mark all as read
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-3 space-y-2">
+              {filteredNotifications.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No notifications found.</p>
+              ) : (
+                filteredNotifications.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`rounded-lg border p-3 ${item.is_read ? "bg-gray-50" : "bg-blue-50 border-blue-200"}`}
+                  >
+                    <p className="text-sm font-semibold text-gray-900">{item.message}</p>
+                    <div className="mt-1 flex justify-between text-[11px] text-gray-500">
+                      <span>{item.ticket_number || "-"}</span>
+                      <span>{new Date(item.created_at).toLocaleString("en-IN")}</span>
+                    </div>
+                    {!item.is_read ? (
+                      <button
+                        onClick={() => handleMarkRead(item.id)}
+                        className="mt-2 text-[11px] px-2 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-200"
+                      >
+                        Mark as Read
+                      </button>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
     </>
   );
 };

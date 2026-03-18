@@ -11,8 +11,10 @@ import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import { resolveProductImageUrl } from "@/lib/api/config";
 import { getProducts, deleteProductById } from "@/lib/api/products";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 export default function ProductDetails() {
+  const { auth, getAuthToken } = useAuth();
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +26,7 @@ export default function ProductDetails() {
   const [deletingId, setDeletingId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const itemsPerPage = 5;
+  const token = getAuthToken() || auth?.authToken || null;
 
   const vendorUserId = typeof window !== "undefined" ? localStorage.getItem("vendorUserId") : null;
 
@@ -98,9 +101,14 @@ export default function ProductDetails() {
       });
 
       if (result.isConfirmed) {
+        if (!token) {
+          toast.error("Session expired. Please sign in again.");
+          return;
+        }
+
         setDeletingId(productId);
 
-        await deleteProductById(productId, localStorage.getItem("token"));
+        await deleteProductById(productId, token);
 
         setRefreshKey((prev) => prev + 1);
 

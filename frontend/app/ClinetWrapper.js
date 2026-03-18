@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
+import AuthApiBinder from "@/components/auth/AuthApiBinder";
 
 export default function ClientWrapper({ children }) {
   useEffect(() => {
@@ -17,5 +18,10 @@ export default function ClientWrapper({ children }) {
     return () => window.removeEventListener("error", handleChunkError);
   }, []);
 
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <AuthProvider>
+      <AuthApiBinder />
+      {children}
+    </AuthProvider>
+  );
 }

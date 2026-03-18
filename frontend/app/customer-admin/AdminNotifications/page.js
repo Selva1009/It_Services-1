@@ -35,13 +35,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import ExportMenu from "@/app/Components/auth/ExportMenu";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const AdminNotifications = () => {
+  const { auth, getAuthToken } = useAuth();
   const NOTIFICATION_LIMIT = 200;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [adminID, setAdminID] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,32 +51,21 @@ const AdminNotifications = () => {
     direction: "desc",
   });
   const usersPerPage = 5;
-
-  useEffect(() => {
-    const storedCustomer = localStorage.getItem("customer");
-    if (storedCustomer) {
-      try {
-        const customerData = JSON.parse(storedCustomer);
-        setAdminID(customerData.id);
-      } catch (err) {
-        console.error("Invalid customer data:", err);
-        setError("Failed to load admin data");
-      }
-    }
-  }, []);
+  const token = getAuthToken() || auth?.authToken || null;
 
   const fetchNotifications = async () => {
     try {
+      if (!token) return;
+
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/notifications/admin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminID, limit: NOTIFICATION_LIMIT }),
+      const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) throw new Error("Failed to fetch notifications");
       const data = await response.json();
-      setNotifications(data.notifications);
+      setNotifications((data.notifications || []).slice(0, NOTIFICATION_LIMIT));
     } catch (error) {
       console.error("Error fetching notifications:", error);
       setError("Failed to load notifications");
@@ -85,9 +75,12 @@ const AdminNotifications = () => {
   };
 
   useEffect(() => {
-    if (!adminID) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     fetchNotifications();
-  }, [adminID]);
+  }, [token]);
 
   const handleRefresh = () => {
     fetchNotifications();
@@ -113,12 +106,12 @@ const AdminNotifications = () => {
 
   const filteredNotifications = sortedNotifications.filter((n) => {
     const matchesSearch =
-      n.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      n.Email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      n.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      n.companyName?.toLowerCase().includes(searchTerm.toLowerCase());
+      n.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      n.ticket_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      n.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      n.category?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || n.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || String(n.status || "").toLowerCase() === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -255,56 +248,56 @@ const AdminNotifications = () => {
                   <TableRow>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={ () => handleSort("customerName") }
+                      onClick={ () => handleSort("ticket_number") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
-                        User
-                        <SortIcon columnKey="customerName" />
+                        Ticket
+                        <SortIcon columnKey="ticket_number" />
                       </div>
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={ () => handleSort("Email") }
+                      onClick={ () => handleSort("type") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
-                        Email
-                        <SortIcon columnKey="Email" />
+                        Type
+                        <SortIcon columnKey="type" />
                       </div>
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={ () => handleSort("productName") }
+                      onClick={ () => handleSort("message") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
-                        Product
-                        <SortIcon columnKey="productName" />
+                        Message
+                        <SortIcon columnKey="message" />
                       </div>
                     </TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-200 px-4 py-3 "
-                      onClick={ () => handleSort("companyName") }
+                      onClick={ () => handleSort("category") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
-                        Company
-                        <SortIcon columnKey="companyName" />
+                        Category
+                        <SortIcon columnKey="category" />
                       </div>
                     </TableHead>
                     <TableHead
                       className="hidden lg:table-cell cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={ () => handleSort("price") }
+                      onClick={ () => handleSort("status") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
-                        Price/Unit
-                        <SortIcon columnKey="price" />
+                        Status
+                        <SortIcon columnKey="status" />
                       </div>
                     </TableHead>
                     <TableHead
                       className="hidden lg:table-cell cursor-pointer hover:bg-gray-200 px-4 py-3"
-                      onClick={ () => handleSort("quantity") }
+                      onClick={ () => handleSort("is_read") }
                     >
                       <div className="flex items-center font-medium text-gray-700 tracking-wider">
-                        Quantity
-                        <SortIcon columnKey="quantity" />
+                        Read
+                        <SortIcon columnKey="is_read" />
                       </div>
                     </TableHead>
                     <TableHead
@@ -330,8 +323,8 @@ const AdminNotifications = () => {
                           <div className="p-2 rounded-full bg-primary/10">
                             <User className="h-4 w-4 text-primary" />
                           </div>
-                          <span className="font-medium">{ n.customerName }</span>
-                          { n.status === "unread" && (
+                          <span className="font-medium">{ n.ticket_number || "-" }</span>
+                          {!n.is_read && (
                             <Badge
                               variant="default"
                               className="ml-2 bg-blue-100 text-blue-800"
@@ -342,24 +335,21 @@ const AdminNotifications = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <a
-                          href={ `mailto:${n.Email}` }
-                          className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2"
-                        >
+                        <div className="text-blue-600 transition-colors flex items-center gap-2">
                           <div className="p-2 rounded-full bg-blue-100">
                             <Mail className="h-4 w-4 text-blue-600" />
                           </div>
                           <span className="truncate max-w-[180px]">
-                            { n.Email }
+                            { n.type || "-" }
                           </span>
-                        </a>
+                        </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="p-2 rounded-full bg-purple-100">
                             <Package className="h-4 w-4 text-purple-600" />
                           </div>
-                          <span>{ n.productName }</span>
+                          <span>{ n.message || "-" }</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
@@ -367,7 +357,7 @@ const AdminNotifications = () => {
                           <div className="p-2 rounded-full bg-green-100">
                             <Building2 className="h-4 w-4 text-green-600" />
                           </div>
-                          <span>{ n.companyName }</span>
+                          <span>{ n.category || "-" }</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell px-4 py-3">
@@ -375,7 +365,7 @@ const AdminNotifications = () => {
                           <div className="p-2 rounded-full bg-yellow-100">
                             <IndianRupee className="h-4 w-4 text-yellow-600" />
                           </div>
-                          <span className="font-medium">{ n.price }</span>
+                          <span className="font-medium">{ n.status || "-" }</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell px-4 py-3">
@@ -383,7 +373,7 @@ const AdminNotifications = () => {
                           <div className="p-2 rounded-full bg-orange-100">
                             <Tag className="h-4 w-4 text-orange-600" />
                           </div>
-                          <span className="font-medium">{ n.quantity }</span>
+                          <span className="font-medium">{ n.is_read ? "Read" : "Unread" }</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">

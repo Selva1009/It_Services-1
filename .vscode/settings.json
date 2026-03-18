@@ -1,0 +1,14 @@
+﻿{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "backend/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "backend/node_modules/**": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "javascript.suggest.autoImports": true
+}

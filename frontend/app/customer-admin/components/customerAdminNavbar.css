@@ -193,6 +193,146 @@
   border: 1.5px solid var(--white);
 }
 
+.ca-nav-bell-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  background: var(--em);
+  border-radius: 99px;
+  border: 1.5px solid var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--white);
+  padding: 0 3px;
+  font-family: var(--mono);
+}
+
+.ca-notif-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.34);
+  z-index: 170;
+}
+
+.ca-notif-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 360px;
+  max-width: 100%;
+  height: 100vh;
+  background: var(--white);
+  border-left: 1px solid var(--border);
+  box-shadow: -10px 0 22px rgba(15, 23, 42, 0.16);
+  z-index: 180;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font);
+}
+
+.ca-notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ca-notif-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ca-notif-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-2);
+}
+
+.ca-notif-controls {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ca-notif-controls select {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.ca-notif-controls button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--sl-light);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ca-notif-list {
+  overflow-y: auto;
+  padding: 8px 12px 16px;
+}
+
+.ca-notif-empty {
+  text-align: center;
+  color: var(--text-3);
+  margin-top: 24px;
+}
+
+.ca-notif-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+}
+
+.ca-notif-item.unread {
+  background: #eef6ff;
+  border-color: #bfdbfe;
+}
+
+.ca-notif-message {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ca-notif-meta {
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.ca-notif-read-btn {
+  margin-top: 8px;
+  border: 1px solid #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
 /* ── Profile button ──────────────────────────────────────────────────────── */
 .ca-nav-profile {
   display: flex;

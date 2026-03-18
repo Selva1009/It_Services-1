@@ -2,47 +2,46 @@
 
 import { apiRequest } from "@/app/services/apiClient";
 
-export const fetchVendorAdminNotifications = ({
-  token,
-  vendorAdminId,
-  limit = 50,
-} = {}) =>
+export const fetchNotifications = ({ token, limit = 50 } = {}) =>
   apiRequest({
-    path: "/api/notifications/vendor-admin",
-    method: "POST",
+    path: "/api/notifications",
+    method: "GET",
     token,
-    body: {
-      vendorAdminID: vendorAdminId,
-      limit,
-    },
   });
 
+export const fetchUnreadCount = ({ token } = {}) =>
+  apiRequest({
+    path: "/api/notifications/unread-count",
+    method: "GET",
+    token,
+  });
+
+export const fetchVendorAdminNotifications = ({
+  token,
+  limit = 50,
+} = {}) =>
+  fetchNotifications({ token, limit });
+
 export const fetchCustomerAdminNotifications = ({
+  token,
   adminId,
   limit = 200,
 } = {}) =>
+  fetchNotifications({ token, limit });
+
+export const fetchVendorUserNotifications = ({ token, limit = 50 } = {}) =>
+  fetchNotifications({ token, limit });
+
+export const markNotificationRead = (notificationId, token) =>
   apiRequest({
-    path: "/api/notifications/admin",
-    method: "POST",
-    body: {
-      adminID: adminId,
-      limit,
-    },
+    path: `/api/notifications/${notificationId}/read`,
+    method: "PATCH",
+    token,
   });
 
-export const fetchVendorUserNotifications = ({ vendorUserId, limit = 50 } = {}) =>
+export const markAllNotificationsRead = (token) =>
   apiRequest({
-    path: `/api/notifications/${vendorUserId}?limit=${limit}`,
-  });
-
-export const markNotificationRead = (notificationId) =>
-  apiRequest({
-    path: `/api/notifications/read/${notificationId}`,
-    method: "PUT",
-  });
-
-export const markAllNotificationsRead = (vendorUserId) =>
-  apiRequest({
-    path: `/api/notifications/read-all/${vendorUserId}`,
-    method: "PUT",
+    path: "/api/notifications/read-all",
+    method: "PATCH",
+    token,
   });

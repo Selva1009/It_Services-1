@@ -93,7 +93,7 @@ exports.signup = async (data) => {
     for (const svc of services) {
       await db.query(
         `INSERT INTO vendor_services
-         (vendor_id, service_name, support_level)
+         (vendor_id, service_name,  support_level)
          VALUES (?, ?, ?)`,
         [vendorId, svc.name, svc.level]
       );

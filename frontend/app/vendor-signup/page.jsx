@@ -26,6 +26,7 @@ import {
   Tooltip,
   Zoom,
   Fade,
+  Checkbox,
 } from "@mui/material";
 
 import {
@@ -267,7 +268,7 @@ export default function VendorSignup() {
   };
 
   const addService = () => {
-    setServices([...services, { name: "", level: "L1" }]);
+    setServices([...services, { name: "", level: [] }]);
   };
 
   const removeService = (index) => {
@@ -943,33 +944,59 @@ export default function VendorSignup() {
                             </FormControl>
                           </Grid>
 
-                          <Grid item xs={10} md={5}>
-                            <FormControl fullWidth className="serviceSelect">
-                              <InputLabel>Support Level *</InputLabel>
-                              <Select
-                                value={s.level}
-                                onChange={(e) => updateService(i, "level", e.target.value)}
-                                label="Support Level *"
-                              >
-                                {SERVICE_LEVELS.map((level) => (
-                                  <MenuItem key={level.value} value={level.value}>
-                                    <Box className="levelOption">
-                                      <span>{level.label}</span>
-                                      <Chip
-                                        label={level.value}
-                                        size="small"
-                                        sx={{
-                                          backgroundColor: level.color,
-                                          color: 'white',
-                                          ml: 1
-                                        }}
-                                      />
-                                    </Box>
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </Grid>
+    <Grid item xs={12} md={6}>
+  <FormControl fullWidth className="serviceSelect">
+    <InputLabel id={`support-level-label-${i}`}>Support Level *</InputLabel>
+    <Select
+      labelId={`support-level-label-${i}`}
+      multiple
+      value={s.level || []}
+      onChange={(e) => updateService(i, "level", e.target.value)}
+      label="Support Level *"
+      displayEmpty
+      renderValue={(selected) => {
+        if (!selected || selected.length === 0) {
+          return <span style={{ color: '#9e9e9e' }}>Select Levels</span>;
+        }
+        return (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {selected.map((val) => {
+              const found = SERVICE_LEVELS.find((l) => l.value === val);
+              return (
+                <Chip
+                  key={val}
+                  label={val}
+                  size="small"
+                  sx={{
+                    backgroundColor: found?.color || '#ccc',
+                    color: 'white',
+                  }}
+                />
+              );
+            })}
+          </Box>
+        );
+      }}
+    >
+      {SERVICE_LEVELS.map((level) => (
+        <MenuItem key={level.value} value={level.value}>
+          <Checkbox checked={(s.level || []).includes(level.value)} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <span>{level.label}</span>
+            <Chip
+              label={level.value}
+              size="small"
+              sx={{
+                backgroundColor: level.color,
+                color: 'white',
+              }}
+            />
+          </Box>
+        </MenuItem> 
+      ))}
+    </Select>
+  </FormControl>
+</Grid>
 
                           <Grid item xs={2} md={1}>
                             <Tooltip title="Remove service" arrow>

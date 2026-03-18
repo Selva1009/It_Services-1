@@ -6,6 +6,8 @@ const authRoutes=require("./routers/auth.router")
 const itUserRoutes=require("./routers/userAdmin.router")
 const vendorUser=require("./routers/vendorUser.router")
 const itUserEmployee=require("./routers/itUser.router")
+const ticketRoutes=require("./routers/tickets.router")
+const notificationRoutes=require("./routers/notifications.router")
 const app=express()
 
 app.use(cors());
@@ -16,6 +18,8 @@ app.use("/api/user-admin",itUserRoutes)
 app.use("/api/auth",authRoutes)
 app.use("/api/vendor-user",vendorUser)
 app.use("/api/it-user-employee",itUserEmployee)
+app.use("/api/tickets", ticketRoutes)
+app.use("/api/notifications", notificationRoutes)
 
 
 module.exports=app

@@ -14,10 +14,16 @@ import {
   X,
   ChevronDown,
   UserRoundPen,
+  Bell,
 } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  fetchCustomerAdminNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/app/services/notificationsService";
 import "./customerAdminNavbar.css"
 export default function CustomerAdminNavbar() {
   const pathname = usePathname();
@@ -35,6 +41,10 @@ export default function CustomerAdminNavbar() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifFilter, setNotifFilter] = useState("all");
+  const [unreadCount, setUnreadCount] = useState(0);
    
   const customerName = useMemo(
     () =>
@@ -99,6 +109,55 @@ export default function CustomerAdminNavbar() {
     day: "numeric",
   });
 
+  const fetchNotifications = async () => {
+    try {
+      const token = auth?.authToken;
+      if (!token) return;
+
+      const data = await fetchCustomerAdminNotifications({ token, limit: 50 });
+      const list = data?.notifications || [];
+      setNotifications(list);
+      setUnreadCount(list.filter((n) => !n.is_read).length);
+    } catch (err) {
+      console.error("Failed to load notifications", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [auth?.authToken]);
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "all") return notifications;
+    return notifications.filter((n) => (notifFilter === "read" ? Boolean(n.is_read) : !n.is_read));
+  }, [notifFilter, notifications]);
+
+  const handleMarkRead = async (id) => {
+    try {
+      const token = auth?.authToken;
+      if (!token || !id) return;
+      await markNotificationRead(id, token);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = auth?.authToken;
+      if (!token) return;
+      await markAllNotificationsRead(token);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications as read", err);
+    }
+  };
+
    
 
  // Replace with
@@ -145,6 +204,19 @@ const initials = useMemo(() => {
             {currentDate}
           </div>
 
+          <button
+            className="ca-nav-icon-btn"
+            aria-label="Notifications"
+            onClick={() => setNotificationOpen((prev) => !prev)}
+          >
+            <Bell size={16} />
+            {unreadCount > 0 ? (
+              <span className="ca-nav-bell-count">{unreadCount > 99 ? "99+" : unreadCount}</span>
+            ) : (
+              <div className="ca-nav-bell-dot" />
+            )}
+          </button>
+
           <div
             className={`ca-nav-profile${dropdownOpen ? " open" : ""}`}
             onClick={() => setDropdownOpen((o) => !o)}
@@ -186,6 +258,51 @@ const initials = useMemo(() => {
 
         </div>
       </nav>
+
+      {notificationOpen && (
+        <>
+          <div className="ca-notif-overlay" onClick={() => setNotificationOpen(false)} />
+          <aside className="ca-notif-sidebar">
+            <div className="ca-notif-header">
+              <h3>Notifications</h3>
+              <button className="ca-notif-close" onClick={() => setNotificationOpen(false)}>×</button>
+            </div>
+
+            <div className="ca-notif-controls">
+              <select value={notifFilter} onChange={(e) => setNotifFilter(e.target.value)}>
+                <option value="all">All</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+              </select>
+              <button onClick={handleMarkAllRead}>Mark all as read</button>
+            </div>
+
+            <div className="ca-notif-list">
+              {filteredNotifications.length === 0 ? (
+                <p className="ca-notif-empty">No notifications found.</p>
+              ) : (
+                filteredNotifications.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`ca-notif-item${item.is_read ? "" : " unread"}`}
+                  >
+                    <div className="ca-notif-message">{item.message}</div>
+                    <div className="ca-notif-meta">
+                      <span>{item.ticket_number || "-"}</span>
+                      <span>{new Date(item.created_at).toLocaleString("en-IN")}</span>
+                    </div>
+                    {!item.is_read ? (
+                      <button className="ca-notif-read-btn" onClick={() => handleMarkRead(item.id)}>
+                        Mark as Read
+                      </button>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* ════════════════ MOBILE NAVBAR ════════════════ */}
       <nav className="ca-nav-mobile">

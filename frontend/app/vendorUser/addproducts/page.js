@@ -5,8 +5,10 @@ import { useState, useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import { IoBagAdd } from "react-icons/io5";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 export default function AddProduct() {
+  const { auth, getAuthToken } = useAuth();
   const [vendorUserId, setVendorUserId] = useState(null);
   const [vendorUser, setVendorUser] = useState(null);
 
@@ -27,8 +29,8 @@ export default function AddProduct() {
 
     const loadVendorContext = async () => {
       const storedVendorId =
-        localStorage.getItem("vendorUserId") || sessionStorage.getItem("vendorUserId");
-      const authToken = localStorage.getItem("token") || sessionStorage.getItem("token");
+        auth?.vendorUserId || sessionStorage.getItem("vendorUserId");
+      const authToken = getAuthToken() || auth?.authToken;
 
       if (storedVendorId && isMounted) {
         setVendorUserId(Number(storedVendorId));
@@ -63,7 +65,7 @@ export default function AddProduct() {
         const resolvedId = profile?.id || Number(storedVendorId);
         if (resolvedId) {
           setVendorUserId(Number(resolvedId));
-          localStorage.setItem("vendorUserId", String(resolvedId));
+          sessionStorage.setItem("vendorUserId", String(resolvedId));
         }
 
         setVendorUser(profile);
@@ -86,7 +88,7 @@ export default function AddProduct() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [auth?.vendorUserId, auth?.authToken, getAuthToken]);
 
 
   useEffect(() => {

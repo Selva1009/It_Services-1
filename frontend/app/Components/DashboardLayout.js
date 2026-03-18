@@ -30,6 +30,10 @@ export default function DashboardLayout({ id, children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("all");
+  const unreadCount = useMemo(
+    () => notifications.filter((notif) => !notif.read).length,
+    [notifications]
+  );
 
   const router = useRouter();
   useEffect(() => {
@@ -66,8 +70,11 @@ export default function DashboardLayout({ id, children }) {
     }
 
     try {
+      const token = getAuthToken() || auth?.authToken || null;
+      if (!token) return;
+
       const data = await fetchVendorUserNotifications({
-        vendorUserId,
+        token,
         limit: NOTIFICATION_LIMIT,
       });
 
@@ -78,7 +85,7 @@ export default function DashboardLayout({ id, children }) {
       const formattedNotifications = data.notifications
         .map((notif) => ({
           ...notif,
-          read: notif.status === "read",
+          read: Boolean(notif.is_read),
           time: new Date(notif.created_at).toLocaleString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
@@ -100,7 +107,7 @@ export default function DashboardLayout({ id, children }) {
     } catch {
       // Ignore notification errors
     }
-  }, [vendorUserId]);
+  }, [vendorUserId, getAuthToken, auth?.authToken]);
 
   useEffect(() => {
     if (!vendorUserId) return;
@@ -122,7 +129,10 @@ export default function DashboardLayout({ id, children }) {
     }
 
     try {
-      await markNotificationRead(notifId);
+      const token = getAuthToken() || auth?.authToken || null;
+      if (!token) return;
+
+      await markNotificationRead(notifId, token);
       setNotifications((prev) =>
         prev.map((notif) =>
           notif.id === notifId
@@ -142,7 +152,10 @@ export default function DashboardLayout({ id, children }) {
     }
 
     try {
-      await markAllNotificationsRead(vendorUserId);
+      const token = getAuthToken() || auth?.authToken || null;
+      if (!token) return;
+
+      await markAllNotificationsRead(token);
       setNotifications((prevNotifications) =>
         prevNotifications.map((notification) => ({
           ...notification,
@@ -235,9 +248,9 @@ export default function DashboardLayout({ id, children }) {
               onClick={ toggleNotification }
             >
               <BellRing className="text-black-900 mt-1 w-6 h-6" />
-              { notifications.length > 0 && (
+              { unreadCount > 0 && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                  { notifications.length }
+                  { unreadCount }
                 </span>
               ) }
             </button>
