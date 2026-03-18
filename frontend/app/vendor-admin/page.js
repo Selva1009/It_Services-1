@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { format, subMonths, startOfWeek } from "date-fns";
-import { Line, Bar, Doughnut } from "react-chartjs-2";
+import { format, subMonths, startOfWeek, eachDayOfInterval, eachWeekOfInterval } from "date-fns";
+import { Line, Doughnut } from "react-chartjs-2";
 import {
-  Users, Activity, UserX, UserPlus, Edit,
-  Bell, Package, ShoppingCart, Clock, Plus,
+  Users, TicketCheck, Clock, Plus, Activity, UserX,
 } from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import {
@@ -16,8 +15,8 @@ import {
   PointElement, LineElement,
   BarElement, Title, Filler,
 } from "chart.js";
-import { fetchVendorUsers } from "@/app/services/vendorAdminService";
-import { fetchVendorAdminNotifications } from "@/app/services/notificationsService";
+import { fetchVendorAdminUsers } from "../services/vendorAdminService";
+import { getVendorTickets } from "@/services/ticketService";
 import "./vendorAdminDashboard.css";
 
 ChartJS.register(
@@ -25,56 +24,41 @@ ChartJS.register(
   PointElement, LineElement, BarElement, Title, Filler
 );
 
-// ─── Chart colours ────────────────────────────────────────────────────────────
+// ─── Colours ──────────────────────────────────────────────────────────────────
 const C = {
-  em:         "#10b981",
-  emLight:    "#d1fae5",
-  border:     "#e2e8f0",
-  text:       "#0f172a",
-  text2:      "#475569",
-  text3:      "#94a3b8",
-  white:      "#ffffff",
-  amber:      "#f59e0b",
-  amberLight: "#fef3c7",
-  blue:       "#3b82f6",
-  blueLight:  "#dbeafe",
+  border: "#e2e8f0", text: "#0f172a", text2: "#475569", text3: "#94a3b8",
+  white: "#ffffff", blue: "#3b82f6",
 };
 
-const DONUT_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
-const AVATAR_VARS  = ["v0", "v1", "v2", "v3", "v4"];
-
-const getInitials = (name = "") =>
-  name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+// ticket.status → colour  (matches your real status values exactly)
+const STATUS_COLOR_MAP = {
+  "open": "#3b82f6",
+  "in progress": "#8b5cf6",
+  "resolved": "#10b981",
+  "closed": "#06b6d4",
+  "pending": "#f59e0b",
+  "cancelled": "#ef4444",
+};
+const FALLBACK_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 // ─── Chart option factories ───────────────────────────────────────────────────
 const makeLineOptions = () => ({
   responsive: true, maintainAspectRatio: false,
   plugins: {
-    legend: { display: false }, title: { display: false },
+    legend: { display: false },
     tooltip: {
       backgroundColor: C.white, titleColor: C.text, bodyColor: C.text2,
       borderColor: C.border, borderWidth: 1, cornerRadius: 8, displayColors: false,
-      callbacks: { label: (ctx) => ` ${ctx.parsed.y} new vendors` },
+      callbacks: { label: (ctx) => ` ${ctx.parsed.y} ticket${ctx.parsed.y !== 1 ? "s" : ""}` },
     },
   },
   scales: {
     x: { grid: { display: false }, ticks: { color: C.text3, font: { size: 11 } } },
-    y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { color: C.text3, stepSize: 1, font: { size: 11 } } },
-  },
-});
-
-const makeBarOptions = () => ({
-  responsive: true, maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false }, title: { display: false },
-    tooltip: {
-      backgroundColor: C.white, titleColor: C.text, bodyColor: C.text2,
-      borderColor: C.border, borderWidth: 1, cornerRadius: 8,
+    y: {
+      beginAtZero: true,
+      grid: { color: "rgba(0,0,0,0.05)" },
+      ticks: { color: C.text3, stepSize: 1, font: { size: 11 }, precision: 0 },
     },
-  },
-  scales: {
-    x: { grid: { display: false }, ticks: { color: C.text3, font: { size: 11 } } },
-    y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" }, ticks: { color: C.text3, font: { size: 11 } } },
   },
 });
 
@@ -85,14 +69,13 @@ const makeDoughnutOptions = () => ({
       position: "right",
       labels: { color: C.text, font: { size: 12 }, padding: 16, usePointStyle: true, pointStyle: "circle" },
     },
-    title: { display: false },
     tooltip: {
       backgroundColor: C.white, titleColor: C.text, bodyColor: C.text2,
       borderColor: C.border, borderWidth: 1, cornerRadius: 8,
       callbacks: {
         label: (ctx) => {
           const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-          return `${ctx.label}: ${ctx.raw} (${Math.round((ctx.raw / total) * 100)}%)`;
+          return ` ${ctx.label}: ${ctx.raw} (${Math.round((ctx.raw / total) * 100)}%)`;
         },
       },
     },
@@ -102,17 +85,17 @@ const makeDoughnutOptions = () => ({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const VendorDashboard = () => {
-  const NOTIFICATION_LIMIT = 200;
   const router = useRouter();
-  const { auth, getAuthToken: getAuthTokenFromContext } = useAuth();
+  const { auth } = useAuth();
+  const authToken = auth?.authToken
+  // console.log(authToken)
+  const [vendors, setVendors] = useState(0);
+  const [tickets, setTickets] = useState([]);  // ticket[] from getVendorTickets()
+  const [loading, setLoading] = useState(true);
+  const [vendorID, setVendorID] = useState(null);
+  const [timeRange, setTimeRange] = useState("week");
+  console.log(tickets, "count")
 
-  const [vendors,           setVendors]           = useState([]);
-  const [notifications,     setNotifications]     = useState([]);
-  const [loading,           setLoading]           = useState(true);
-  const [vendorID,          setVendorID]          = useState(null);
-  const [timeRange,         setTimeRange]         = useState("week");
-  const [recentActivity,    setRecentActivity]    = useState([]);
-  const [notificationStats, setNotificationStats] = useState({ total: 0, unread: 0, read: 0 });
 
   // ── Date helpers ──────────────────────────────────────────────────────────
   const getTimeRangeDates = () => {
@@ -122,154 +105,126 @@ const VendorDashboard = () => {
       : { start: subMonths(now, 1), end: now };
   };
 
-  const filterVendorsByTimeRange = (list) => {
-    const { start } = getTimeRangeDates();
-    return list.filter((v) => v.createdAt && new Date(v.createdAt) >= start);
-  };
-
-  const getDayLabels = () => {
+  // ── Ticket trend line chart
+  //    Groups tickets by ticket.created_at into day/week buckets
+  const prepareTicketTrendData = () => {
     const { start, end } = getTimeRangeDates();
-    const labels = [];
+    let labels = [];
+    let dataMap = {};
+
     if (timeRange === "week") {
-      const cur = new Date(start);
-      while (cur <= end) { labels.push(format(cur, "EEE")); cur.setDate(cur.getDate() + 1); }
+      const days = eachDayOfInterval({ start, end });
+      labels = days.map((d) => format(d, "EEE d"));
+      labels.forEach((l) => (dataMap[l] = 0));
+      tickets.forEach((t) => {
+        const d = new Date(t.created_at);
+        if (d >= start && d <= end) {
+          const key = format(d, "EEE d");
+          if (key in dataMap) dataMap[key]++;
+        }
+      });
     } else {
-      const ws = new Date(start);
-      while (ws <= end) {
-        const we = new Date(ws); we.setDate(we.getDate() + 6);
-        if (we > end) we.setTime(end.getTime());
-        labels.push(`Week ${format(ws, "d")}-${format(we, "d MMM")}`);
-        ws.setDate(ws.getDate() + 7);
-      }
+      const weeks = eachWeekOfInterval({ start, end });
+      labels = weeks.map((ws, i) => `Wk ${i + 1} (${format(ws, "d MMM")})`);
+      labels.forEach((l) => (dataMap[l] = 0));
+      tickets.forEach((t) => {
+        const d = new Date(t.created_at);
+        if (d >= start && d <= end) {
+          const idx = weeks.findIndex((ws) => {
+            const we = new Date(ws); we.setDate(we.getDate() + 6);
+            return d >= ws && d <= we;
+          });
+          if (idx !== -1) dataMap[labels[idx]]++;
+        }
+      });
     }
-    return labels;
-  };
 
-  // ── Chart data builders ───────────────────────────────────────────────────
-  const prepareGrowthData = (list) => {
-    const { start, end } = getTimeRangeDates();
-    const labels  = getDayLabels();
-    const dataMap = Object.fromEntries(labels.map((l) => [l, 0]));
-    list.forEach((v) => {
-      if (!v.createdAt) return;
-      const d = new Date(v.createdAt);
-      if (d < start || d > end) return;
-      const label = timeRange === "week"
-        ? format(d, "EEE")
-        : labels[Math.min(Math.floor((d - start) / (7 * 864e5)), labels.length - 1)];
-      dataMap[label] = (dataMap[label] || 0) + 1;
-    });
     return {
       labels,
       datasets: [{
-        label: "New Vendors", data: labels.map((l) => dataMap[l]),
-        backgroundColor: "rgba(16,185,129,0.08)", borderColor: C.em,
+        label: "Tickets Raised",
+        data: labels.map((l) => dataMap[l] || 0),
+        backgroundColor: "rgba(59,130,246,0.08)",
+        borderColor: C.blue,
         borderWidth: 2, tension: 0.4, fill: true,
-        pointBackgroundColor: C.em, pointBorderColor: C.white,
+        pointBackgroundColor: C.blue, pointBorderColor: C.white,
         pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
       }],
     };
   };
 
-  const prepareNotificationData = () => {
-    const now  = new Date();
-    const days = timeRange === "week" ? 7 : 30;
-    const labels = [], data = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now); d.setDate(d.getDate() - i);
-      labels.push(format(d, "MMM d"));
-      data.push(notifications.filter((n) => {
-        const nd = new Date(n.created_at);
-        return nd.getDate() === d.getDate() && nd.getMonth() === d.getMonth() && nd.getFullYear() === d.getFullYear();
-      }).length);
-    }
+  // ── Ticket status doughnut
+  //    Groups by ticket.status  (e.g. "Open", "In Progress", "Resolved")
+  const prepareTicketStatusData = () => {
+    const counts = {};
+    tickets.forEach((t) => {
+      const s = (t.status || "Unknown").trim();
+      counts[s] = (counts[s] || 0) + 1;
+    });
+
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const labels = entries.map(([s]) => s);
+    const data = entries.map(([, v]) => v);
+    const bgColors = entries.map(([s], i) =>
+      STATUS_COLOR_MAP[s.toLowerCase()] || FALLBACK_COLORS[i % FALLBACK_COLORS.length]
+    );
+
     return {
       labels,
       datasets: [{
-        label: "Orders", data,
-        backgroundColor: C.emLight, hoverBackgroundColor: C.em,
-        borderRadius: 5, borderWidth: 0,
+        data, label: "Tickets",
+        backgroundColor: bgColors, borderColor: C.white,
+        borderWidth: 2, hoverOffset: 12,
       }],
     };
   };
 
-  const prepareProductData = () => {
-    const counts = {};
-    notifications.forEach((n) => {
-      if (!n.productName) return;
-      const qty = typeof n.quantity === "string"
-        ? parseInt(n.quantity.replace(/[^\d]/g, ""), 10)
-        : n.quantity || 1;
-      counts[n.productName] = (counts[n.productName] || 0) + qty;
-    });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    return {
-      labels: sorted.map((p) => p[0]),
-      datasets: [{
-        label: "Total Quantity Ordered", data: sorted.map((p) => p[1]),
-        backgroundColor: DONUT_COLORS, borderColor: C.white, borderWidth: 2, hoverOffset: 12,
-      }],
-    };
-  };
-
-  // ── Data fetching ─────────────────────────────────────────────────────────
-  const fetchNotifications = async (vid) => {
-    try {
-      const token = getAuthTokenFromContext();
-      if (!token) return;
-      const data = await fetchVendorAdminNotifications({
-        token,
-        vendorAdminId: vid,
-        limit: NOTIFICATION_LIMIT,
-      });
-      const list = data?.notifications || [];
-      const unread = list.filter((n) => n.status === "unread").length;
-      setNotifications(list);
-      setNotificationStats({ total: list.length, unread, read: list.length - unread });
-    } catch (err) {
-      console.error("Notifications error:", err);
-    }
-  };
-
-  const buildRecentActivity = (list) => {
-    const acts = [];
-    list.forEach((v) => {
-      acts.push({ type: "created", name: v.personName || "—", company: v.companyName || "—", date: v.createdAt, id: v.id });
-      if (v.updated_at && new Date(v.updated_at).getTime() !== new Date(v.createdAt).getTime()) {
-        acts.push({ type: "updated", name: v.personName || "—", company: v.companyName || "—", date: v.updated_at, id: v.id });
-      }
-    });
-    return acts.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-  };
-
+  // ── Auth resolution ────────────────────────────────────────────────────────
   useEffect(() => {
     const resolvedVendorId = auth.vendor?.id || auth.vendorId || auth.userId;
     if (resolvedVendorId) {
       setVendorID(resolvedVendorId);
-      return;
+    } else {
+      setLoading(false);
+      router.replace("/SignIn");
     }
-    setLoading(false);
-    router.replace("/SignIn");
   }, [auth.vendor, auth.vendorId, auth.userId, router]);
 
-  // useEffect(() => {
-  //   if (!vendorID) return;
-  //   const load = async () => {
-  //     setLoading(true);
-  //     try {
-  //       const data = await fetchVendorUsers(vendorID);
-  //       const list = Array.isArray(data) ? data : data?.users || data?.vendors || [];
-  //       setVendors(list);
-  //       setRecentActivity(buildRecentActivity(list));
-  //       await fetchNotifications(vendorID);
-  //     } catch (err) {
-  //       console.error("Dashboard load error:", err);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-  //   load();
-  // }, [vendorID]);
+  // ── Data fetch ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!vendorID) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+
+
+        // Users → fetchVendorUsers(vendorId)
+        const userData = await fetchVendorAdminUsers(authToken);
+
+        console.log(userData);
+
+        setVendors(userData?.users || []);
+
+        // Tickets → getVendorTickets() → { tickets: [...] }
+
+        const ticketData = await getVendorTickets();
+        console.log(ticketData)
+        console.log(ticketData?.data)
+
+        const tickeCount = ticketData?.data
+        console.log(tickeCount);
+
+        setTickets(tickeCount?.tickets || []);
+
+
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [vendorID]);
 
   if (loading) {
     return (
@@ -280,9 +235,18 @@ const VendorDashboard = () => {
     );
   }
 
-  const filteredVendors = filterVendorsByTimeRange(vendors);
-  const activeVendors   = vendors.filter((v) => v.status === "Active").length;
-  const inactiveVendors = vendors.filter((v) => v.status !== "Active").length;
+  // ── Derived stats ─────────────────────────────────────────────────────────
+  const totalUsers = vendors.length;
+  const totalTickets = tickets.length;
+  const openTickets = tickets.filter((t) => t.status?.toLowerCase() === "open").length;
+  // "Resolved" + "Closed" both count as done
+  const closedTickets = tickets.filter((t) =>
+    ["closed", "resolved"].includes(t.status?.toLowerCase())
+  ).length;
+
+  const AVATAR_VARS = ["v0", "v1", "v2", "v3", "v4"];
+  const getInitials = (name = "") =>
+    name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
   return (
     <div className="vd-page">
@@ -311,107 +275,70 @@ const VendorDashboard = () => {
         <div className="vd-stats-grid">
           <div className="vd-stat-card">
             <div className="vd-stat-header">
-              <span className="vd-stat-label">Total Vendors</span>
+              <span className="vd-stat-label">Total Users</span>
               <div className="vd-stat-icon green"><Users size={16} /></div>
             </div>
-            <div className="vd-stat-value">{vendors.length}</div>
-            <div className="vd-stat-meta"><span className="vd-badge up">↑ 12%</span>&nbsp;vs last period</div>
+            <div className="vd-stat-value">{totalUsers}</div>
+            {/* <div className="vd-stat-meta"><span className="vd-badge up">↑ 12%</span>&nbsp;vs last period</div> */}
           </div>
 
           <div className="vd-stat-card">
             <div className="vd-stat-header">
-              <span className="vd-stat-label">Active Vendors</span>
-              <div className="vd-stat-icon blue"><Activity size={16} /></div>
+              <span className="vd-stat-label">Total Tickets Raised</span>
+              <div className="vd-stat-icon blue"><TicketCheck size={16} /></div>
             </div>
-            <div className="vd-stat-value">{activeVendors}</div>
-            <div className="vd-stat-meta"><span className="vd-badge up">↑ 8%</span>&nbsp;vs last period</div>
+            <div className="vd-stat-value">{totalTickets}</div>
+            {/* <div className="vd-stat-meta"><span className="vd-badge up">↑ 5%</span>&nbsp;vs last period</div> */}
           </div>
 
           <div className="vd-stat-card">
             <div className="vd-stat-header">
-              <span className="vd-stat-label">Inactive Vendors</span>
-              <div className="vd-stat-icon red"><UserX size={16} /></div>
+              <span className="vd-stat-label">Open Tickets</span>
+              <div className="vd-stat-icon amber"><Clock size={16} /></div>
             </div>
-            <div className="vd-stat-value">{inactiveVendors}</div>
-            <div className="vd-stat-meta"><span className="vd-badge down">↑ 3%</span>&nbsp;vs last period</div>
+            <div className="vd-stat-value">{openTickets}</div>
+            <div className="vd-stat-meta"><span className="vd-badge down">Needs attention</span></div>
           </div>
 
           <div className="vd-stat-card">
             <div className="vd-stat-header">
-              <span className="vd-stat-label">Total Orders</span>
-              <div className="vd-stat-icon amber"><ShoppingCart size={16} /></div>
+              <span className="vd-stat-label">Resolved / Closed</span>
+              <div className="vd-stat-icon green"><Activity size={16} /></div>
             </div>
-            <div className="vd-stat-value">{notificationStats.total}</div>
-            <div className="vd-stat-meta"><span className="vd-badge up">↑ 21%</span>&nbsp;vs last period</div>
+            <div className="vd-stat-value">{closedTickets}</div>
+            {/* <div className="vd-stat-meta"><span className="vd-badge up">↑ 8%</span>&nbsp;vs last period</div> */}
           </div>
         </div>
 
         {/* ── Charts Row ── */}
         <div className="vd-charts-row">
+
+          {/* Line chart — ticket.created_at grouped by day or week */}
           <div className="vd-card">
-            <div className="vd-card-title">Vendor Growth</div>
-            <div className="vd-card-sub">New registrations {timeRange === "week" ? "this week" : "this month"}</div>
+            <div className="vd-card-title">Tickets Raised Over Time</div>
+            <div className="vd-card-sub">
+              Daily ticket submissions {timeRange === "week" ? "this week" : "this month"}
+            </div>
             <div className="vd-chart-wrap">
-              {vendors.length > 0
-                ? <Line data={prepareGrowthData(vendors)} options={makeLineOptions()} />
-                : <div className="vd-chart-empty"><Clock size={18} /> Loading vendor data…</div>}
+              {tickets.length > 0
+                ? <Line data={prepareTicketTrendData()} options={makeLineOptions()} />
+                : <div className="vd-chart-empty"><TicketCheck size={18} /> No ticket data available</div>}
             </div>
           </div>
 
+          {/* Doughnut chart — ticket.status (Open / In Progress / Resolved …) */}
           <div className="vd-card">
-            <div className="vd-card-title">Order Activity</div>
-            <div className="vd-card-sub">Daily order volume {timeRange === "week" ? "this week" : "this month"}</div>
-            <div className="vd-chart-wrap">
-              {notifications.length > 0
-                ? <Bar data={prepareNotificationData()} options={makeBarOptions()} />
-                : <div className="vd-chart-empty"><Bell size={18} /> Loading order data…</div>}
+            <div className="vd-card-title">Ticket Status Breakdown</div>
+            <div className="vd-card-sub">
+              Distribution across Open, In Progress, Resolved, Closed…
             </div>
-          </div>
-        </div>
-
-        {/* ── Bottom Row ── */}
-        <div className="vd-bottom-row">
-          <div className="vd-card">
-            <div className="vd-card-title">Top Products</div>
-            <div className="vd-card-sub">By quantity ordered</div>
             <div className="vd-chart-wrap">
-              {notifications.length > 0
-                ? <Doughnut data={prepareProductData()} options={makeDoughnutOptions()} />
-                : <div className="vd-chart-empty"><Package size={18} /> Loading product data…</div>}
+              {tickets.length > 0
+                ? <Doughnut data={prepareTicketStatusData()} options={makeDoughnutOptions()} />
+                : <div className="vd-chart-empty"><Activity size={18} /> No status data available</div>}
             </div>
           </div>
 
-          <div className="vd-card">
-            <div className="vd-card-title" style={{ marginBottom: 16 }}>Recent Activity</div>
-            <div className="vd-activity-list">
-              {recentActivity.length === 0 ? (
-                <div className="vd-activity-empty">
-                  <Activity size={28} />
-                  No recent activity
-                </div>
-              ) : (
-                recentActivity.map((act, i) => (
-                  <div key={`${act.id}-${i}`} className="vd-activity-item">
-                    <div className={`vd-activity-icon ${act.type === "created" ? "create" : "update"}`}>
-                      {act.type === "created" ? <UserPlus size={13} /> : <Edit size={13} />}
-                    </div>
-                    <div className="vd-activity-body">
-                      <p className="vd-activity-text">
-                        <strong>{act.name}</strong> from{" "}
-                        <span className="vd-activity-company">{act.company}</span>
-                      </p>
-                      <p className="vd-activity-time">
-                        {format(new Date(act.date), "MMM d, h:mm a")}
-                      </p>
-                    </div>
-                    <span className={`vd-activity-tag ${act.type === "created" ? "created" : "updated"}`}>
-                      {act.type === "created" ? "Created" : "Updated"}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
 
         {/* ── Vendor Table ── */}
@@ -419,8 +346,7 @@ const VendorDashboard = () => {
           <div className="vd-table-header">
             <div className="vd-table-header-text">
               <div className="vd-card-title">
-                Vendor Management{" "}
-                <span>({timeRange === "week" ? "This Week" : "This Month"})</span>
+                Vendor Management <span>({timeRange === "week" ? "This Week" : "This Month"})</span>
               </div>
               <div className="vd-card-sub" style={{ marginBottom: 0 }}>Recent registrations</div>
             </div>
@@ -444,7 +370,7 @@ const VendorDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVendors
+                {vendors
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .slice(0, 5)
                   .map((vendor, idx) => (
@@ -475,10 +401,10 @@ const VendorDashboard = () => {
               </tbody>
             </table>
 
-            {filteredVendors.length === 0 && (
+            {vendors.length === 0 && (
               <div className="vd-table-empty">
                 <UserX size={28} />
-                No vendors found for this time period
+                No vendors found
               </div>
             )}
           </div>
