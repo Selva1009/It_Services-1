@@ -8,6 +8,7 @@ import {
   UserPlus,
   User,
   LayoutDashboard,
+  Ticket,
   LogOut,
   Calendar,
   Menu,
@@ -32,6 +33,7 @@ export default function CustomerAdminNavbar() {
     [
       "/SignIn",
       "/customer-admin/customerAdminDashboard",
+      "/customer-admin/tickets",
       "/customer-admin/add-user",
       "/customer-admin/user-profile",
       "/customer-admin/customerAdminProfile",
@@ -101,6 +103,11 @@ export default function CustomerAdminNavbar() {
       href: "/customer-admin/user-profile",
       icon: <Users className="h-5 w-5" />,
       label: "User Profiles",
+    },
+    {
+      href: "/customer-admin/tickets",
+      icon: <Ticket className="h-5 w-5" />,
+      label: "Tickets",
     },
   ];
 

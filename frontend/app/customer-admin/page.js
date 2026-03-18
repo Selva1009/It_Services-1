@@ -1,13 +1,5 @@
-import React from 'react'
-import CustomerAdminNavbar from './components/customerAdminNavbar'
-import CustomerAdminDashboard from './customerAdminDashboard/page'
-const page = () => {
-  return (
-    <div>
-   <CustomerAdminNavbar/>
-   
-    </div>
-  )
-}
+import CustomerAdminDashboard from "./customerAdminDashboard/page";
 
-export default page
+export default function CustomerAdminHomePage() {
+  return <CustomerAdminDashboard />;
+}
