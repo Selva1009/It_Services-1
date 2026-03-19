@@ -4,89 +4,323 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
-  Badge,
-  Button,
+  Alert,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
+  FormControl,
+  InputAdornment,
   MenuItem,
+  Paper,
   Select,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
-  Paper,
+  Tooltip,
+  Typography,
+  tooltipClasses,
 } from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
+import { styled } from "@mui/material/styles";
+import SearchIcon from "@mui/icons-material/Search";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import {
+  X, Tag, Building2, User, AlertTriangle,
+  Activity, MessageSquare, Hash,
+  Layers, Monitor, Wrench, Calendar,
+} from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
 import "./AdminTickets.css";
 
-const STATUS_OPTIONS = ["Open", "Assigned", "In Progress", "Escalated", "Resolved", "Closed"];
-const STATUS_FILTERS = ["All", ...STATUS_OPTIONS];
+/* ─── Styled Tooltip ─────────────────────────────────────── */
+const VtTooltip = styled(({ className, ...props }) => (
+  <Tooltip {...props} arrow classes={{ popper: className }} />
+))(({ theme }) => ({
+  [`& .${tooltipClasses.arrow}`]: { color: "#1e293b" },
+  [`& .${tooltipClasses.tooltip}`]: {
+    backgroundColor: "#1e293b",
+    color: "#f1f5f9",
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: "12.5px",
+    fontWeight: 400,
+    lineHeight: 1.5,
+    padding: "7px 12px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 20px rgba(15,23,42,0.22)",
+    maxWidth: 280,
+  },
+}));
 
-const PRIORITY_CLASS = {
-  Low: "priority-low",
-  Medium: "priority-medium",
-  High: "priority-high",
-  Critical: "priority-critical",
+/* ─── Chip colour maps ───────────────────────────────────── */
+const STATUS_CHIP = {
+  Open:          { bg: "#eff6ff", color: "#1d4ed8" },
+  Assigned:      { bg: "#f5f3ff", color: "#6d28d9" },
+  "In Progress": { bg: "#fffbeb", color: "#b45309" },
+  Escalated:     { bg: "#fff1f2", color: "#be123c" },
+  Resolved:      { bg: "#f0fdf4", color: "#16a34a" },
+  Closed:        { bg: "#f1f5f9", color: "#475569" },
 };
 
-const STATUS_CLASS = {
-  Open: "status-open",
-  Assigned: "status-assigned",
-  "In Progress": "status-progress",
-  Escalated: "status-escalated",
-  Resolved: "status-resolved",
-  Closed: "status-closed",
+const PRIORITY_CHIP = {
+  Low:      { bg: "#f0fdf4", color: "#16a34a" },
+  Medium:   { bg: "#fffbeb", color: "#b45309" },
+  High:     { bg: "#fff1f2", color: "#be123c" },
+  Critical: { bg: "#fce7f3", color: "#9f1239" },
 };
 
-const SUPPORT_CLASS = {
-  L1: "support-l1",
-  L2: "support-l2",
-  L3: "support-l3",
+const STATUS_OPTIONS   = ["All","Open","Assigned","In Progress","Escalated","Resolved","Closed"];
+const PRIORITY_OPTIONS = ["All","High","Medium","Low","Critical"];
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
+
+/* ─── Helpers ────────────────────────────────────────────── */
+const fmtDate = (v) =>
+  v ? new Date(v).toLocaleString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }) : "-";
+
+const formatDate = (v) => fmtDate(v);
+
+const chipSx = (map, key, fallback) => {
+  const s = map[key] || map[fallback];
+  return {
+    backgroundColor: s.bg,
+    color: s.color,
+    fontSize: "12px",
+    fontWeight: 600,
+    fontFamily: "'DM Sans', sans-serif",
+    height: 23,
+    borderRadius: "6px",
+    border: "none",
+  };
 };
 
+const formatTimeAgo = (v) => {
+  if (!v) return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
+
+/* ─── Tooltip cell — same as vendor TipCell ─────────────── */
+function TipCell({ value }) {
+  const text = value || "-";
+  return (
+    <TableCell className="it-td it-td-soft it-td-tip">
+      <VtTooltip title={text !== "-" ? text : ""} placement="top" enterDelay={300} enterNextDelay={200}>
+        <span className="it-tip-inner">{text}</span>
+      </VtTooltip>
+    </TableCell>
+  );
+}
+
+/* ─── Columns definition ─────────────────────────────────── */
+const COLUMNS = [
+  { label: "Ticket #",      cls: "col-ticket"   },
+  { label: "Title",         cls: "col-title"    },
+  { label: "Category",      cls: "col-cat"      },
+  { label: "Support Level", cls: "col-support"  },
+  { label: "Sub Category",  cls: "col-subcat"   },
+  { label: "Vendor",        cls: "col-company"  },
+  { label: "Assigned To",   cls: "col-raised"   },
+  { label: "Priority",      cls: "col-priority" },
+  { label: "Status",        cls: "col-status"   },
+  { label: "Last Activity", cls: "col-created"  },
+  { label: "Actions",       cls: "col-actions"  },
+];
+
+/* ─── Actor colours for timeline ─────────────────────────── */
+const ACTOR_LABELS = {
+  it_user:     "User",
+  it_admin:    "IT Admin",
+  vendor:      "Vendor",
+  vendor_user: "Vendor",
+  system:      "System",
+};
+
+const ACTOR_COLOR = {
+  it_user:     { bg: "#dbeafe", color: "#1d4ed8" },
+  it_admin:    { bg: "#ede9fe", color: "#5b21b6" },
+  vendor:      { bg: "#d1fae5", color: "#065f46" },
+  vendor_user: { bg: "#d1fae5", color: "#065f46" },
+  system:      { bg: "#f1f5f9", color: "#475569" },
+};
+
+/* ─── Ticket Detail Modal ────────────────────────────────── */
+function TicketDetailModal({ ticket, activity, loading, onClose }) {
+  return (
+    <>
+      <div className="td-backdrop" onClick={onClose} />
+      <div className="td-modal">
+        <div className="td-modal-header">
+          <div className="td-modal-header-left">
+            <div className="td-ticket-num">
+              <Hash size={12} />
+              {ticket?.ticket_number || "—"}
+            </div>
+            <h2 className="td-modal-title">{ticket?.title || "Ticket Details"}</h2>
+          </div>
+          <button className="td-close-btn" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="td-modal-body">
+          {loading ? (
+            <div className="td-loading">
+              <div className="td-spinner" />
+              Loading details…
+            </div>
+          ) : (
+            <>
+              <div className="td-chips-row">
+                {(() => {
+                  const s = STATUS_CHIP[ticket?.status]   || STATUS_CHIP["Open"];
+                  const p = PRIORITY_CHIP[ticket?.priority] || PRIORITY_CHIP["Medium"];
+                  return (
+                    <>
+                      <span className="td-chip" style={{ background: s.bg, color: s.color }}>
+                        <span className="td-chip-dot" style={{ background: s.color }} />
+                        {ticket?.status || "Open"}
+                      </span>
+                      <span className="td-chip" style={{ background: p.bg, color: p.color }}>
+                        <AlertTriangle size={11} />
+                        {ticket?.priority || "Medium"}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="td-modal-cols">
+                <div className="td-modal-left">
+                  <div className="td-info-grid">
+                    <div className="td-info-item">
+                      <div className="td-info-label"><User size={11} /> Raised By</div>
+                      <div className="td-info-value">{ticket?.raised_by_name || "—"}</div>
+                      <div className="td-info-sub">{ticket?.raised_by_email || ""}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><Building2 size={11} /> Company</div>
+                      <div className="td-info-value">{ticket?.it_company || "—"}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><Wrench size={11} /> Vendor</div>
+                      <div className="td-info-value">{ticket?.vendor_company || "—"}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><User size={11} /> Assigned To</div>
+                      <div className="td-info-value">{ticket?.assigned_vendor_user || "Unassigned"}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><Tag size={11} /> Category</div>
+                      <div className="td-info-value">{ticket?.category || "—"}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><Monitor size={11} /> Sub Category</div>
+                      <div className="td-info-value">{ticket?.sub_category || "—"}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><Layers size={11} /> Support Level</div>
+                      <div className="td-info-value">{ticket?.support_level || "—"}</div>
+                    </div>
+                    <div className="td-info-item">
+                      <div className="td-info-label"><Calendar size={11} /> Raised On</div>
+                      <div className="td-info-value">{fmtDate(ticket?.created_at)}</div>
+                    </div>
+                  </div>
+                  <div className="td-section">
+                    <div className="td-section-title"><MessageSquare size={13} /> Description</div>
+                    <div className="td-description">{ticket?.description || "No description provided."}</div>
+                  </div>
+                </div>
+
+                <div className="td-modal-right">
+                  <div className="td-section-title" style={{ marginBottom: 12 }}>
+                    <Activity size={13} /> Activity
+                  </div>
+                  {activity.length === 0 ? (
+                    <div className="td-empty">No activity recorded yet.</div>
+                  ) : (
+                    <div className="td-timeline">
+                      {activity.map((item, idx) => {
+                        const actorKey   = item.actor_type || "system";
+                        const actorStyle = ACTOR_COLOR[actorKey] || ACTOR_COLOR.system;
+                        const actorLabel = ACTOR_LABELS[actorKey] || actorKey;
+                        const isLast     = idx === activity.length - 1;
+                        return (
+                          <div key={item.id || idx} className={`td-tl-item${isLast ? " last" : ""}`}>
+                            <div className="td-tl-left">
+                              <div className="td-tl-dot" style={{ background: actorStyle.color }} />
+                              {!isLast && <div className="td-tl-line" />}
+                            </div>
+                            <div className="td-tl-content">
+                              <div className="td-tl-header">
+                                <span className="td-tl-actor" style={{ background: actorStyle.bg, color: actorStyle.color }}>
+                                  {actorLabel}
+                                </span>
+                                <span className="td-tl-time">{formatTimeAgo(item.created_at)}</span>
+                              </div>
+                              <div className="td-tl-message">{item.message || "—"}</div>
+                              {(item.old_value || item.new_value) && (
+                                <div className="td-tl-change">
+                                  {item.old_value && <span className="td-tl-old">{item.old_value}</span>}
+                                  {item.old_value && item.new_value && <span className="td-tl-arrow">→</span>}
+                                  {item.new_value && <span className="td-tl-new">{item.new_value}</span>}
+                                </div>
+                              )}
+                              <div className="td-tl-date">{fmtDate(item.created_at)}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────────────── */
 export default function AdminTicketsPage() {
   const { auth, getAuthToken } = useAuth();
-  const token = getAuthToken() || auth?.authToken || null;
+  const token = getAuthToken?.() || auth?.authToken || null;
 
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [vendorFilter, setVendorFilter] = useState("All");
-  const [search, setSearch] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [activity, setActivity] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [tickets,        setTickets]       = useState([]);
+  const [loading,        setLoading]       = useState(true);
+  const [error,          setError]         = useState("");
+  const [statusFilter,   setStatus]        = useState("All");
+  const [priorityFilter, setPriority]      = useState("All");
+  const [search,         setSearch]        = useState("");
+  const [page,           setPage]          = useState(0);
+  const [pageSize,       setPageSize]      = useState(10);
+  const [modalOpen,      setModalOpen]     = useState(false);
+  const [selectedTicket, setSelectedTicket]= useState(null);
+  const [activity,       setActivity]      = useState([]);
+  const [detailLoading,  setDetailLoading] = useState(false);
+  const fetchedRef = useRef(null);
 
-  const formatDate = (d) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
+  /* ── Load ── */
   const loadTickets = useCallback(async () => {
+    if (!token) { setTickets([]); setLoading(false); return; }
+    setLoading(true); setError("");
     try {
-      const response = await axios.get("http://localhost:5000/api/tickets/admin/list", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTickets(response.data.tickets || []);
+      const response = await fetchItAdminTickets(token);
+      const raw = response?.tickets ?? response?.data?.tickets ?? [];
+      setTickets(Array.isArray(raw) ? raw : []);
     } catch (err) {
       Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
     } finally {
@@ -94,341 +328,249 @@ export default function AdminTicketsPage() {
     }
   }, [token]);
 
-  const loadUnreadCount = useCallback(async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/notifications/unread-count", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUnreadCount(response.data.unreadCount || 0);
-    } catch {
-      // silent
-    }
-  }, [token]);
-
-  const loadNotifications = useCallback(async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/notifications", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setNotifications(response.data.notifications || []);
-    } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
-    }
-  }, [token]);
-
   useEffect(() => {
-    if (!token) return;
+    if (!token) { fetchedRef.current = null; return; }
+    if (fetchedRef.current === token) return;
+    fetchedRef.current = token;
     loadTickets();
     loadUnreadCount();
   }, [token, loadTickets, loadUnreadCount]);
 
-  const total = tickets.length;
-  const open = tickets.filter((t) => t.status === "Open").length;
-  const inProgress = tickets.filter((t) => t.status === "In Progress").length;
-  const resolved = tickets.filter((t) => t.status === "Resolved").length;
-  const unclaimed = tickets.filter((t) => t.vendor_id === null).length;
-
-  const vendorOptions = useMemo(() => {
-    return ["All", ...new Set(tickets.map((t) => t.vendor_company).filter(Boolean))];
-  }, [tickets]);
-
-  const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
-      const matchesStatus = statusFilter === "All" || ticket.status === statusFilter;
-      const matchesVendor = vendorFilter === "All" || ticket.vendor_company === vendorFilter;
-      const q = search.trim().toLowerCase();
-      const matchesSearch =
+  /* ── Filter ── */
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return tickets.filter((t) => {
+      const matchQ =
         !q ||
-        String(ticket.ticket_number || "").toLowerCase().includes(q) ||
-        String(ticket.raised_by_name || "").toLowerCase().includes(q) ||
-        String(ticket.category || "").toLowerCase().includes(q);
-      return matchesStatus && matchesVendor && matchesSearch;
+        String(t.ticket_number  || "").toLowerCase().includes(q) ||
+        String(t.title          || "").toLowerCase().includes(q) ||
+        String(t.category       || "").toLowerCase().includes(q) ||
+        String(t.support_level  || "").toLowerCase().includes(q) ||
+        String(t.sub_category   || "").toLowerCase().includes(q) ||
+        String(t.vendor_company || "").toLowerCase().includes(q);
+      return (
+        matchQ &&
+        (statusFilter   === "All" || t.status   === statusFilter) &&
+        (priorityFilter === "All" || t.priority === priorityFilter)
+      );
     });
-  }, [tickets, statusFilter, vendorFilter, search]);
+  }, [tickets, search, statusFilter, priorityFilter]);
 
-  const openTicketDetail = async (ticket) => {
-    setSelectedTicket(ticket);
-    setDetailOpen(true);
-    setDetailLoading(true);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged      = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  const from       = filtered.length === 0 ? 0 : page * pageSize + 1;
+  const to         = Math.min((page + 1) * pageSize, filtered.length);
 
-    try {
-      const response = await axios.get(`http://localhost:5000/api/tickets/${ticket.id}/detail`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSelectedTicket(response.data.ticket);
-      setActivity(response.data.activity || []);
-    } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+  /* ── Stats ── */
+  const total    = tickets.length;
+  const open     = tickets.filter((t) => t.status   === "Open").length;
+  const inProg   = tickets.filter((t) => t.status   === "In Progress").length;
+  const crit     = tickets.filter((t) => t.priority === "Critical").length;
+  const resolved = tickets.filter((t) => t.status   === "Resolved").length;
 
-  const handleMarkRead = async (id) => {
-    try {
-      await axios.patch(
-        `http://localhost:5000/api/notifications/${id}/read`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await loadNotifications();
-      await loadUnreadCount();
-    } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await axios.patch(
-        "http://localhost:5000/api/notifications/read-all",
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await loadNotifications();
-      await loadUnreadCount();
-    } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
-    }
-  };
-
-  const toggleDrawer = async () => {
-    const opening = !drawerOpen;
-    setDrawerOpen(opening);
-    if (opening) {
-      await loadNotifications();
-    }
-  };
+  const chips = [
+    statusFilter   !== "All" && { k: "s", label: `Status: ${statusFilter}`,     clear: () => setStatus("All")   },
+    priorityFilter !== "All" && { k: "p", label: `Priority: ${priorityFilter}`, clear: () => setPriority("All") },
+  ].filter(Boolean);
 
   return (
-    <div className="page-wrapper">
+    <div className="it-page">
       <CustomerAdminNavbar />
 
-      <div className="page-header">
-        <div>
-          <h1>Ticket Overview</h1>
-          <p>Monitor all tickets raised by IT users.</p>
-        </div>
-        <div className="header-right">
-          <Badge badgeContent={unreadCount} color="error">
-            <IconButton onClick={toggleDrawer}>
-              <NotificationsIcon className="header-bell-icon" />
-            </IconButton>
-          </Badge>
-        </div>
-      </div>
+      <div className="it-content">
 
-      <div className="stats-row">
-        <div className="stat-card border-navy"><h2>{total}</h2><p>Total Tickets</p></div>
-        <div className="stat-card border-blue"><h2>{open}</h2><p>Open</p></div>
-        <div className="stat-card border-orange"><h2>{inProgress}</h2><p>In Progress</p></div>
-        <div className="stat-card border-green"><h2>{resolved}</h2><p>Resolved</p></div>
-        <div className="stat-card border-red"><h2>{unclaimed}</h2><p>Unclaimed</p></div>
-      </div>
-
-      <div className="filter-bar">
-        <div className="filter-chips">
-          {STATUS_FILTERS.map((item) => (
-            <Chip
-              key={item}
-              label={item}
-              onClick={() => setStatusFilter(item)}
-              className={`filter-chip${statusFilter === item ? " active" : ""}`}
-            />
-          ))}
-        </div>
-
-        <div className="filter-row">
-          <TextField
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            fullWidth
-            placeholder="Search by ticket number, raised by or category"
-          />
-          <Select value={vendorFilter} onChange={(event) => setVendorFilter(event.target.value)}>
-            {vendorOptions.map((vendor) => (
-              <MenuItem key={vendor} value={vendor}>{vendor}</MenuItem>
-            ))}
-          </Select>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading-wrapper">
-          <CircularProgress className="navy-spinner" />
-        </div>
-      ) : !Array.isArray(tickets) || tickets.length === 0 ? (
-        <div className="empty-state">No tickets found.</div>
-      ) : (
-        <TableContainer className="table-wrapper" component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell className="th-cell">Ticket No</TableCell>
-                <TableCell className="th-cell">Raised By</TableCell>
-                <TableCell className="th-cell">Company</TableCell>
-                <TableCell className="th-cell">Category</TableCell>
-                <TableCell className="th-cell">Vendor Assigned</TableCell>
-                <TableCell className="th-cell">Vendor User</TableCell>
-                <TableCell className="th-cell">Priority</TableCell>
-                <TableCell className="th-cell">Status</TableCell>
-                <TableCell className="th-cell">Support Level</TableCell>
-                <TableCell className="th-cell">Raised On</TableCell>
-                <TableCell className="th-cell">Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredTickets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={11} className="empty-state">No tickets found.</TableCell>
-                </TableRow>
-              ) : (
-                filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id}>
-                    <TableCell className="td-num">{ticket.ticket_number || "-"}</TableCell>
-                    <TableCell>{ticket.raised_by_name || "-"}</TableCell>
-                    <TableCell>{ticket.it_company || "-"}</TableCell>
-                    <TableCell>{ticket.category || "-"}</TableCell>
-                    <TableCell>
-                      {ticket.vendor_company ? ticket.vendor_company : <Chip label="Unassigned" className="unassigned-chip" size="small" />}
-                    </TableCell>
-                    <TableCell>
-                      {ticket.assigned_vendor_user ? ticket.assigned_vendor_user : <Chip label="Unassigned" className="unassigned-chip" size="small" />}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={ticket.priority || "Medium"}
-                        className={PRIORITY_CLASS[ticket.priority] || "priority-medium"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={ticket.status || "Open"}
-                        className={STATUS_CLASS[ticket.status] || "status-open"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={ticket.support_level || "L1"}
-                        className={SUPPORT_CLASS[ticket.support_level] || "support-l1"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{formatDate(ticket.created_at)}</TableCell>
-                    <TableCell>
-                      <Button className="view-btn" onClick={() => openTicketDetail(ticket)}>View Details</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>Ticket Detail</DialogTitle>
-        <DialogContent className="detail-content">
-          {detailLoading ? (
-            <div className="loading-wrapper">
-              <CircularProgress className="navy-spinner" />
+        {/* ── Header ── */}
+        <div className="it-header">
+          <div className="it-header-left">
+            <div className="it-badge">
+              <span className="it-badge-dot" />
+              Customer Portal
             </div>
-          ) : (
-            <div className="detail-grid">
-              <div className="detail-left">
-                <div className="detail-header">
-                  <div className="detail-num">{selectedTicket?.ticket_number || "-"}</div>
-                  <Chip
-                    label={selectedTicket?.status || "Open"}
-                    className={STATUS_CLASS[selectedTicket?.status] || "status-open"}
-                    size="small"
-                  />
-                </div>
-
-                <div className="detail-meta">
-                  <div><div className="meta-label">Category</div><div className="meta-value">{selectedTicket?.category || "-"}</div></div>
-                  <div><div className="meta-label">Sub Category</div><div className="meta-value">{selectedTicket?.sub_category || "-"}</div></div>
-                  <div><div className="meta-label">Support Level</div><div className="meta-value">{selectedTicket?.support_level || "-"}</div></div>
-                  <div><div className="meta-label">Priority</div><div className="meta-value">{selectedTicket?.priority || "-"}</div></div>
-                </div>
-
-                <h3 className="detail-title">{selectedTicket?.title || "-"}</h3>
-                <div className="desc-box">{selectedTicket?.description || "-"}</div>
-
-                <div className="raised-grid">
-                  <div><div className="meta-label">Raised By</div><div className="meta-value">{selectedTicket?.raised_by_name || "-"}</div></div>
-                  <div><div className="meta-label">Email</div><div className="meta-value">{selectedTicket?.raised_by_email || "-"}</div></div>
-                  <div><div className="meta-label">Company</div><div className="meta-value">{selectedTicket?.it_company || "-"}</div></div>
-                  <div><div className="meta-label">Raised On</div><div className="meta-value">{formatDate(selectedTicket?.created_at)}</div></div>
-                </div>
-              </div>
-
-              <div className="detail-right">
-                <div className="summary-box">
-                  <div className="summary-row"><span className="summary-label">Raised by</span><span className="summary-value">{selectedTicket?.raised_by_name || "-"} ({selectedTicket?.raised_by_email || "-"})</span></div>
-                  <div className="summary-row"><span className="summary-label">Vendor</span><span className="summary-value">{selectedTicket?.vendor_company || "Not assigned yet"}</span></div>
-                  <div className="summary-row"><span className="summary-label">Assigned to</span><span className="summary-value">{selectedTicket?.assigned_vendor_user || "Not assigned yet"}</span></div>
-                  <div className="summary-row"><span className="summary-label">Latest comment</span><span className="summary-value">{selectedTicket?.latest_comment || "-"}</span></div>
-                  <div className="summary-row"><span className="summary-label">Last activity</span><span className="summary-value">{formatDate(selectedTicket?.latest_activity_at)}</span></div>
-                </div>
-
-                <div className="activity-section">
-                  <h3>Activity Log</h3>
-                  <div className="activity-list">
-                    {activity.length === 0 ? (
-                      <div className="activity-empty">No activity found.</div>
-                    ) : (
-                      activity.map((item) => (
-                        <div className="activity-item" key={item.id}>
-                          <div className="activity-top">
-                            <span className={`actor-badge actor-${item.actor_type || "system"}`}>{item.actor_type || "system"}</span>
-                            <span className="activity-msg">{item.message || "-"}</span>
-                          </div>
-                          {(item.old_value || item.new_value) ? (
-                            <div className="activity-change">{item.old_value || "-"} -&gt; {item.new_value || "-"}</div>
-                          ) : null}
-                          <div className="activity-time">{formatDate(item.created_at)}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <div className={`notif-overlay${drawerOpen ? " open" : ""}`} onClick={toggleDrawer} />
-      <div className={`notif-drawer${drawerOpen ? " open" : ""}`}>
-        <div className="notif-header">
-          <div>
-            <h3>Notifications</h3>
-            <p>{unreadCount} unread</p>
+            <Typography className="it-title">
+              IT Admin&nbsp;<span className="it-title-hi">Tickets</span>
+            </Typography>
+            <Typography className="it-subtitle">
+              All tickets raised by IT users under your company.
+            </Typography>
           </div>
-          <Button onClick={handleMarkAllRead} className="mark-all-btn">Mark all read</Button>
+
+          <div className="it-stats">
+            {[
+              { n: total,    cls: "",      lbl: "Total"       },
+              { n: open,     cls: "amber", lbl: "Open"        },
+              { n: inProg,   cls: "amber", lbl: "In Progress" },
+              { n: crit,     cls: "red",   lbl: "Critical"    },
+              { n: resolved, cls: "green", lbl: "Resolved"    },
+            ].map((s) => (
+              <div className="it-stat" key={s.lbl}>
+                <div className={`it-stat-n ${s.cls}`}>{s.n}</div>
+                <div className="it-stat-l">{s.lbl}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="notif-list">
-          {notifications.length === 0 ? (
-            <div className="notif-empty">No notifications yet.</div>
-          ) : notifications.map((item) => (
-            <div
-              key={item.id}
-              className={`notif-item${item.is_read ? "" : " unread"}`}
-              onClick={() => handleMarkRead(item.id)}
-            >
-              <p className="notif-msg">{item.message}</p>
-              <div className="notif-meta">
-                <span>{item.ticket_number} � {item.category}</span>
-                <span>{formatDate(item.created_at)}</span>
-                {!item.is_read && <span className="unread-dot" />}
+
+        {/* ── Toolbar ── */}
+        <div className="it-toolbar">
+          <div className="it-toolbar-left">
+            <div className="it-field-group it-search">
+              <p className="it-label">Search</p>
+              <TextField
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Ticket #, title, category, vendor…"
+                size="small"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="it-toolbar-right">
+            <div className="it-field-group it-select">
+              <p className="it-label">Status</p>
+              <FormControl fullWidth size="small">
+                <Select value={statusFilter} onChange={(e) => setStatus(e.target.value)} MenuProps={{ className: "it-menu" }}>
+                  {STATUS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </div>
+
+            <div className="it-field-group it-select">
+              <p className="it-label">Priority</p>
+              <FormControl fullWidth size="small">
+                <Select value={priorityFilter} onChange={(e) => setPriority(e.target.value)} MenuProps={{ className: "it-menu" }}>
+                  {PRIORITY_OPTIONS.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Active chips ── */}
+        {chips.length > 0 && (
+          <div className="it-chips">
+            {chips.map((c) => (
+              <span key={c.k} className="it-chip" onClick={c.clear}>
+                {c.label}<span className="it-chip-x">×</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
+
+        {/* ── Table ── */}
+        {loading ? (
+          <div className="it-loading"><CircularProgress /></div>
+        ) : (
+          <Paper className="it-card" variant="outlined">
+            <div className="it-scroll">
+              <Table className="it-table" size="small">
+                <colgroup>
+                  {COLUMNS.map((c) => <col key={c.label} className={c.cls} />)}
+                </colgroup>
+
+                <TableHead className="it-thead">
+                  <TableRow>
+                    {COLUMNS.map((c) => (
+                      <TableCell key={c.label} className="it-th">{c.label}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {paged.length === 0 ? (
+                    <TableRow className="it-empty">
+                      <TableCell colSpan={COLUMNS.length}>
+                        <div style={{ fontSize: 26, marginBottom: 8, opacity: 0.16 }}>🎫</div>
+                        No tickets match your filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paged.map((t, i) => (
+                      <TableRow key={t.id} className="it-tr" style={{ animationDelay: `${i * 20}ms` }}>
+                        <TableCell className="it-td it-td-id">{t.ticket_number || "-"}</TableCell>
+                        <TableCell className="it-td" title={t.title}>{t.title || "-"}</TableCell>
+                        <TipCell value={t.category} />
+                        <TableCell className="it-td it-td-soft">{t.support_level || "-"}</TableCell>
+                        <TipCell value={t.sub_category} />
+                        <TableCell className="it-td">{t.vendor_company || "-"}</TableCell>
+                        <TableCell className="it-td it-td-soft">{t.assigned_vendor_user || "Unassigned"}</TableCell>
+                        <TableCell className="it-td">
+                          <Chip size="small" label={t.priority || "-"} sx={chipSx(PRIORITY_CHIP, t.priority, "Medium")} />
+                        </TableCell>
+                        <TableCell className="it-td">
+                          <Chip size="small" label={t.status || "-"} sx={chipSx(STATUS_CHIP, t.status, "Open")} />
+                        </TableCell>
+                        <TableCell className="it-td it-td-soft">{fmtDate(t.latest_activity_at || t.updated_at || t.created_at)}</TableCell>
+                        <TableCell className="it-td">
+                          <button className="it-view-btn" onClick={() => openDetail(t)}>
+                            <Eye size={15} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* ── Footer ── */}
+            <div className="it-footer">
+              <div className="it-footer-left">
+                <span className="it-rows-label">Rows per page:</span>
+                <select
+                  className="it-rows-select"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                >
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="it-footer-right">
+                <span className="it-count">
+                  {filtered.length === 0 ? "0–0 of 0" : `${from}–${to} of ${filtered.length}`}
+                </span>
+                <button
+                  className="it-nav-btn"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  className="it-nav-btn"
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+          </Paper>
+        )}
       </div>
+
+      {/* ── Detail Modal ── */}
+      {modalOpen && (
+        <TicketDetailModal
+          ticket={selectedTicket}
+          activity={activity}
+          loading={detailLoading}
+          onClose={() => { setModalOpen(false); setSelectedTicket(null); setActivity([]); }}
+        />
+      )}
     </div>
   );
 }

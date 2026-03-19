@@ -7,7 +7,6 @@ import {
   FormControl,
   InputAdornment,
   MenuItem,
-  Pagination,
   Paper,
   Select,
   Table,
@@ -22,6 +21,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getVendorTickets } from "@/services/ticketService";
 import "./vendorTicketsPage.css";
 
@@ -29,9 +29,7 @@ import "./vendorTicketsPage.css";
 const VtTooltip = styled(({ className, ...props }) => (
   <Tooltip {...props} arrow classes={{ popper: className }} />
 ))(({ theme }) => ({
-  [`& .${tooltipClasses.arrow}`]: {
-    color: "#1e293b",
-  },
+  [`& .${tooltipClasses.arrow}`]: { color: "#1e293b" },
   [`& .${tooltipClasses.tooltip}`]: {
     backgroundColor: "#1e293b",
     color: "#f1f5f9",
@@ -65,7 +63,7 @@ const PRIORITY_CHIP = {
 
 const STATUS_OPTIONS   = ["All","Open","Assigned","In Progress","Escalated","Resolved","Closed"];
 const PRIORITY_OPTIONS = ["All","Low","Medium","High","Critical"];
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 
 /* ─── Helpers ────────────────────────────────────────────── */
 const fmtDate = (v) =>
@@ -93,12 +91,7 @@ function TipCell({ value }) {
   const text = value || "-";
   return (
     <TableCell className="vt-td vt-td-soft vt-td-tip">
-      <VtTooltip
-        title={text !== "-" ? text : ""}
-        placement="top"
-        enterDelay={300}
-        enterNextDelay={200}
-      >
+      <VtTooltip title={text !== "-" ? text : ""} placement="top" enterDelay={300} enterNextDelay={200}>
         <span className="vt-tip-inner">{text}</span>
       </VtTooltip>
     </TableCell>
@@ -127,7 +120,8 @@ export default function VendorAdminTicketsPage() {
   const [search, setSearch]           = useState("");
   const [statusFilter, setStatus]     = useState("All");
   const [priorityFilter, setPriority] = useState("All");
-  const [page, setPage]               = useState(1);
+  const [page, setPage]               = useState(0); // 0-indexed like DataGrid
+  const [pageSize, setPageSize]       = useState(10);
 
   useEffect(() => {
     let live = true;
@@ -141,7 +135,7 @@ export default function VendorAdminTicketsPage() {
     return () => { live = false; };
   }, []);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, priorityFilter]);
+  useEffect(() => { setPage(0); }, [search, statusFilter, priorityFilter, pageSize]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -151,6 +145,8 @@ export default function VendorAdminTicketsPage() {
         String(t.ticket_number  || "").toLowerCase().includes(q) ||
         String(t.title          || "").toLowerCase().includes(q) ||
         String(t.category       || "").toLowerCase().includes(q) ||
+        String(t.support_level  || "").toLowerCase().includes(q) ||
+        String(t.sub_category   || "").toLowerCase().includes(q) ||
         String(t.raised_by_name || "").toLowerCase().includes(q);
       return (
         matchQ &&
@@ -160,8 +156,11 @@ export default function VendorAdminTicketsPage() {
     });
   }, [tickets, search, statusFilter, priorityFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged      = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged      = filtered.slice(page * pageSize, (page + 1) * pageSize);
+
+  const from = filtered.length === 0 ? 0 : page * pageSize + 1;
+  const to   = Math.min((page + 1) * pageSize, filtered.length);
 
   const total    = tickets.length;
   const open     = tickets.filter((t) => t.status   === "Open").length;
@@ -170,8 +169,8 @@ export default function VendorAdminTicketsPage() {
   const resolved = tickets.filter((t) => t.status   === "Resolved").length;
 
   const chips = [
-    statusFilter   !== "All" && { k:"s", label:`Status: ${statusFilter}`,     clear:()=>setStatus("All")   },
-    priorityFilter !== "All" && { k:"p", label:`Priority: ${priorityFilter}`, clear:()=>setPriority("All") },
+    statusFilter   !== "All" && { k: "s", label: `Status: ${statusFilter}`,     clear: () => setStatus("All")   },
+    priorityFilter !== "All" && { k: "p", label: `Priority: ${priorityFilter}`, clear: () => setPriority("All") },
   ].filter(Boolean);
 
   return (
@@ -208,20 +207,15 @@ export default function VendorAdminTicketsPage() {
         </div>
       </div>
 
-      {/* ── Toolbar ──
-           ONLY CHANGE: search wrapped in .vt-toolbar-left,
-           Status + Priority wrapped in .vt-toolbar-right
-      ── */}
-      <div style={{display:"flex",justifyContent:"space-between"}}>
-
-        {/* LEFT — search */}
+      {/* ── Toolbar ── */}
+      <div className="vt-toolbar">
         <div className="vt-toolbar-left">
           <div className="vt-field-group vt-search">
             <p className="vt-label">Search</p>
             <TextField
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ticket, title, category, raised by…"
+              placeholder="Search"
               size="small"
               fullWidth
               InputProps={{
@@ -235,19 +229,12 @@ export default function VendorAdminTicketsPage() {
           </div>
         </div>
 
-        {/* RIGHT — Status + Priority pinned to right edge */}
-        <div style={{display:"flex",gap:"25px",position:"relative",bottom:"3px"}}>
+        <div className="vt-toolbar-right">
           <div className="vt-field-group vt-select">
             <p className="vt-label">Status</p>
             <FormControl fullWidth size="small">
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatus(e.target.value)}
-                MenuProps={{ className: "vt-menu" }}
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <MenuItem key={s} value={s}>{s}</MenuItem>
-                ))}
+              <Select value={statusFilter} onChange={(e) => setStatus(e.target.value)} MenuProps={{ className: "vt-menu" }}>
+                {STATUS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
             </FormControl>
           </div>
@@ -255,19 +242,12 @@ export default function VendorAdminTicketsPage() {
           <div className="vt-field-group vt-select">
             <p className="vt-label">Priority</p>
             <FormControl fullWidth size="small">
-              <Select
-                value={priorityFilter}
-                onChange={(e) => setPriority(e.target.value)}
-                MenuProps={{ className: "vt-menu" }}
-              >
-                {PRIORITY_OPTIONS.map((p) => (
-                  <MenuItem key={p} value={p}>{p}</MenuItem>
-                ))}
+              <Select value={priorityFilter} onChange={(e) => setPriority(e.target.value)} MenuProps={{ className: "vt-menu" }}>
+                {PRIORITY_OPTIONS.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
               </Select>
             </FormControl>
           </div>
         </div>
-
       </div>
 
       {/* ── Active chips ── */}
@@ -289,17 +269,13 @@ export default function VendorAdminTicketsPage() {
           <div className="vt-scroll">
             <Table className="vt-table" size="small">
               <colgroup>
-                {COLUMNS.map((c) => (
-                  <col key={c.label} className={c.cls} />
-                ))}
+                {COLUMNS.map((c) => <col key={c.label} className={c.cls} />)}
               </colgroup>
 
               <TableHead className="vt-thead">
                 <TableRow>
                   {COLUMNS.map((c) => (
-                    <TableCell key={c.label} className="vt-th">
-                      {c.label}
-                    </TableCell>
+                    <TableCell key={c.label} className="vt-th">{c.label}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
@@ -314,42 +290,22 @@ export default function VendorAdminTicketsPage() {
                   </TableRow>
                 ) : (
                   paged.map((t, i) => (
-                    <TableRow
-                      key={t.id}
-                      className="vt-tr"
-                      style={{ animationDelay: `${i * 20}ms` }}
-                    >
-                      <TableCell className="vt-td vt-td-id">
-                        {t.ticket_number || "-"}
-                      </TableCell>
-                      <TableCell className="vt-td" title={t.title}>
-                        {t.title || "-"}
-                      </TableCell>
+                    <TableRow key={t.id} className="vt-tr" style={{ animationDelay: `${i * 20}ms` }}>
+                      <TableCell className="vt-td vt-td-id">{t.ticket_number || "-"}</TableCell>
+                      <TableCell className="vt-td" title={t.title}>{t.title || "-"}</TableCell>
                       <TipCell value={t.category} />
-                      <TableCell className="vt-td vt-td-soft">
-                        {t.support_level || "-"}
-                      </TableCell>
+                      <TableCell className="vt-td vt-td-soft">{t.support_level || "-"}</TableCell>
                       <TipCell value={t.sub_category} />
+                      <TableCell className="vt-td">{t.raised_by_name || "-"}</TableCell>
+                      <TableCell className="vt-td vt-td-soft" title={t.raised_by_email}>{t.raised_by_email || "-"}</TableCell>
+                      <TableCell className="vt-td">{t.it_company || "-"}</TableCell>
                       <TableCell className="vt-td">
-                        {t.raised_by_name || "-"}
-                      </TableCell>
-                      <TableCell className="vt-td vt-td-soft" title={t.raised_by_email}>
-                        {t.raised_by_email || "-"}
-                      </TableCell>
-                      <TableCell className="vt-td">
-                        {t.it_company || "-"}
+                        <Chip size="small" label={t.priority || "-"} sx={chipSx(PRIORITY_CHIP, t.priority, "Medium")} />
                       </TableCell>
                       <TableCell className="vt-td">
-                        <Chip size="small" label={t.priority || "-"}
-                          sx={chipSx(PRIORITY_CHIP, t.priority, "Medium")} />
+                        <Chip size="small" label={t.status || "-"} sx={chipSx(STATUS_CHIP, t.status, "Open")} />
                       </TableCell>
-                      <TableCell className="vt-td">
-                        <Chip size="small" label={t.status || "-"}
-                          sx={chipSx(STATUS_CHIP, t.status, "Open")} />
-                      </TableCell>
-                      <TableCell className="vt-td vt-td-soft">
-                        {fmtDate(t.created_at)}
-                      </TableCell>
+                      <TableCell className="vt-td vt-td-soft">{fmtDate(t.created_at)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -357,24 +313,42 @@ export default function VendorAdminTicketsPage() {
             </Table>
           </div>
 
-          {/* Footer */}
+          {/* ── DataGrid-style footer ── */}
           <div className="vt-footer">
-            <Typography className="vt-count">
-              {filtered.length === 0
-                ? "No results"
-                : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(
-                    page * PAGE_SIZE, filtered.length
-                  )} of ${filtered.length} tickets`}
-            </Typography>
-            <Pagination
-              className="vt-pages"
-              count={totalPages}
-              page={page}
-              onChange={(_, v) => setPage(v)}
-              size="small"
-              shape="rounded"
-              variant="outlined"
-            />
+            <div className="vt-footer-left">
+              <span className="vt-rows-label">Rows per page:</span>
+              <select
+                className="vt-rows-select"
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="vt-footer-right">
+              <span className="vt-count">
+                {filtered.length === 0 ? "0–0 of 0" : `${from}–${to} of ${filtered.length}`}
+              </span>
+              <button
+                className="vt-nav-btn"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                className="vt-nav-btn"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                aria-label="Next page"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </Paper>
       )}
