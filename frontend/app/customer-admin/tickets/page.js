@@ -1,75 +1,56 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import Swal from "sweetalert2";
 import {
-  Alert,
-  Box,
+  Badge,
   Button,
   Chip,
   CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
-  FormControl,
-  InputLabel,
+  IconButton,
   MenuItem,
   Select,
-  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
-  Typography,
+  Paper,
 } from "@mui/material";
-import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useAuth } from "@/app/contexts/AuthContext";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
-import { apiRequest } from "@/app/services/apiClient";
-import { fetchItAdminTickets } from "@/app/services/customerAdminService";
 import "./AdminTickets.css";
 
-const STATUS_OPTIONS = ["All", "Open", "Assigned", "In Progress", "Escalated", "Resolved", "Closed"];
-const PRIORITY_OPTIONS = ["All", "High", "Medium", "Low"];
+const STATUS_OPTIONS = ["Open", "Assigned", "In Progress", "Escalated", "Resolved", "Closed"];
+const STATUS_FILTERS = ["All", ...STATUS_OPTIONS];
 
-const PRIORITY_ORDER = { High: 3, Medium: 2, Low: 1 };
-const STATUS_ORDER = {
-  Open: 1,
-  Assigned: 2,
-  "In Progress": 3,
-  Escalated: 4,
-  Resolved: 5,
-  Closed: 6,
+const PRIORITY_CLASS = {
+  Low: "priority-low",
+  Medium: "priority-medium",
+  High: "priority-high",
+  Critical: "priority-critical",
 };
 
-const getPriorityColor = (priority) => {
-  if (priority === "High") return "error";
-  if (priority === "Medium") return "warning";
-  if (priority === "Low") return "success";
-  return "default";
+const STATUS_CLASS = {
+  Open: "status-open",
+  Assigned: "status-assigned",
+  "In Progress": "status-progress",
+  Escalated: "status-escalated",
+  Resolved: "status-resolved",
+  Closed: "status-closed",
 };
 
-const getStatusColor = (status) => {
-  if (status === "In Progress") return "info";
-  if (status === "Resolved") return "success";
-  if (status === "Closed") return "default";
-  if (status === "Escalated") return "error";
-  return "default";
-};
-
-const toDateTime = (value) => {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const formatDate = (value) => {
-  const date = toDateTime(value);
-  if (!date) return "-";
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const SUPPORT_CLASS = {
+  L1: "support-l1",
+  L2: "support-l2",
+  L3: "support-l3",
 };
 
 export default function AdminTicketsPage() {
@@ -78,326 +59,376 @@ export default function AdminTicketsPage() {
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [priorityFilter, setPriorityFilter] = useState("All");
-  const [dateFilter, setDateFilter] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
-  const [sortModel, setSortModel] = useState([{ field: "createdAt", sort: "desc" }]);
+  const [vendorFilter, setVendorFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [activity, setActivity] = useState([]);
-  const fetchedTokenRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput.trim().toLowerCase());
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const formatDate = (d) => {
+    if (!d) return "-";
+    return new Date(d).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const loadTickets = useCallback(async () => {
-    if (!token) {
-      setTickets([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
     try {
-      const response = await fetchItAdminTickets(token);
-      setTickets(Array.isArray(response?.tickets) ? response.tickets : []);
+      const response = await axios.get("http://localhost:5000/api/tickets/admin/list", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTickets(response.data.tickets || []);
     } catch (err) {
-      setError(err.message || "Failed to load tickets.");
-      setTickets([]);
+      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
     } finally {
       setLoading(false);
     }
   }, [token]);
 
-  useEffect(() => {
-    if (!token) {
-      fetchedTokenRef.current = null;
-      return;
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/notifications/unread-count", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUnreadCount(response.data.unreadCount || 0);
+    } catch {
+      // silent
     }
+  }, [token]);
 
-    if (fetchedTokenRef.current === token) return;
-    fetchedTokenRef.current = token;
+  const loadNotifications = useCallback(async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications(response.data.notifications || []);
+    } catch (err) {
+      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
     loadTickets();
-  }, [token, loadTickets]);
+    loadUnreadCount();
+  }, [token, loadTickets, loadUnreadCount]);
 
-  const filteredRows = useMemo(() => {
-    return tickets
-      .filter((ticket) => {
-        const createdAt = toDateTime(ticket.created_at);
-        const dateValue = createdAt ? createdAt.toISOString().slice(0, 10) : "";
+  const total = tickets.length;
+  const open = tickets.filter((t) => t.status === "Open").length;
+  const inProgress = tickets.filter((t) => t.status === "In Progress").length;
+  const resolved = tickets.filter((t) => t.status === "Resolved").length;
+  const unclaimed = tickets.filter((t) => t.vendor_id === null).length;
 
-        const matchesStatus = statusFilter === "All" || ticket.status === statusFilter;
-        const matchesPriority = priorityFilter === "All" || ticket.priority === priorityFilter;
-        const matchesDate = !dateFilter || dateValue === dateFilter;
-        const matchesSearch =
-          !debouncedSearch ||
-          String(ticket.ticket_number || "").toLowerCase().includes(debouncedSearch) ||
-          String(ticket.title || "").toLowerCase().includes(debouncedSearch) ||
-          String(ticket.vendor_company || "").toLowerCase().includes(debouncedSearch);
+  const vendorOptions = useMemo(() => {
+    return ["All", ...new Set(tickets.map((t) => t.vendor_company).filter(Boolean))];
+  }, [tickets]);
 
-        return matchesStatus && matchesPriority && matchesDate && matchesSearch;
-      })
-      .map((ticket) => ({
-        id: ticket.id,
-        ticketNumber: ticket.ticket_number || "-",
-        title: ticket.title || "-",
-        category: ticket.category || "-",
-        vendorCompany: ticket.vendor_company || "-",
-        assignedVendorUser: ticket.assigned_vendor_user || "Unassigned",
-        priority: ticket.priority || "Medium",
-        status: ticket.status || "Open",
-        latestComment: ticket.latest_comment || "-",
-        lastActivityTime: ticket.latest_activity_at || ticket.updated_at || ticket.created_at,
-        createdAt: ticket.created_at,
-        raw: ticket,
-      }));
-  }, [tickets, statusFilter, priorityFilter, dateFilter, debouncedSearch]);
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      const matchesStatus = statusFilter === "All" || ticket.status === statusFilter;
+      const matchesVendor = vendorFilter === "All" || ticket.vendor_company === vendorFilter;
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        String(ticket.ticket_number || "").toLowerCase().includes(q) ||
+        String(ticket.raised_by_name || "").toLowerCase().includes(q) ||
+        String(ticket.category || "").toLowerCase().includes(q);
+      return matchesStatus && matchesVendor && matchesSearch;
+    });
+  }, [tickets, statusFilter, vendorFilter, search]);
 
-  const openTicketDetail = useCallback(async (row) => {
-    if (!token || !row?.id) return;
+  const openTicketDetail = async (ticket) => {
+    setSelectedTicket(ticket);
     setDetailOpen(true);
     setDetailLoading(true);
 
     try {
-      const response = await apiRequest({
-        path: `/api/tickets/${row.id}/detail`,
-        token,
+      const response = await axios.get(`http://localhost:5000/api/tickets/${ticket.id}/detail`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setSelectedTicket(response?.ticket || null);
-      setActivity(Array.isArray(response?.activity) ? response.activity : []);
-    } catch {
-      setSelectedTicket(row.raw || null);
-      setActivity([]);
+      setSelectedTicket(response.data.ticket);
+      setActivity(response.data.activity || []);
+    } catch (err) {
+      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
     } finally {
       setDetailLoading(false);
     }
-  }, [token]);
+  };
 
-  const columns = useMemo(
-    () => [
-      { field: "ticketNumber", headerName: "Ticket Number", flex: 1, minWidth: 150 },
-      { field: "title", headerName: "Title", flex: 1.3, minWidth: 200 },
-      { field: "category", headerName: "Category", flex: 1, minWidth: 130 },
-      { field: "vendorCompany", headerName: "Vendor Company", flex: 1.2, minWidth: 180 },
-      { field: "assignedVendorUser", headerName: "Assigned Vendor User", flex: 1.2, minWidth: 190 },
-      {
-        field: "priority",
-        headerName: "Priority",
-        minWidth: 120,
-        flex: 0.8,
-        sortComparator: (a, b) => (PRIORITY_ORDER[a] || 0) - (PRIORITY_ORDER[b] || 0),
-        renderCell: (params) => (
-          <Chip
-            label={params.value}
-            size="small"
-            color={getPriorityColor(params.value)}
-            variant="outlined"
-          />
-        ),
-      },
-      {
-        field: "status",
-        headerName: "Status",
-        minWidth: 130,
-        flex: 0.9,
-        sortComparator: (a, b) => (STATUS_ORDER[a] || 0) - (STATUS_ORDER[b] || 0),
-        renderCell: (params) => (
-          <Chip label={params.value} size="small" color={getStatusColor(params.value)} variant="filled" />
-        ),
-      },
-      { field: "latestComment", headerName: "Latest Comment", flex: 1.4, minWidth: 220 },
-      {
-        field: "lastActivityTime",
-        headerName: "Last Activity Time",
-        flex: 1,
-        minWidth: 170,
-        renderCell: (params) => formatDate(params.value),
-      },
-      {
-        field: "actions",
-        type: "actions",
-        headerName: "Actions",
-        minWidth: 100,
-        getActions: (params) => [
-          <GridActionsCellItem
-            key={`view-${params.id}`}
-            icon={<VisibilityIcon fontSize="small" />}
-            label="View"
-            onClick={() => openTicketDetail(params.row)}
-          />,
-        ],
-      },
-    ],
-    [openTicketDetail]
-  );
+  const handleMarkRead = async (id) => {
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/notifications/${id}/read`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await loadNotifications();
+      await loadUnreadCount();
+    } catch (err) {
+      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await axios.patch(
+        "http://localhost:5000/api/notifications/read-all",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await loadNotifications();
+      await loadUnreadCount();
+    } catch (err) {
+      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
+    }
+  };
+
+  const toggleDrawer = async () => {
+    const opening = !drawerOpen;
+    setDrawerOpen(opening);
+    if (opening) {
+      await loadNotifications();
+    }
+  };
 
   return (
-    <Box className="it-admin-tickets-page">
+    <div className="page-wrapper">
       <CustomerAdminNavbar />
 
-      <Box className="it-admin-content">
-        <Typography variant="h4" className="it-admin-title">
-          IT Admin Tickets
-        </Typography>
-        <Typography className="it-admin-subtitle">
-          All tickets raised by IT users under your company.
-        </Typography>
+      <div className="page-header">
+        <div>
+          <h1>Ticket Overview</h1>
+          <p>Monitor all tickets raised by IT users.</p>
+        </div>
+        <div className="header-right">
+          <Badge badgeContent={unreadCount} color="error">
+            <IconButton onClick={toggleDrawer}>
+              <NotificationsIcon className="header-bell-icon" />
+            </IconButton>
+          </Badge>
+        </div>
+      </div>
 
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} className="it-admin-filters">
+      <div className="stats-row">
+        <div className="stat-card border-navy"><h2>{total}</h2><p>Total Tickets</p></div>
+        <div className="stat-card border-blue"><h2>{open}</h2><p>Open</p></div>
+        <div className="stat-card border-orange"><h2>{inProgress}</h2><p>In Progress</p></div>
+        <div className="stat-card border-green"><h2>{resolved}</h2><p>Resolved</p></div>
+        <div className="stat-card border-red"><h2>{unclaimed}</h2><p>Unclaimed</p></div>
+      </div>
+
+      <div className="filter-bar">
+        <div className="filter-chips">
+          {STATUS_FILTERS.map((item) => (
+            <Chip
+              key={item}
+              label={item}
+              onClick={() => setStatusFilter(item)}
+              className={`filter-chip${statusFilter === item ? " active" : ""}`}
+            />
+          ))}
+        </div>
+
+        <div className="filter-row">
           <TextField
-            label="Search"
-            placeholder="Ticket number, title, vendor company"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
             fullWidth
+            placeholder="Search by ticket number, raised by or category"
           />
+          <Select value={vendorFilter} onChange={(event) => setVendorFilter(event.target.value)}>
+            {vendorOptions.map((vendor) => (
+              <MenuItem key={vendor} value={vendor}>{vendor}</MenuItem>
+            ))}
+          </Select>
+        </div>
+      </div>
 
-          <FormControl size="small" sx={{ minWidth: 180 }}>
-            <InputLabel>Status</InputLabel>
-            <Select value={statusFilter} label="Status" onChange={(event) => setStatusFilter(event.target.value)}>
-              {STATUS_OPTIONS.map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+      {loading ? (
+        <div className="loading-wrapper">
+          <CircularProgress className="navy-spinner" />
+        </div>
+      ) : !Array.isArray(tickets) || tickets.length === 0 ? (
+        <div className="empty-state">No tickets found.</div>
+      ) : (
+        <TableContainer className="table-wrapper" component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell className="th-cell">Ticket No</TableCell>
+                <TableCell className="th-cell">Raised By</TableCell>
+                <TableCell className="th-cell">Company</TableCell>
+                <TableCell className="th-cell">Category</TableCell>
+                <TableCell className="th-cell">Vendor Assigned</TableCell>
+                <TableCell className="th-cell">Vendor User</TableCell>
+                <TableCell className="th-cell">Priority</TableCell>
+                <TableCell className="th-cell">Status</TableCell>
+                <TableCell className="th-cell">Support Level</TableCell>
+                <TableCell className="th-cell">Raised On</TableCell>
+                <TableCell className="th-cell">Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredTickets.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="empty-state">No tickets found.</TableCell>
+                </TableRow>
+              ) : (
+                filteredTickets.map((ticket) => (
+                  <TableRow key={ticket.id}>
+                    <TableCell className="td-num">{ticket.ticket_number || "-"}</TableCell>
+                    <TableCell>{ticket.raised_by_name || "-"}</TableCell>
+                    <TableCell>{ticket.it_company || "-"}</TableCell>
+                    <TableCell>{ticket.category || "-"}</TableCell>
+                    <TableCell>
+                      {ticket.vendor_company ? ticket.vendor_company : <Chip label="Unassigned" className="unassigned-chip" size="small" />}
+                    </TableCell>
+                    <TableCell>
+                      {ticket.assigned_vendor_user ? ticket.assigned_vendor_user : <Chip label="Unassigned" className="unassigned-chip" size="small" />}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={ticket.priority || "Medium"}
+                        className={PRIORITY_CLASS[ticket.priority] || "priority-medium"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={ticket.status || "Open"}
+                        className={STATUS_CLASS[ticket.status] || "status-open"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={ticket.support_level || "L1"}
+                        className={SUPPORT_CLASS[ticket.support_level] || "support-l1"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{formatDate(ticket.created_at)}</TableCell>
+                    <TableCell>
+                      <Button className="view-btn" onClick={() => openTicketDetail(ticket)}>View Details</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={priorityFilter}
-              label="Priority"
-              onChange={(event) => setPriorityFilter(event.target.value)}
-            >
-              {PRIORITY_OPTIONS.map((priority) => (
-                <MenuItem key={priority} value={priority}>
-                  {priority}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            size="small"
-            type="date"
-            label="Created Date"
-            InputLabelProps={{ shrink: true }}
-            value={dateFilter}
-            onChange={(event) => setDateFilter(event.target.value)}
-            sx={{ minWidth: 180 }}
-          />
-
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setStatusFilter("All");
-              setPriorityFilter("All");
-              setDateFilter("");
-              setSearchInput("");
-            }}
-          >
-            Reset
-          </Button>
-        </Stack>
-
-        {error ? <Alert severity="error">{error}</Alert> : null}
-
-        <Box className="it-admin-grid-wrapper">
-          <DataGrid
-            rows={filteredRows}
-            columns={columns}
-            loading={loading}
-            disableRowSelectionOnClick
-            pagination
-            paginationModel={paginationModel}
-            onPaginationModelChange={setPaginationModel}
-            pageSizeOptions={[10, 25, 50]}
-            sortModel={sortModel}
-            onSortModelChange={setSortModel}
-            getRowHeight={() => "auto"}
-            sx={{
-              border: 0,
-              "& .MuiDataGrid-columnHeaders": { backgroundColor: "#f8fafc", fontWeight: 600 },
-              "& .MuiDataGrid-cell": { alignItems: "center", py: 1 },
-              "& .MuiDataGrid-overlay": { fontFamily: "DM Sans, sans-serif" },
-            }}
-            slots={{
-              noRowsOverlay: () => (
-                <Box className="it-admin-empty-state">No tickets found for the selected filters.</Box>
-              ),
-              loadingOverlay: () => (
-                <Box className="it-admin-loading-state">
-                  <CircularProgress size={24} />
-                  <Typography>Loading tickets...</Typography>
-                </Box>
-              ),
-            }}
-          />
-        </Box>
-      </Box>
-
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Ticket Details</DialogTitle>
-        <DialogContent>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>Ticket Detail</DialogTitle>
+        <DialogContent className="detail-content">
           {detailLoading ? (
-            <Box className="it-admin-loading-state">
-              <CircularProgress size={24} />
-              <Typography>Loading ticket details...</Typography>
-            </Box>
+            <div className="loading-wrapper">
+              <CircularProgress className="navy-spinner" />
+            </div>
           ) : (
-            <Stack spacing={2}>
-              <Typography>
-                <strong>Ticket:</strong> {selectedTicket?.ticket_number || "-"}
-              </Typography>
-              <Typography>
-                <strong>Title:</strong> {selectedTicket?.title || "-"}
-              </Typography>
-              <Typography>
-                <strong>Description:</strong> {selectedTicket?.description || "-"}
-              </Typography>
-              <Typography>
-                <strong>Vendor Company:</strong> {selectedTicket?.vendor_company || "-"}
-              </Typography>
-              <Typography>
-                <strong>Latest Comment:</strong> {selectedTicket?.latest_comment || "-"}
-              </Typography>
+            <div className="detail-grid">
+              <div className="detail-left">
+                <div className="detail-header">
+                  <div className="detail-num">{selectedTicket?.ticket_number || "-"}</div>
+                  <Chip
+                    label={selectedTicket?.status || "Open"}
+                    className={STATUS_CLASS[selectedTicket?.status] || "status-open"}
+                    size="small"
+                  />
+                </div>
 
-              <Box>
-                <Typography fontWeight={700} sx={{ mb: 1 }}>
-                  Activity
-                </Typography>
-                {activity.length === 0 ? (
-                  <Typography color="text.secondary">No activity found.</Typography>
-                ) : (
-                  <Stack spacing={1}>
-                    {activity.map((item) => (
-                      <Box key={item.id} className="it-admin-activity-item">
-                        <Typography fontWeight={600}>{item.message || "-"}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {formatDate(item.created_at)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                )}
-              </Box>
-            </Stack>
+                <div className="detail-meta">
+                  <div><div className="meta-label">Category</div><div className="meta-value">{selectedTicket?.category || "-"}</div></div>
+                  <div><div className="meta-label">Sub Category</div><div className="meta-value">{selectedTicket?.sub_category || "-"}</div></div>
+                  <div><div className="meta-label">Support Level</div><div className="meta-value">{selectedTicket?.support_level || "-"}</div></div>
+                  <div><div className="meta-label">Priority</div><div className="meta-value">{selectedTicket?.priority || "-"}</div></div>
+                </div>
+
+                <h3 className="detail-title">{selectedTicket?.title || "-"}</h3>
+                <div className="desc-box">{selectedTicket?.description || "-"}</div>
+
+                <div className="raised-grid">
+                  <div><div className="meta-label">Raised By</div><div className="meta-value">{selectedTicket?.raised_by_name || "-"}</div></div>
+                  <div><div className="meta-label">Email</div><div className="meta-value">{selectedTicket?.raised_by_email || "-"}</div></div>
+                  <div><div className="meta-label">Company</div><div className="meta-value">{selectedTicket?.it_company || "-"}</div></div>
+                  <div><div className="meta-label">Raised On</div><div className="meta-value">{formatDate(selectedTicket?.created_at)}</div></div>
+                </div>
+              </div>
+
+              <div className="detail-right">
+                <div className="summary-box">
+                  <div className="summary-row"><span className="summary-label">Raised by</span><span className="summary-value">{selectedTicket?.raised_by_name || "-"} ({selectedTicket?.raised_by_email || "-"})</span></div>
+                  <div className="summary-row"><span className="summary-label">Vendor</span><span className="summary-value">{selectedTicket?.vendor_company || "Not assigned yet"}</span></div>
+                  <div className="summary-row"><span className="summary-label">Assigned to</span><span className="summary-value">{selectedTicket?.assigned_vendor_user || "Not assigned yet"}</span></div>
+                  <div className="summary-row"><span className="summary-label">Latest comment</span><span className="summary-value">{selectedTicket?.latest_comment || "-"}</span></div>
+                  <div className="summary-row"><span className="summary-label">Last activity</span><span className="summary-value">{formatDate(selectedTicket?.latest_activity_at)}</span></div>
+                </div>
+
+                <div className="activity-section">
+                  <h3>Activity Log</h3>
+                  <div className="activity-list">
+                    {activity.length === 0 ? (
+                      <div className="activity-empty">No activity found.</div>
+                    ) : (
+                      activity.map((item) => (
+                        <div className="activity-item" key={item.id}>
+                          <div className="activity-top">
+                            <span className={`actor-badge actor-${item.actor_type || "system"}`}>{item.actor_type || "system"}</span>
+                            <span className="activity-msg">{item.message || "-"}</span>
+                          </div>
+                          {(item.old_value || item.new_value) ? (
+                            <div className="activity-change">{item.old_value || "-"} -&gt; {item.new_value || "-"}</div>
+                          ) : null}
+                          <div className="activity-time">{formatDate(item.created_at)}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
-    </Box>
+
+      <div className={`notif-overlay${drawerOpen ? " open" : ""}`} onClick={toggleDrawer} />
+      <div className={`notif-drawer${drawerOpen ? " open" : ""}`}>
+        <div className="notif-header">
+          <div>
+            <h3>Notifications</h3>
+            <p>{unreadCount} unread</p>
+          </div>
+          <Button onClick={handleMarkAllRead} className="mark-all-btn">Mark all read</Button>
+        </div>
+        <div className="notif-list">
+          {notifications.length === 0 ? (
+            <div className="notif-empty">No notifications yet.</div>
+          ) : notifications.map((item) => (
+            <div
+              key={item.id}
+              className={`notif-item${item.is_read ? "" : " unread"}`}
+              onClick={() => handleMarkRead(item.id)}
+            >
+              <p className="notif-msg">{item.message}</p>
+              <div className="notif-meta">
+                <span>{item.ticket_number} � {item.category}</span>
+                <span>{formatDate(item.created_at)}</span>
+                {!item.is_read && <span className="unread-dot" />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

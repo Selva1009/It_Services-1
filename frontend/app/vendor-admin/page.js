@@ -341,74 +341,7 @@ const VendorDashboard = () => {
 
         </div>
 
-        {/* ── Vendor Table ── */}
-        <div className="vd-table-card">
-          <div className="vd-table-header">
-            <div className="vd-table-header-text">
-              <div className="vd-card-title">
-                Vendor Management <span>({timeRange === "week" ? "This Week" : "This Month"})</span>
-              </div>
-              <div className="vd-card-sub" style={{ marginBottom: 0 }}>Recent registrations</div>
-            </div>
-            <div className="vd-table-actions">
-              <button className="vd-btn-primary" onClick={() => router.push("/vendor-admin/addUser")}>
-                <Plus size={13} /> Add Vendor
-              </button>
-              <button className="vd-btn-ghost" onClick={() => router.push("/vendor-admin/usersprofile")}>
-                View All
-              </button>
-            </div>
-          </div>
-
-          <div className="vd-table-scroll">
-            <table className="vd-data-table">
-              <thead>
-                <tr>
-                  {["Vendor", "Company", "Status", "Registered"].map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {vendors
-                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                  .slice(0, 5)
-                  .map((vendor, idx) => (
-                    <tr key={vendor.id || vendor.Email}>
-                      <td>
-                        <div className="vd-user-cell">
-                          <div className={`vd-user-avatar ${AVATAR_VARS[idx % AVATAR_VARS.length]}`}>
-                            {getInitials(vendor.personName)}
-                          </div>
-                          <div>
-                            <div className="vd-user-name">{vendor.personName}</div>
-                            <div className="vd-user-email">{vendor.Email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="muted">{vendor.companyName || "N/A"}</td>
-                      <td>
-                        <span className={`vd-status-chip ${vendor.status === "Active" ? "active" : "inactive"}`}>
-                          <span className={`vd-status-dot ${vendor.status === "Active" ? "active" : "inactive"}`} />
-                          {vendor.status}
-                        </span>
-                      </td>
-                      <td className="date">
-                        {vendor.createdAt ? format(new Date(vendor.createdAt), "MMM d, yyyy") : "N/A"}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-
-            {vendors.length === 0 && (
-              <div className="vd-table-empty">
-                <UserX size={28} />
-                No vendors found
-              </div>
-            )}
-          </div>
-        </div>
+     
 
       </main>
     </div>

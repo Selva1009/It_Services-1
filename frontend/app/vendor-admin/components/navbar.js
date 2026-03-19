@@ -152,9 +152,11 @@ export default function Navbar() {
 
   const menuItems = [
     { href: "/vendor-admin", icon: <LayoutDashboard size={16} />, label: "Dashboard" },
-    { href: "/vendor-admin/tickets", icon: <Ticket size={16} />, label: "Tickets" },
+    
     { href: "/vendor-admin/addUser", icon: <UserPlus size={16} />, label: "Add User" },
     { href: "/vendor-admin/usersprofile", icon: <Users size={16} />, label: "User Profiles" },
+
+    { href: "/vendor-admin/tickets", icon: <Ticket size={16} />, label: "Tickets" },
   ];
 
   const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });

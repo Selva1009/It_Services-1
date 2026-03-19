@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
@@ -15,6 +15,8 @@ import {
   IconButton,
   MenuItem,
   Select,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -47,12 +49,21 @@ const STATUS_CLASS = {
   Closed: "status-closed",
 };
 
-const SUPPORT_CLASS = { L1: "support-l1", L2: "support-l2", L3: "support-l3" };
+const SUPPORT_CLASS = {
+  L1: "support-l1",
+  L2: "support-l2",
+  L3: "support-l3",
+};
 
-export default function VendorTicketsPage() {
+export default function VendorUserTicketsPage() {
   const { auth, getAuthToken } = useAuth();
-  const [tickets, setTickets] = useState([]);
+  const token = getAuthToken() || auth?.authToken || null;
+
+  const [activeTab, setActiveTab] = useState(0);
+  const [unclaimedTickets, setUnclaimedTickets] = useState([]);
+  const [myTickets, setMyTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -66,8 +77,6 @@ export default function VendorTicketsPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const token = getAuthToken() || auth?.authToken || null;
-
   const formatDate = (d) => {
     if (!d) return "-";
     return new Date(d).toLocaleDateString("en-IN", {
@@ -79,31 +88,18 @@ export default function VendorTicketsPage() {
     });
   };
 
-  const loadTickets = useCallback(async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/tickets/vendor/list", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTickets(response.data.tickets || []);
-    } catch (err) {
-      Swal.fire("error", err.response?.data?.message || "Something went wrong.", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
   const loadUnreadCount = useCallback(async () => {
     try {
       const response = await axios.get("http://localhost:5000/api/notifications/unread-count", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUnreadCount(response.data.unreadCount || 0);
-    } catch (err) {
-      Swal.fire("error", err.response?.data?.message || "Something went wrong.", "error");
+    } catch {
+      // silent catch
     }
   }, [token]);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       const response = await axios.get("http://localhost:5000/api/notifications", {
         headers: { Authorization: `Bearer ${token}` },
@@ -112,24 +108,68 @@ export default function VendorTicketsPage() {
     } catch (err) {
       Swal.fire("error", err.response?.data?.message || "Something went wrong.", "error");
     }
-  };
+  }, [token]);
+
+  const loadUnclaimedTickets = useCallback(async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/tickets/vendor/unclaimed", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUnclaimedTickets(response.data.tickets || []);
+    } catch {
+      setUnclaimedTickets([]);
+    }
+  }, [token]);
+
+  const loadMyTickets = useCallback(async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/tickets/vendor/list", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMyTickets(response.data.tickets || []);
+    } catch {
+      setMyTickets([]);
+    }
+  }, [token]);
+
+  const loadAll = useCallback(async () => {
+    try {
+      await Promise.all([loadUnclaimedTickets(), loadMyTickets()]);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadMyTickets, loadUnclaimedTickets]);
 
   useEffect(() => {
-    loadTickets();
+    if (!token) return;
+    loadAll();
     loadUnreadCount();
-  }, [loadTickets, loadUnreadCount]);
+  }, [token, loadAll, loadUnreadCount]);
 
-  const filteredTickets = useMemo(() => {
-    return (tickets || []).filter((ticket) => {
-      const matchesStatus = statusFilter === "All" || ticket.status === statusFilter;
-      const query = search.trim().toLowerCase();
-      const matchesSearch =
-        !query ||
-        ticket.ticket_number?.toLowerCase().includes(query) ||
-        ticket.title?.toLowerCase().includes(query);
-      return matchesStatus && matchesSearch;
-    });
-  }, [tickets, statusFilter, search]);
+  const handleClaim = async (ticketId) => {
+    try {
+      setClaiming(ticketId);
+      await axios.patch(
+        `http://localhost:5000/api/tickets/${ticketId}/claim`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      Swal.fire("success", "Ticket claimed. Check My Tickets tab.", "success");
+      setActiveTab(1);
+      await loadAll();
+      await loadUnreadCount();
+    } catch (err) {
+      if (err.response?.status === 400) {
+        Swal.fire("warning", "This ticket was already claimed.", "warning");
+        await loadUnclaimedTickets();
+      } else {
+        Swal.fire("error", err.response?.data?.message || "Failed.", "error");
+      }
+    } finally {
+      setClaiming(null);
+    }
+  };
 
   const openTicketDetail = async (ticket) => {
     setSelectedTicket(ticket);
@@ -152,12 +192,8 @@ export default function VendorTicketsPage() {
   };
 
   const handleStatusUpdate = async () => {
-    if (!selectedTicket) {
-      return;
-    }
-
     if (!statusValue) {
-      Swal.fire("Error", "Please select a status.", "error");
+      Swal.fire("error", "Select a status", "error");
       return;
     }
 
@@ -168,9 +204,11 @@ export default function VendorTicketsPage() {
         { status: statusValue, comment },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      Swal.fire("Success", "Status updated successfully.", "success");
+
+      Swal.fire("success", "Status updated", "success");
       await openTicketDetail(selectedTicket);
-      await loadTickets();
+      await loadMyTickets();
+      await loadUnreadCount();
     } catch (err) {
       Swal.fire("error", err.response?.data?.message || "Something went wrong.", "error");
     } finally {
@@ -207,131 +245,229 @@ export default function VendorTicketsPage() {
   };
 
   const toggleDrawer = async () => {
-    const nextState = !drawerOpen;
-    setDrawerOpen(nextState);
-    if (nextState) {
+    const opening = !drawerOpen;
+    setDrawerOpen(opening);
+    if (opening) {
       await loadNotifications();
     }
   };
 
+  const filteredUnclaimed = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return unclaimedTickets.filter((ticket) => {
+      if (!q) return true;
+      return (
+        String(ticket.ticket_number || "").toLowerCase().includes(q) ||
+        String(ticket.title || "").toLowerCase().includes(q)
+      );
+    });
+  }, [unclaimedTickets, search]);
+
+  const filteredMy = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return myTickets.filter((ticket) => {
+      const statusMatch = statusFilter === "All" || ticket.status === statusFilter;
+      const searchMatch =
+        !q ||
+        String(ticket.ticket_number || "").toLowerCase().includes(q) ||
+        String(ticket.title || "").toLowerCase().includes(q);
+      return statusMatch && searchMatch;
+    });
+  }, [myTickets, statusFilter, search]);
+
   return (
-    <div className="vendor-tickets-page">
+    <div className="page-wrapper">
       <div className="page-header">
         <div>
-          <h1>Support Tickets</h1>
-          <p>Track and update assigned tickets.</p>
+          <h1>My Tickets</h1>
+          <p>Claim and manage support tickets</p>
         </div>
         <div className="header-right">
-          <IconButton className="notification-btn" onClick={toggleDrawer}>
-            <Badge badgeContent={unreadCount} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-          <Chip label={`Total ${Array.isArray(tickets) ? tickets.length : 0}`} className="total-chip" />
+          <Badge badgeContent={unreadCount} color="error">
+            <IconButton onClick={toggleDrawer}>
+              <NotificationsIcon className="header-bell-icon" />
+            </IconButton>
+          </Badge>
         </div>
       </div>
 
-      <div className="filter-bar">
-        <div className="filter-chips">
-          {STATUS_FILTERS.map((item) => (
-            <Chip
-              key={item}
-              label={item}
-              onClick={() => setStatusFilter(item)}
-              className={`status-filter-chip${statusFilter === item ? " active" : ""}`}
+      <div className="tabs-wrapper">
+        <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)}>
+          <Tab
+            label={<span>Available to Claim<span className="tab-badge">{unclaimedTickets.length}</span></span>}
+          />
+          <Tab
+            label={<span>My Tickets<span className="tab-badge-blue">{myTickets.length}</span></span>}
+          />
+        </Tabs>
+      </div>
+
+      {activeTab === 0 ? (
+        <>
+          <div className="filter-bar">
+            <TextField
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              fullWidth
+              placeholder="Search by ticket number or title"
             />
-          ))}
-        </div>
+          </div>
 
-        <TextField
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          fullWidth
-          placeholder="Search by ticket number or title"
-        />
-      </div>
-
-      {loading ? (
-        <div className="loading-wrapper">
-          <CircularProgress className="navy-spinner" />
-        </div>
-      ) : !Array.isArray(tickets) || tickets.length === 0 ? (
-        <div className="table-empty">No tickets found.</div>
-      ) : (
-        <TableContainer component={Paper} className="table-container">
-          <Table>
-           <TableHead>
-  <TableRow>
-    <TableCell className="table-header-cell">Ticket No</TableCell>
-    <TableCell className="table-header-cell">Category</TableCell>
-    <TableCell className="table-header-cell">Sub Category</TableCell>
-    <TableCell className="table-header-cell">Raised By</TableCell>
-    <TableCell className="table-header-cell">Company</TableCell>
-    <TableCell className="table-header-cell">Priority</TableCell>
-    <TableCell className="table-header-cell">Status</TableCell>
-    <TableCell className="table-header-cell">Support Level</TableCell>
-    <TableCell className="table-header-cell">Raised On</TableCell>
-    <TableCell className="table-header-cell">Action</TableCell>
-  </TableRow>
-</TableHead>
-            <TableBody>
-              {filteredTickets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="table-empty">No tickets found.</TableCell>
-                </TableRow>
-              ) : (
-                filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id}>
-                    <TableCell className="ticket-number">{ticket.ticket_number || "-"}</TableCell>
-                    <TableCell>{ticket.category || "-"}</TableCell>
-                    <TableCell>{ticket.sub_category || "-"}</TableCell>
-                    <TableCell>{ticket.raised_by_name || "-"}</TableCell>
-                    <TableCell>{ticket.it_company || "-"}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={ticket.priority || "Medium"}
-                        className={PRIORITY_CLASS[ticket.priority] || "priority-medium"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={ticket.status || "Open"}
-                        className={STATUS_CLASS[ticket.status] || "status-open"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={ticket.support_level || "L1"}
-                        className={SUPPORT_CLASS[ticket.support_level] || "support-l1"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{formatDate(ticket.created_at)}</TableCell>
-                    <TableCell>
-                      <Button className="action-btn" onClick={() => openTicketDetail(ticket)}>View</Button>
-                    </TableCell>
+          {loading ? (
+            <div className="loading-wrapper">
+              <CircularProgress className="navy-spinner" />
+            </div>
+          ) : !Array.isArray(filteredUnclaimed) || filteredUnclaimed.length === 0 ? (
+            <div className="empty-state">No tickets available for your service categories.</div>
+          ) : (
+            <TableContainer className="table-wrapper" component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell className="th-cell">Ticket No</TableCell>
+                    <TableCell className="th-cell">Category</TableCell>
+                    <TableCell className="th-cell">Sub Category</TableCell>
+                    <TableCell className="th-cell">Raised By</TableCell>
+                    <TableCell className="th-cell">Company</TableCell>
+                    <TableCell className="th-cell">Priority</TableCell>
+                    <TableCell className="th-cell">Support Level</TableCell>
+                    <TableCell className="th-cell">Raised On</TableCell>
+                    <TableCell className="th-cell">Action</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {filteredUnclaimed.map((ticket) => (
+                    <TableRow key={ticket.id}>
+                      <TableCell className="td-num">{ticket.ticket_number || "-"}</TableCell>
+                      <TableCell>{ticket.category || "-"}</TableCell>
+                      <TableCell>{ticket.sub_category || "-"}</TableCell>
+                      <TableCell>{ticket.raised_by_name || "-"}</TableCell>
+                      <TableCell>{ticket.it_company || "-"}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ticket.priority || "Medium"}
+                          className={PRIORITY_CLASS[ticket.priority] || "priority-medium"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ticket.support_level || "L1"}
+                          className={SUPPORT_CLASS[ticket.support_level] || "support-l1"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{formatDate(ticket.created_at)}</TableCell>
+                      <TableCell>
+                        <Button className="claim-btn" onClick={() => handleClaim(ticket.id)} disabled={claiming === ticket.id}>
+                          {claiming === ticket.id ? <CircularProgress size={16} color="inherit" /> : "Claim Ticket"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="filter-bar">
+            <div className="filter-chips">
+              {STATUS_FILTERS.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  onClick={() => setStatusFilter(item)}
+                  className={`filter-chip${statusFilter === item ? " active" : ""}`}
+                />
+              ))}
+            </div>
+            <TextField
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              fullWidth
+              placeholder="Search by ticket number or title"
+            />
+          </div>
+
+          {loading ? (
+            <div className="loading-wrapper">
+              <CircularProgress className="navy-spinner" />
+            </div>
+          ) : !Array.isArray(filteredMy) || filteredMy.length === 0 ? (
+            <div className="empty-state">No tickets claimed yet.</div>
+          ) : (
+            <TableContainer className="table-wrapper" component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell className="th-cell">Ticket No</TableCell>
+                    <TableCell className="th-cell">Category</TableCell>
+                    <TableCell className="th-cell">Sub Category</TableCell>
+                    <TableCell className="th-cell">Raised By</TableCell>
+                    <TableCell className="th-cell">Company</TableCell>
+                    <TableCell className="th-cell">Priority</TableCell>
+                    <TableCell className="th-cell">Status</TableCell>
+                    <TableCell className="th-cell">Support Level</TableCell>
+                    <TableCell className="th-cell">Raised On</TableCell>
+                    <TableCell className="th-cell">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredMy.map((ticket) => (
+                    <TableRow key={ticket.id}>
+                      <TableCell className="td-num">{ticket.ticket_number || "-"}</TableCell>
+                      <TableCell>{ticket.category || "-"}</TableCell>
+                      <TableCell>{ticket.sub_category || "-"}</TableCell>
+                      <TableCell>{ticket.raised_by_name || "-"}</TableCell>
+                      <TableCell>{ticket.it_company || "-"}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ticket.priority || "Medium"}
+                          className={PRIORITY_CLASS[ticket.priority] || "priority-medium"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ticket.status || "Open"}
+                          className={STATUS_CLASS[ticket.status] || "status-open"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ticket.support_level || "L1"}
+                          className={SUPPORT_CLASS[ticket.support_level] || "support-l1"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{formatDate(ticket.created_at)}</TableCell>
+                      <TableCell>
+                        <Button className="view-btn" onClick={() => openTicketDetail(ticket)}>View</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
       )}
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle>Ticket Detail</DialogTitle>
-        <DialogContent className="ticket-detail-content">
+        <DialogContent className="detail-content">
           {detailLoading ? (
             <div className="loading-wrapper">
               <CircularProgress className="navy-spinner" />
             </div>
           ) : (
-            <div className="ticket-detail-grid">
-              <div className="ticket-info">
-                <div className="ticket-detail-header">
-                  <div className="ticket-number-large">{selectedTicket?.ticket_number || "-"}</div>
+            <div className="detail-grid">
+              <div className="detail-left">
+                <div className="detail-header">
+                  <div className="detail-num">{selectedTicket?.ticket_number || "-"}</div>
                   <Chip
                     label={selectedTicket?.status || "Open"}
                     className={STATUS_CLASS[selectedTicket?.status] || "status-open"}
@@ -339,75 +475,42 @@ export default function VendorTicketsPage() {
                   />
                 </div>
 
-                <div className="ticket-meta">
-                  <div>
-                    <div className="meta-label">Category</div>
-                    <div className="meta-value">{selectedTicket?.category || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="meta-label">Sub Category</div>
-                    <div className="meta-value">{selectedTicket?.sub_category || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="meta-label">Support Level</div>
-                    <div className="meta-value">{selectedTicket?.support_level || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="meta-label">Priority</div>
-                    <div className="meta-value">{selectedTicket?.priority || "-"}</div>
-                  </div>
+                <div className="detail-meta">
+                  <div><div className="meta-label">Category</div><div className="meta-value">{selectedTicket?.category || "-"}</div></div>
+                  <div><div className="meta-label">Sub Category</div><div className="meta-value">{selectedTicket?.sub_category || "-"}</div></div>
+                  <div><div className="meta-label">Support Level</div><div className="meta-value">{selectedTicket?.support_level || "-"}</div></div>
+                  <div><div className="meta-label">Priority</div><div className="meta-value">{selectedTicket?.priority || "-"}</div></div>
                 </div>
 
-                <div className="meta-label">Title</div>
-                <div className="ticket-title">{selectedTicket?.title || "-"}</div>
+                <h3 className="detail-title">{selectedTicket?.title || "-"}</h3>
+                <div className="desc-box">{selectedTicket?.description || "-"}</div>
 
-                <div className="meta-label">Description</div>
-                <div className="description-box">{selectedTicket?.description || "-"}</div>
-
-                <div className="ticket-meta">
-                  <div>
-                    <div className="meta-label">Raised By</div>
-                    <div className="meta-value">{selectedTicket?.raised_by_name || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="meta-label">Email</div>
-                    <div className="meta-value">{selectedTicket?.raised_by_email || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="meta-label">Company</div>
-                    <div className="meta-value">{selectedTicket?.it_company || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="meta-label">Raised On</div>
-                    <div className="meta-value">{formatDate(selectedTicket?.created_at)}</div>
-                  </div>
+                <div className="raised-grid">
+                  <div><div className="meta-label">Raised By</div><div className="meta-value">{selectedTicket?.raised_by_name || "-"}</div></div>
+                  <div><div className="meta-label">Email</div><div className="meta-value">{selectedTicket?.raised_by_email || "-"}</div></div>
+                  <div><div className="meta-label">Company</div><div className="meta-value">{selectedTicket?.it_company || "-"}</div></div>
+                  <div><div className="meta-label">Created</div><div className="meta-value">{formatDate(selectedTicket?.created_at)}</div></div>
                 </div>
               </div>
 
-              <div className="ticket-activity">
-                <div className="update-status">
+              <div className="detail-right">
+                <div className="update-section">
                   <h3>Update Status</h3>
-                  <Select
-                    value={statusValue}
-                    onChange={(event) => setStatusValue(event.target.value)}
-                    fullWidth
-                  >
+                  <Select value={statusValue} onChange={(event) => setStatusValue(event.target.value)} fullWidth>
                     {STATUS_OPTIONS.map((item) => (
                       <MenuItem key={item} value={item}>{item}</MenuItem>
                     ))}
                   </Select>
-
                   <TextField
                     value={comment}
                     onChange={(event) => setComment(event.target.value)}
                     multiline
                     rows={3}
+                    placeholder="Add a comment"
                     fullWidth
-                    placeholder="Add comment"
                   />
-
-                  <Button className="btn-primary" onClick={handleStatusUpdate} disabled={updatingStatus}>
-                    {updatingStatus ? <CircularProgress size={20} className="btn-spinner" /> : "Submit"}
+                  <Button className="submit-btn" onClick={handleStatusUpdate} disabled={updatingStatus}>
+                    {updatingStatus ? <CircularProgress size={18} color="inherit" /> : "Submit"}
                   </Button>
                 </div>
 
@@ -417,13 +520,13 @@ export default function VendorTicketsPage() {
                   <h3>Activity Log</h3>
                   <div className="activity-list">
                     {activity.length === 0 ? (
-                      <div className="table-empty">No activity found.</div>
+                      <div className="activity-empty">No activity found.</div>
                     ) : (
                       activity.map((item) => (
                         <div className="activity-item" key={item.id}>
-                          <div className="activity-row">
-                            <span className={`actor-badge ${item.actor_type || ""}`}>{item.actor_type || "system"}</span>
-                            <span className="activity-message">{item.message}</span>
+                          <div className="activity-top">
+                            <span className={`actor-badge actor-${item.actor_type || "system"}`}>{item.actor_type || "system"}</span>
+                            <span className="activity-msg">{item.message || "-"}</span>
                           </div>
                           {(item.old_value || item.new_value) && (
                             <div className="activity-change">{item.old_value || "-"} -&gt; {item.new_value || "-"}</div>
@@ -440,41 +543,35 @@ export default function VendorTicketsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className={`notification-overlay${drawerOpen ? " open" : ""}`} onClick={toggleDrawer} />
-      <div className={`notification-drawer${drawerOpen ? " open" : ""}`}>
-        <div className="notification-header">
-          <h3>Notifications</h3>
-          <Button onClick={handleMarkAllRead}>Mark all as read</Button>
+      <div className={`notif-overlay${drawerOpen ? " open" : ""}`} onClick={toggleDrawer} />
+      <div className={`notif-drawer${drawerOpen ? " open" : ""}`}>
+        <div className="notif-header">
+          <div>
+            <h3>Notifications</h3>
+            <p>{unreadCount} unread</p>
+          </div>
+          <Button onClick={handleMarkAllRead} className="mark-all-btn">Mark all read</Button>
         </div>
 
-        <div className="notification-list">
+        <div className="notif-list">
           {notifications.length === 0 ? (
-            <div className="notification-empty">No notifications found.</div>
-          ) : (
-            notifications.map((item) => (
-              <div
-                className={`notification-item${item.is_read ? "" : " unread"}`}
-                key={item.id}
-                onClick={() => handleMarkRead(item.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    handleMarkRead(item.id);
-                  }
-                }}
-              >
-                <div className="notification-message">{item.message}</div>
-                <div className="notification-meta">
-                  <span>{item.ticket_number || "-"}</span>
-                  <span>{formatDate(item.created_at)}</span>
-                </div>
+            <div className="notif-empty">No notifications yet.</div>
+          ) : notifications.map((item) => (
+            <div
+              key={item.id}
+              className={`notif-item${item.is_read ? "" : " unread"}`}
+              onClick={() => handleMarkRead(item.id)}
+            >
+              <p className="notif-msg">{item.message}</p>
+              <div className="notif-meta">
+                <span>{item.ticket_number} • {item.category}</span>
+                <span>{formatDate(item.created_at)}</span>
+                {!item.is_read && <span className="unread-dot" />}
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
-

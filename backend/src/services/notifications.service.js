@@ -47,5 +47,5 @@ exports.getUnreadCount = async (recipientType, recipientId) => {
     [recipientType, recipientId]
   );
 
-  return rows.length ? rows[0].unread_count : 0;
+  return Number(rows?.[0]?.unread_count || 0);
 };

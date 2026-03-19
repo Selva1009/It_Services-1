@@ -1,54 +1,60 @@
-const ticketService = require("../services/tickets.service");
-const notificationService = require("../services/notifications.service");
+const {
+  generateTicketNumber,
+  createTicket,
+  getVendorsByCategory,
+  getVendorUserIdsByVendorId,
+  getUnclaimedTickets,
+  claimTicket,
+  getTicketsByVendor,
+  getTicketsByItAdmin,
+  getTicketsByItUser,
+  getTicketById,
+  getTicketActivity,
+  addTicketActivity,
+  updateTicketStatus,
+} = require("../services/tickets.service");
+const { createNotification } = require("../services/notifications.service");
 
-const resolveVendorIdFromUser = (user) => {
-  if (!user) return null;
-  if (user.role === "vendor_user") return user.parentId || null;
-  if (user.role === "vendor_admin") return user.id || null;
-  return null;
-};
-
-const resolveItAdminIdFromUser = (user) => {
-  if (!user) return null;
-  if (user.role === "it_user") return user.parentId || null;
-  if (user.role === "it_admin") return user.id || null;
-  return null;
-};
+const getUser = (req) => req.user || req.users || null;
 
 exports.raiseTicket = async (req, res) => {
   try {
-    if (!req.users?.id) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const user = getUser(req);
+    const itUserId = user?.id;
+    const itAdminId = user?.parentId;
 
     const {
       category,
       subCategory,
+      supportLevel,
       title,
       description,
       priority,
-      supportLevel,
-      vendorId,
-      itAdminId,
-    } = req.body;
+    } = req.body || {};
 
-    const itUserId = req.users.id;
-    const resolvedItAdminId = itAdminId || resolveItAdminIdFromUser(req.users);
+    if (!itUserId || !itAdminId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const ticketResult = await ticketService.createTicket({
+    if (!category || !subCategory || !title || !description) {
+      return res.status(400).json({ message: "category, subCategory, title and description are required." });
+    }
+
+    const ticketResult = await createTicket({
+      ticketNumber: generateTicketNumber(),
       itUserId,
-      itAdminId: resolvedItAdminId,
-      vendorId: vendorId || null,
+      itAdminId,
+      vendorId: null,
       vendorUserId: null,
       category,
       subCategory,
+      supportLevel: supportLevel || "L1",
       title,
       description,
-      priority,
-      supportLevel,
+      priority: priority || "Medium",
     });
 
-    await ticketService.addTicketActivity({
+    await addTicketActivity({
       ticketId: ticketResult.ticketId,
       actorType: "it_user",
       actorId: itUserId,
@@ -58,38 +64,41 @@ exports.raiseTicket = async (req, res) => {
       newValue: "Open",
     });
 
-    if (ticketResult.vendorId) {
-      await notificationService.createNotification({
-        recipientType: "vendor_admin",
-        recipientId: ticketResult.vendorId,
-        ticketId: ticketResult.ticketId,
-        type: "ticket_raised",
-        message: `New ticket ${ticketResult.ticketNumber} raised for ${category} support.`,
-      });
+    const vendors = await getVendorsByCategory(category);
 
-      const vendorUserIds = await ticketService.getVendorUserIdsByVendorId(ticketResult.vendorId);
-      await Promise.all(
-        vendorUserIds.map((vendorUserId) =>
-          notificationService.createNotification({
-            recipientType: "vendor_user",
-            recipientId: vendorUserId,
-            ticketId: ticketResult.ticketId,
-            type: "ticket_raised",
-            message: `New ticket ${ticketResult.ticketNumber} raised for ${category} support.`,
-          })
-        )
-      );
-    }
+    await Promise.all(
+      vendors.map(async (vendor) => {
+        await createNotification({
+          recipientType: "vendor_admin",
+          recipientId: vendor.vendor_id,
+          ticketId: ticketResult.ticketId,
+          type: "ticket_raised",
+          message: `New ticket ${ticketResult.ticketNumber} raised for ${category} support. Click to claim.`,
+        });
 
-    if (resolvedItAdminId) {
-      await notificationService.createNotification({
-        recipientType: "it_admin",
-        recipientId: resolvedItAdminId,
-        ticketId: ticketResult.ticketId,
-        type: "ticket_raised",
-        message: `Ticket ${ticketResult.ticketNumber} has been raised and assigned to vendor.`,
-      });
-    }
+        const vendorUserIds = await getVendorUserIdsByVendorId(vendor.vendor_id);
+
+        await Promise.all(
+          vendorUserIds.map((vendorUserId) =>
+            createNotification({
+              recipientType: "vendor_user",
+              recipientId: vendorUserId,
+              ticketId: ticketResult.ticketId,
+              type: "ticket_raised",
+              message: `New ticket ${ticketResult.ticketNumber} raised for ${category} support. Click to claim.`,
+            })
+          )
+        );
+      })
+    );
+
+    await createNotification({
+      recipientType: "it_admin",
+      recipientId: itAdminId,
+      ticketId: ticketResult.ticketId,
+      type: "ticket_raised",
+      message: `Ticket ${ticketResult.ticketNumber} raised for ${category} support.`,
+    });
 
     return res.status(201).json({
       message: "Ticket raised successfully",
@@ -97,75 +106,140 @@ exports.raiseTicket = async (req, res) => {
       ticketId: ticketResult.ticketId,
     });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to raise ticket" });
+    return res.status(500).json({ message: err.message || "Failed to raise ticket" });
+  }
+};
+
+exports.claimTicket = async (req, res) => {
+  try {
+    const user = getUser(req);
+    const ticketId = req.params.id;
+
+    const vendorId = user?.role === "vendor_user"
+      ? user?.parentId
+      : user?.id;
+
+    const vendorUserId = user?.role === "vendor_user"
+      ? user?.id
+      : null;
+
+    if (!vendorId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const ticket = await getTicketById(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (ticket.vendor_id !== null) {
+      return res.status(400).json({ message: "Ticket already claimed by another vendor." });
+    }
+
+    const affectedRows = await claimTicket(ticketId, vendorId, vendorUserId);
+    if (!affectedRows) {
+      return res.status(400).json({ message: "Ticket already claimed by another vendor." });
+    }
+
+    await addTicketActivity({
+      ticketId,
+      actorType: "vendor_user",
+      actorId: user?.id,
+      actionType: "assignment",
+      message: "Ticket claimed by vendor user",
+      oldValue: "Open",
+      newValue: "Assigned",
+    });
+
+    await createNotification({
+      recipientType: "it_admin",
+      recipientId: ticket.it_admin_id,
+      ticketId,
+      type: "ticket_assigned",
+      message: `Ticket ${ticket.ticket_number} has been claimed by a vendor.`,
+    });
+
+    await createNotification({
+      recipientType: "it_user",
+      recipientId: ticket.it_user_id,
+      ticketId,
+      type: "ticket_assigned",
+      message: `Your ticket ${ticket.ticket_number} has been assigned to a support vendor.`,
+    });
+
+    return res.status(200).json({ message: "Ticket claimed successfully." });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to claim ticket" });
+  }
+};
+
+exports.getUnclaimedTickets = async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const vendorId = user?.role === "vendor_user"
+      ? user?.parentId
+      : user?.id;
+
+    if (!vendorId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const tickets = await getUnclaimedTickets(vendorId);
+    return res.status(200).json({ tickets });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load tickets" });
   }
 };
 
 exports.getVendorTickets = async (req, res) => {
   try {
-    const vendorId = resolveVendorIdFromUser(req.users);
+    const user = getUser(req);
+
+    const vendorId = user?.role === "vendor_user"
+      ? user?.parentId
+      : user?.id;
+
     if (!vendorId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const tickets = await ticketService.getTicketsByVendor(vendorId);
-    res.status(200).json({ tickets });
-  } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to load tickets" });
-  }
-};
 
-exports.getMyTickets = async (req, res) => {
-  try {
-    const userId = req.users?.id;
-    const role = req.users?.role;
-
-    if (!userId || role !== "it_user") {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const tickets = await ticketService.getTicketsByItUser(userId);
+    const tickets = await getTicketsByVendor(vendorId);
     return res.status(200).json({ tickets });
   } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message || "Failed to load tickets" });
-  }
-};
-
-exports.getMyTicketCount = async (req, res) => {
-  try {
-    const userId = req.users?.id;
-    const role = req.users?.role;
-
-    if (!userId || role !== "it_user") {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const { openCount, resolvedCount } = await ticketService.getTicketCountByItUser(userId);
-
-    return res.status(200).json({
-      open: openCount,
-      resolved: resolvedCount,
-      openCount,
-      resolvedCount,
-      counts: {
-        open: openCount,
-        resolved: resolvedCount,
-      },
-    });
-  } catch (err) {
-    return res.status(err.status || 500).json({ message: err.message || "Failed to load ticket counts" });
+    return res.status(500).json({ message: err.message || "Failed to load tickets" });
   }
 };
 
 exports.getItAdminTickets = async (req, res) => {
   try {
-    const itAdminId = resolveItAdminIdFromUser(req.users);
+    const user = getUser(req);
+    const itAdminId = user?.id;
+
     if (!itAdminId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const tickets = await ticketService.getTicketsByItAdmin(itAdminId);
-    res.status(200).json({ tickets });
+
+    const tickets = await getTicketsByItAdmin(itAdminId);
+    return res.status(200).json({ tickets });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to load tickets" });
+    return res.status(500).json({ message: err.message || "Failed to load tickets" });
+  }
+};
+
+exports.getMyTickets = async (req, res) => {
+  try {
+    const user = getUser(req);
+    const itUserId = user?.id;
+
+    if (!itUserId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const tickets = await getTicketsByItUser(itUserId);
+    return res.status(200).json({ tickets });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load tickets" });
   }
 };
 
@@ -174,92 +248,65 @@ exports.getTicketDetail = async (req, res) => {
     const ticketId = req.params.id;
 
     const [ticket, activity] = await Promise.all([
-      ticketService.getTicketById(ticketId),
-      ticketService.getTicketActivity(ticketId),
+      getTicketById(ticketId),
+      getTicketActivity(ticketId),
     ]);
 
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    res.status(200).json({ ticket, activity });
+    return res.status(200).json({ ticket, activity });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to load ticket" });
+    return res.status(500).json({ message: err.message || "Failed to load ticket" });
   }
 };
 
 exports.updateStatus = async (req, res) => {
   try {
-    if (!req.users?.role || !req.users.role.startsWith("vendor")) {
-      return res.status(403).json({ message: "Only vendor users can update ticket status" });
-    }
-
+    const user = getUser(req);
     const ticketId = req.params.id;
-    const { status, comment } = req.body;
+    const { status, comment } = req.body || {};
 
     if (!status) {
       return res.status(400).json({ message: "Status required" });
     }
 
-    const ticket = await ticketService.getTicketById(ticketId);
-    if (!ticket) {
+    const currentTicket = await getTicketById(ticketId);
+    if (!currentTicket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    const actorType = req.users?.role === "vendor_admin" ? "vendor_admin" : "vendor_user";
+    await updateTicketStatus(ticketId, status, status === "Resolved" ? new Date() : null);
 
-    const actorId = req.users?.id || null;
-
-    const resolvedAt = status === "Resolved" ? new Date() : null;
-    await ticketService.updateTicketStatus(ticketId, status, resolvedAt);
-
-    await ticketService.addTicketActivity({
+    await addTicketActivity({
       ticketId,
-      actorType,
-      actorId,
+      actorType: user?.role,
+      actorId: user?.id,
       actionType: "status_change",
       message: comment || "Status updated",
-      oldValue: ticket.status || null,
+      oldValue: currentTicket.status,
       newValue: status,
     });
 
-    if (ticket.it_user_id) {
-      await notificationService.createNotification({
-        recipientType: "it_user",
-        recipientId: ticket.it_user_id,
-        ticketId: ticket.id,
-        type: "status_update",
-        message: `Your ticket ${ticket.ticket_number} status updated to ${status}.`,
-      });
-    }
+    await createNotification({
+      recipientType: "it_user",
+      recipientId: currentTicket.it_user_id,
+      ticketId,
+      type: "status_update",
+      message: `Your ticket ${currentTicket.ticket_number} status updated to ${status}.`,
+    });
 
-    if (ticket.it_admin_id) {
-      const adminMessage = actorType === "vendor_user"
-        ? `Ticket ${ticket.ticket_number} updated to ${status} by vendor.`
-        : `Ticket ${ticket.ticket_number} updated to ${status} by IT admin.`;
+    await createNotification({
+      recipientType: "it_admin",
+      recipientId: currentTicket.it_admin_id,
+      ticketId,
+      type: "status_update",
+      message: `Ticket ${currentTicket.ticket_number} updated to ${status} by vendor.`,
+    });
 
-      await notificationService.createNotification({
-        recipientType: "it_admin",
-        recipientId: ticket.it_admin_id,
-        ticketId: ticket.id,
-        type: "status_update",
-        message: adminMessage,
-      });
-    }
-
-    if (status === "Escalated" && ticket.vendor_id) {
-      await notificationService.createNotification({
-        recipientType: "vendor_admin",
-        recipientId: ticket.vendor_id,
-        ticketId: ticket.id,
-        type: "status_update",
-        message: `Ticket ${ticket.ticket_number} escalated by vendor to ${status}.`,
-      });
-    }
-
-    res.status(200).json({ message: "Status updated successfully." });
+    return res.status(200).json({ message: "Status updated successfully." });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to update status" });
+    return res.status(500).json({ message: err.message || "Failed to update status" });
   }
 };
-

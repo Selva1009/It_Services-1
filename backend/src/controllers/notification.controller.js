@@ -1,77 +1,69 @@
-const notificationService = require("../services/notifications.service");
+const {
+  getNotificationsByRecipient,
+  getUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} = require("../services/notifications.service");
 
-const resolveRecipient = (user) => {
-  if (!user) return null;
-
-  switch (user.role) {
-    case "vendor_admin":
-      return { type: "vendor_admin", id: user.id };
-    case "vendor_user":
-      return { type: "vendor_user", id: user.id };
-    case "it_admin":
-      return { type: "it_admin", id: user.id };
-    case "it_user":
-      return { type: "it_user", id: user.id };
-    default:
-      return null;
-  }
-};
+const getUser = (req) => req.user || req.users || null;
 
 exports.getNotifications = async (req, res) => {
   try {
-    const recipient = resolveRecipient(req.users);
-    if (!recipient) {
+    const user = getUser(req);
+    const recipientType = user?.role;
+    const recipientId = user?.id;
+
+    if (!recipientType || !recipientId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const notifications = await notificationService.getNotificationsByRecipient(
-      recipient.type,
-      recipient.id
-    );
-
-    res.status(200).json({ notifications });
+    const notifications = await getNotificationsByRecipient(recipientType, recipientId);
+    return res.status(200).json({ notifications });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to load notifications" });
-  }
-};
-
-exports.markRead = async (req, res) => {
-  try {
-    await notificationService.markNotificationRead(req.params.id);
-    res.status(200).json({ message: "Notification marked as read" });
-  } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to update notification" });
-  }
-};
-
-exports.markAllRead = async (req, res) => {
-  try {
-    const recipient = resolveRecipient(req.users);
-    if (!recipient) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    await notificationService.markAllNotificationsRead(recipient.type, recipient.id);
-    res.status(200).json({ message: "All notifications marked as read" });
-  } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to update notifications" });
+    return res.status(500).json({ message: err.message || "Failed to load notifications" });
   }
 };
 
 exports.getUnreadCount = async (req, res) => {
   try {
-    const recipient = resolveRecipient(req.users);
-    if (!recipient) {
+    const user = getUser(req);
+    const recipientType = user?.role;
+    const recipientId = user?.id;
+
+    if (!recipientType || !recipientId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const unreadCount = await notificationService.getUnreadCount(
-      recipient.type,
-      recipient.id
-    );
-
-    res.status(200).json({ unreadCount, unread_count: unreadCount });
+    const unreadCount = await getUnreadCount(recipientType, recipientId);
+    return res.status(200).json({ unreadCount });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || "Failed to load unread count" });
+    return res.status(500).json({ message: err.message || "Failed to load unread count" });
+  }
+};
+
+exports.markRead = async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    await markNotificationRead(notificationId);
+    return res.status(200).json({ message: "Marked as read" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to update notification" });
+  }
+};
+
+exports.markAllRead = async (req, res) => {
+  try {
+    const user = getUser(req);
+    const recipientType = user?.role;
+    const recipientId = user?.id;
+
+    if (!recipientType || !recipientId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    await markAllNotificationsRead(recipientType, recipientId);
+    return res.status(200).json({ message: "All marked as read" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to update notifications" });
   }
 };
