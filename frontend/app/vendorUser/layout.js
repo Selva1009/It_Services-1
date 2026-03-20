@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import DashboardLayout from "@/app/Components/DashboardLayout";
 import { useAuth } from "@/app/contexts/AuthContext";
 
 const normalizeRole = (role) => String(role || "").toLowerCase().replace(/-/g, "_");
@@ -64,5 +63,5 @@ export default function VendorDashboardLayout({ children }) {
     return <p className="text-center text-gray-600 mt-10">Loading...</p>;
   }
 
-  return <DashboardLayout id={vendorUserId}>{children}</DashboardLayout>;
+  return <div className="min-h-screen bg-gray-50">{children}</div>;
 }

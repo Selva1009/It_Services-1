@@ -13,7 +13,7 @@ exports.createNotification = async (data) => {
 
 exports.getNotificationsByRecipient = async (recipientType, recipientId) => {
   const [rows] = await db.query(
-    `SELECT n.*, t.ticket_number, t.category, t.status
+    `SELECT n.*, t.ticket_number, t.category, t.status,t.priority
      FROM notifications n
      LEFT JOIN tickets t ON t.id = n.ticket_id
      WHERE n.recipient_type = ? AND n.recipient_id = ?

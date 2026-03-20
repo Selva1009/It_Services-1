@@ -126,9 +126,11 @@ const VendorAdminNotifications = () => {
     currentPage * notificationsPerPage
   );
 
-  /* ── helper: is this notification's priority Critical? ── */
-  const isCritical = (n) =>
-    String(n.priority || "").toLowerCase() === "critical";
+  const isPriorityAlert = (n) => {
+    const priority = String(n.priority || "").toLowerCase();
+    const message = String(n.message || "").toLowerCase();
+    return priority === "critical" || priority === "high" || message.includes("high priority");
+  };
 
   if (loading) {
     return (
@@ -280,7 +282,7 @@ const VendorAdminNotifications = () => {
 
                 <TableBody>
                   {currentNotifications.map((notification, idx) => {
-                    const critical = isCritical(notification);
+                    const critical = isPriorityAlert(notification);
 
                     /*
                      * Row background logic:
@@ -289,7 +291,7 @@ const VendorAdminNotifications = () => {
                      *  - Odd row   → very light gray
                      */
                     const rowBg = critical
-                      ? "bg-red-50 hover:bg-red-100/70 border-l-4 border-l-red-500"
+                      ? "bg-red-50 hover:bg-red-100/70 border-l-4 border-l-red-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
                       : idx % 2 === 0
                         ? "bg-white hover:bg-blue-50/50"
                         : "bg-gray-50/50 hover:bg-blue-50/50";
@@ -306,11 +308,11 @@ const VendorAdminNotifications = () => {
                             <span className={`font-medium ${critical ? "text-red-700" : ""}`}>
                               {notification.ticket_number || "-"}
                             </span>
-                            {/* "Critical" badge — only shown on critical rows */}
+                            {/* Priority badge for highlighted notifications */}
                             {critical && (
                               <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-100 border border-red-300 px-2 py-0.5 text-[11px] font-600 text-red-700 leading-none">
                                 <AlertCircle className="h-3 w-3" />
-                                Critical
+                                {String(notification.priority || "").toLowerCase() === "critical" ? "Critical" : "High"}
                               </span>
                             )}
                           </div>

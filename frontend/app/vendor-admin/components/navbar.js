@@ -28,6 +28,55 @@ import "./VendorAdminNavbar.css";
 
 const NOTIFICATION_LIMIT = 50;
 
+const isHighPriorityNotification = (notification) => {
+  const priority = String(notification?.priority || "").toLowerCase();
+  const message = String(notification?.message || "").toLowerCase();
+  return priority === "high" || priority === "critical" || message.includes("high priority");
+};
+
+const highPriorityCardStyle = {
+  background:
+    "linear-gradient(135deg, rgba(239, 68, 68, 0.08), transparent 35%), linear-gradient(180deg, #fff7f7 0%, #ffecec 100%)",
+  borderColor: "#f87171",
+  boxShadow: "0 10px 22px rgba(239, 68, 68, 0.08)",
+};
+
+const highPriorityBannerStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  marginBottom: "8px",
+  padding: "4px 9px",
+  borderRadius: "999px",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#b91c1c",
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+};
+
+const highPrioritySignalStyle = {
+  width: "7px",
+  height: "7px",
+  borderRadius: "50%",
+  background: "#ef4444",
+  boxShadow: "0 0 0 3px rgba(239, 68, 68, 0.14)",
+};
+
+const highPriorityMetaPillStyle = {
+  border: "1px solid rgba(254, 202, 202, 0.9)",
+};
+
+const highPriorityReadButtonStyle = {
+  borderColor: "#fecaca",
+  background: "#fef2f2",
+  color: "#b91c1c",
+  position: "relative",
+  zIndex: 1,
+};
+
 export default function Navbar() {
   const { auth, clearAuth, getAuthToken: getAuthTokenFromContext } = useAuth();
   const pathname = usePathname();
@@ -251,20 +300,34 @@ export default function Navbar() {
               {filteredNotifications.length === 0 ? (
                 <p className="va-notif-empty">No notifications found.</p>
               ) : (
-                filteredNotifications.map((item) => (
-                  <div key={item.id} className={`va-notif-item${item.is_read ? "" : " unread"}`}>
-                    <div className="va-notif-message">{item.message}</div>
-                    <div className="va-notif-meta">
-                      <span>{item.ticket_number || "-"}</span>
-                      <span>{new Date(item.created_at).toLocaleString("en-IN")}</span>
+                filteredNotifications.map((item) => {
+                  const isHighPriority = isHighPriorityNotification(item);
+                  return (
+                  <div
+                    key={item.id}
+                    className={`va-notif-item${item.is_read ? "" : " unread"}${isHighPriority ? " high-priority" : ""}`}
+                    style={isHighPriority ? highPriorityCardStyle : undefined}
+                  >
+                    {isHighPriority ? (
+                      <div className="va-notif-priority-banner" style={highPriorityBannerStyle}>
+                        <span className="va-notif-priority-signal" style={highPrioritySignalStyle} />
+                        High Priority
+                      </div>
+                    ) : null}
+                    <div className="va-notif-card-head">
+                      <div className="va-notif-message" style={isHighPriority ? { color: "#0f172a", fontWeight: 700 } : undefined}>{item.message}</div>
+                    </div>
+                    <div className="va-notif-meta" style={isHighPriority ? { color: "#475569" } : undefined}>
+                      <span className="va-notif-meta-pill" style={isHighPriority ? highPriorityMetaPillStyle : undefined}>{item.ticket_number || "-"}</span>
+                      <span className="va-notif-meta-pill" style={isHighPriority ? highPriorityMetaPillStyle : undefined}>{new Date(item.created_at).toLocaleString("en-IN")}</span>
                     </div>
                     {!item.is_read ? (
-                      <button onClick={() => handleMarkRead(item.id)} className="va-notif-read-btn">
+                      <button onClick={() => handleMarkRead(item.id)} className="va-notif-read-btn" style={isHighPriority ? highPriorityReadButtonStyle : undefined}>
                         Mark as Read
                       </button>
                     ) : null}
                   </div>
-                ))
+                )})
               )}
             </div>
           </aside>

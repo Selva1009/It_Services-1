@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
-  Badge,
   Button,
   Chip,
   CircularProgress,
@@ -12,7 +11,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  IconButton,
   MenuItem,
   Select,
   Tab,
@@ -26,12 +24,13 @@ import {
   TextField,
   Paper,
 } from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useAuth } from "@/app/contexts/AuthContext";
+import VendorNavbar from "../navbar";
 import "./VendorTickets.css";
 
 const STATUS_OPTIONS = ["Open", "Assigned", "In Progress", "Escalated", "Resolved", "Closed"];
 const STATUS_FILTERS = ["All", ...STATUS_OPTIONS];
+const PRIORITY_FILTERS = ["All", "Low", "Medium", "High", "Critical"];
 
 const PRIORITY_CLASS = {
   Low: "priority-low",
@@ -55,6 +54,12 @@ const SUPPORT_CLASS = {
   L3: "support-l3",
 };
 
+const isHighPriorityNotification = (notification) => {
+  const priority = String(notification?.priority || "").toLowerCase();
+  const message = String(notification?.message || "").toLowerCase();
+  return priority === "high" || priority === "critical" || message.includes("high priority");
+};
+
 export default function VendorUserTicketsPage() {
   const { auth, getAuthToken } = useAuth();
   const token = getAuthToken() || auth?.authToken || null;
@@ -65,6 +70,7 @@ export default function VendorUserTicketsPage() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -76,6 +82,7 @@ export default function VendorUserTicketsPage() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState("all");
 
   const formatDate = (d) => {
     if (!d) return "-";
@@ -255,39 +262,49 @@ export default function VendorUserTicketsPage() {
   const filteredUnclaimed = useMemo(() => {
     const q = search.trim().toLowerCase();
     return unclaimedTickets.filter((ticket) => {
-      if (!q) return true;
-      return (
+      const statusMatch = statusFilter === "All" || ticket.status === statusFilter;
+      const priorityMatch = priorityFilter === "All" || ticket.priority === priorityFilter;
+      const searchMatch =
+        !q ||
         String(ticket.ticket_number || "").toLowerCase().includes(q) ||
-        String(ticket.title || "").toLowerCase().includes(q)
-      );
+        String(ticket.title || "").toLowerCase().includes(q);
+      return statusMatch && priorityMatch && searchMatch;
     });
-  }, [unclaimedTickets, search]);
+  }, [unclaimedTickets, search, statusFilter, priorityFilter]);
 
   const filteredMy = useMemo(() => {
     const q = search.trim().toLowerCase();
     return myTickets.filter((ticket) => {
       const statusMatch = statusFilter === "All" || ticket.status === statusFilter;
+      const priorityMatch = priorityFilter === "All" || ticket.priority === priorityFilter;
       const searchMatch =
         !q ||
         String(ticket.ticket_number || "").toLowerCase().includes(q) ||
         String(ticket.title || "").toLowerCase().includes(q);
-      return statusMatch && searchMatch;
+      return statusMatch && priorityMatch && searchMatch;
     });
-  }, [myTickets, statusFilter, search]);
+  }, [myTickets, statusFilter, priorityFilter, search]);
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "all") return notifications;
+    return notifications.filter((item) => (notifFilter === "read" ? Boolean(item.is_read) : !item.is_read));
+  }, [notifFilter, notifications]);
 
   return (
     <div className="page-wrapper">
+      <VendorNavbar
+        search={search}
+        setSearch={setSearch}
+        unreadCount={unreadCount}
+        onToggleNotifications={toggleDrawer}
+        onGoAvailable={() => setActiveTab(0)}
+        onGoMyTickets={() => setActiveTab(1)}
+      />
+
       <div className="page-header">
         <div>
           <h1>My Tickets</h1>
           <p>Claim and manage support tickets</p>
-        </div>
-        <div className="header-right">
-          <Badge badgeContent={unreadCount} color="error">
-            <IconButton onClick={toggleDrawer}>
-              <NotificationsIcon className="header-bell-icon" />
-            </IconButton>
-          </Badge>
         </div>
       </div>
 
@@ -305,12 +322,35 @@ export default function VendorUserTicketsPage() {
       {activeTab === 0 ? (
         <>
           <div className="filter-bar">
-            <TextField
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              fullWidth
-              placeholder="Search by ticket number or title"
-            />
+            <div className="filter-controls">
+              <div className="filter-control filter-control-search">
+                <p className="filter-label">Search</p>
+                <TextField
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  fullWidth
+                  placeholder="Search by ticket number or title"
+                />
+              </div>
+
+              <div className="filter-control">
+                <p className="filter-label">Status</p>
+                <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} fullWidth size="small">
+                  {STATUS_FILTERS.map((item) => (
+                    <MenuItem key={item} value={item}>{item}</MenuItem>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="filter-control">
+                <p className="filter-label">Priority</p>
+                <Select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} fullWidth size="small">
+                  {PRIORITY_FILTERS.map((item) => (
+                    <MenuItem key={item} value={item}>{item}</MenuItem>
+                  ))}
+                </Select>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -373,22 +413,35 @@ export default function VendorUserTicketsPage() {
       ) : (
         <>
           <div className="filter-bar">
-            <div className="filter-chips">
-              {STATUS_FILTERS.map((item) => (
-                <Chip
-                  key={item}
-                  label={item}
-                  onClick={() => setStatusFilter(item)}
-                  className={`filter-chip${statusFilter === item ? " active" : ""}`}
+            <div className="filter-controls">
+              <div className="filter-control filter-control-search">
+                <p className="filter-label">Search</p>
+                <TextField
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  fullWidth
+                  placeholder="Search by ticket number or title"
                 />
-              ))}
+              </div>
+
+              <div className="filter-control">
+                <p className="filter-label">Status</p>
+                <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} fullWidth size="small">
+                  {STATUS_FILTERS.map((item) => (
+                    <MenuItem key={item} value={item}>{item}</MenuItem>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="filter-control">
+                <p className="filter-label">Priority</p>
+                <Select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} fullWidth size="small">
+                  {PRIORITY_FILTERS.map((item) => (
+                    <MenuItem key={item} value={item}>{item}</MenuItem>
+                  ))}
+                </Select>
+              </div>
             </div>
-            <TextField
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              fullWidth
-              placeholder="Search by ticket number or title"
-            />
           </div>
 
           {loading ? (
@@ -544,34 +597,53 @@ export default function VendorUserTicketsPage() {
       </Dialog>
 
       <div className={`notif-overlay${drawerOpen ? " open" : ""}`} onClick={toggleDrawer} />
-      <div className={`notif-drawer${drawerOpen ? " open" : ""}`}>
-        <div className="notif-header">
-          <div>
-            <h3>Notifications</h3>
-            <p>{unreadCount} unread</p>
-          </div>
-          <Button onClick={handleMarkAllRead} className="mark-all-btn">Mark all read</Button>
+      <aside className={`notif-drawer${drawerOpen ? " open" : ""}`}>
+        <div className="notif-header-clean">
+          <h3>Notifications</h3>
+          <button type="button" className="notif-close-btn" onClick={toggleDrawer}>x</button>
         </div>
 
-        <div className="notif-list">
-          {notifications.length === 0 ? (
-            <div className="notif-empty">No notifications yet.</div>
-          ) : notifications.map((item) => (
-            <div
-              key={item.id}
-              className={`notif-item${item.is_read ? "" : " unread"}`}
-              onClick={() => handleMarkRead(item.id)}
-            >
-              <p className="notif-msg">{item.message}</p>
-              <div className="notif-meta">
-                <span>{item.ticket_number} • {item.category}</span>
-                <span>{formatDate(item.created_at)}</span>
-                {!item.is_read && <span className="unread-dot" />}
-              </div>
-            </div>
-          ))}
+        <div className="notif-controls-clean">
+          <select value={notifFilter} onChange={(event) => setNotifFilter(event.target.value)}>
+            <option value="all">All</option>
+            <option value="unread">Unread</option>
+            <option value="read">Read</option>
+          </select>
+          <button type="button" onClick={handleMarkAllRead}>Mark all as read</button>
         </div>
-      </div>
+
+        <div className="notif-list-clean">
+          {filteredNotifications.length === 0 ? (
+            <p className="notif-empty-clean">No notifications found.</p>
+          ) : (
+            filteredNotifications.map((item) => (
+              <div
+                key={item.id}
+                className={`notif-item-clean${item.is_read ? "" : " unread"}${isHighPriorityNotification(item) ? " high-priority" : ""}`}
+              >
+                {isHighPriorityNotification(item) ? (
+                  <div className="notif-priority-banner">
+                    <span className="notif-priority-signal" />
+                    High Priority
+                  </div>
+                ) : null}
+                <div className="notif-card-head">
+                  <div className="notif-message-clean">{item.message}</div>
+                </div>
+                <div className="notif-meta-clean">
+                  <span className="notif-meta-pill">{item.ticket_number || "-"}</span>
+                  <span className="notif-meta-pill">{new Date(item.created_at).toLocaleString("en-IN")}</span>
+                </div>
+                {!item.is_read ? (
+                  <button type="button" onClick={() => handleMarkRead(item.id)} className="notif-read-btn-clean">
+                    Mark as Read
+                  </button>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+      </aside>
     </div>
   );
 }
