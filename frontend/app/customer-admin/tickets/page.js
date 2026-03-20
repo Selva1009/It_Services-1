@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import Swal from "sweetalert2";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Chip,
@@ -32,6 +30,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import CustomerAdminNavbar from "../components/customerAdminNavbar";
+import { apiRequest } from "@/app/services/apiClient";
+import { fetchItAdminTickets } from "@/app/services/customerAdminService";
 import "./AdminTickets.css";
 
 /* ─── Styled Tooltip ─────────────────────────────────────── */
@@ -322,7 +322,8 @@ export default function AdminTicketsPage() {
       const raw = response?.tickets ?? response?.data?.tickets ?? [];
       setTickets(Array.isArray(raw) ? raw : []);
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Something went wrong.", "error");
+      setError(err.message || "Failed to load tickets.");
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -333,8 +334,28 @@ export default function AdminTicketsPage() {
     if (fetchedRef.current === token) return;
     fetchedRef.current = token;
     loadTickets();
-    loadUnreadCount();
-  }, [token, loadTickets, loadUnreadCount]);
+  }, [token, loadTickets]);
+
+  useEffect(() => { setPage(0); }, [search, statusFilter, priorityFilter, pageSize]);
+
+  /* ── Open detail ── */
+  const openDetail = useCallback(async (ticket) => {
+    if (!token || !ticket?.id) return;
+    setModalOpen(true);
+    setDetailLoading(true);
+    setSelectedTicket(null);
+    setActivity([]);
+    try {
+      const response = await apiRequest({ path: `/api/tickets/${ticket.id}/detail`, token });
+      setSelectedTicket(response?.ticket || ticket || null);
+      setActivity(Array.isArray(response?.activity) ? response.activity : []);
+    } catch {
+      setSelectedTicket(ticket || null);
+      setActivity([]);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [token]);
 
   /* ── Filter ── */
   const filtered = useMemo(() => {
