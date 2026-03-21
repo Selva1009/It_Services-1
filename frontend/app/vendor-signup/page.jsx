@@ -49,6 +49,8 @@ import {
   MenuBook as MenuBookIcon,
   ArrowForward as ArrowForwardIcon,
 } from "@mui/icons-material";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 const SERVICES = [
   "Hardware Support",
@@ -243,7 +245,7 @@ export default function VendorSignup() {
     setShowOtpInput(true);
     setOtpLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/vendor-admin/send-otp", {
+      const res = await fetch(toApiUrl(API_ENDPOINTS.vendorAdmin.sendOtp), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail }),
@@ -322,7 +324,7 @@ export default function VendorSignup() {
     const payload = { ...form, services };
 
     try {
-      const res = await fetch("http://localhost:5000/api/vendor-admin/signup", {
+      const res = await fetch(toApiUrl(API_ENDPOINTS.vendorAdmin.signup), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

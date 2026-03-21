@@ -25,6 +25,8 @@ import {
   Paper,
 } from "@mui/material";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import VendorNavbar from "../navbar";
 import "./VendorTickets.css";
 
@@ -97,7 +99,7 @@ export default function VendorUserTicketsPage() {
 
   const loadUnreadCount = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/notifications/unread-count", {
+      const response = await axios.get(toApiUrl(API_ENDPOINTS.notifications.unreadCount), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUnreadCount(response.data.unreadCount || 0);
@@ -108,7 +110,7 @@ export default function VendorUserTicketsPage() {
 
   const loadNotifications = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/notifications", {
+      const response = await axios.get(toApiUrl(API_ENDPOINTS.notifications.list), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotifications(response.data.notifications || []);
@@ -119,7 +121,7 @@ export default function VendorUserTicketsPage() {
 
   const loadUnclaimedTickets = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/tickets/vendor/unclaimed", {
+      const response = await axios.get(toApiUrl(API_ENDPOINTS.tickets.vendorUnclaimed), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUnclaimedTickets(response.data.tickets || []);
@@ -130,7 +132,7 @@ export default function VendorUserTicketsPage() {
 
   const loadMyTickets = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/tickets/vendor/list", {
+      const response = await axios.get(toApiUrl(API_ENDPOINTS.tickets.vendorList), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMyTickets(response.data.tickets || []);
@@ -157,7 +159,7 @@ export default function VendorUserTicketsPage() {
     try {
       setClaiming(ticketId);
       await axios.patch(
-        `http://localhost:5000/api/tickets/${ticketId}/claim`,
+        toApiUrl(API_ENDPOINTS.tickets.claim(ticketId)),
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -186,7 +188,7 @@ export default function VendorUserTicketsPage() {
     setDetailLoading(true);
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/tickets/${ticket.id}/detail`, {
+      const response = await axios.get(toApiUrl(API_ENDPOINTS.tickets.detail(ticket.id)), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSelectedTicket(response.data.ticket);
@@ -207,7 +209,7 @@ export default function VendorUserTicketsPage() {
     try {
       setUpdatingStatus(true);
       await axios.patch(
-        `http://localhost:5000/api/tickets/${selectedTicket.id}/status`,
+        toApiUrl(API_ENDPOINTS.tickets.status(selectedTicket.id)),
         { status: statusValue, comment },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -226,7 +228,7 @@ export default function VendorUserTicketsPage() {
   const handleMarkRead = async (id) => {
     try {
       await axios.patch(
-        `http://localhost:5000/api/notifications/${id}/read`,
+        toApiUrl(API_ENDPOINTS.notifications.markRead(id)),
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -240,7 +242,7 @@ export default function VendorUserTicketsPage() {
   const handleMarkAllRead = async () => {
     try {
       await axios.patch(
-        "http://localhost:5000/api/notifications/read-all",
+        toApiUrl(API_ENDPOINTS.notifications.markAllRead),
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

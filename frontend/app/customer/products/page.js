@@ -47,6 +47,8 @@ import CategoryMenu from "../components/Categories";
 import Footer from "@/app/LandingPage/Footer";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { apiRequest } from "@/app/services/apiClient";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import "./CustomerHome.css";
 
 /* ── Styled Tooltip ──────────────────────────────────────── */
@@ -432,7 +434,7 @@ export default function CustomerSupportHomePage() {
     if (ticketDetailPromiseRef.current[ticketId]) return ticketDetailPromiseRef.current[ticketId];
 
     const promise = (async () => {
-      const response = await apiRequest({ path: `/api/tickets/${ticketId}/detail`, token });
+      const response = await apiRequest({ path: API_ENDPOINTS.tickets.detail(ticketId), token });
       const payload = {
         ticket: response?.ticket || null,
         activity: Array.isArray(response?.activity) ? response.activity : [],
@@ -569,7 +571,7 @@ export default function CustomerSupportHomePage() {
 
   const loadMyTickets = async (tkn) => {
     try {
-      const res = await axios.get("http://localhost:5000/api/tickets/my", { headers: { Authorization: `Bearer ${tkn}` } });
+      const res = await axios.get(toApiUrl(API_ENDPOINTS.tickets.my), { headers: { Authorization: `Bearer ${tkn}` } });
       const tickets = (res.data.tickets || []).map((ticket) => ({
         ...ticket,
         status: normalizeStatus(ticket.status),
@@ -667,7 +669,7 @@ export default function CustomerSupportHomePage() {
     setSubmitting(true);
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/tickets/raise",
+        toApiUrl(API_ENDPOINTS.tickets.raise),
         { category: selectedCategory, subCategory, supportLevel, title, description, priority },
         { headers: { Authorization: `Bearer ${token}` } }
       );

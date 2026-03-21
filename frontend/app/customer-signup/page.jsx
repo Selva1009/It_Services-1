@@ -44,6 +44,8 @@ import {
 
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 const CustomerSignup = () => {
   const router = useRouter();
@@ -231,7 +233,7 @@ const CustomerSignup = () => {
 
     try {
       const res = await fetch(
-        'http://localhost:5000/api/user-admin/send-otp',
+        toApiUrl(API_ENDPOINTS.userAdmin.sendOtp),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -326,7 +328,7 @@ const CustomerSignup = () => {
     try {
       const { confirmPassword, ...payload } = formValues;
       const response = await fetch(
-        'http://localhost:5000/api/user-admin/signup',
+        toApiUrl(API_ENDPOINTS.userAdmin.signup),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

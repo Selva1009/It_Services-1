@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api/config";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_SERVICE_BASE_URL = `${API_BASE_URL}/api`;
 
 let getToken = () => null;
 
@@ -9,7 +10,7 @@ export const bindTokenGetter = (tokenGetter) => {
 };
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_SERVICE_BASE_URL,
   timeout: 15000,
 });
 

@@ -28,6 +28,8 @@ import Navbar from "../components/Navbar";
 import CategoryMenu from "../components/Categories";
 import Footer from "@/app/LandingPage/Footer";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import "./RaiseTicket.css";
 
 const categories = [
@@ -195,7 +197,7 @@ export default function RaiseTicketPage() {
       }
 
       const response = await axios.post(
-        "http://localhost:5000/api/tickets/raise",
+        toApiUrl(API_ENDPOINTS.tickets.raise),
         {
           category: selectedCategory,
           subCategory,

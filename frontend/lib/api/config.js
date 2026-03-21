@@ -4,6 +4,11 @@ export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
 export const API_V1_PREFIX = "/api/auth";
 export const UPLOADS_BASE_URL = `${API_BASE_URL}/uploads`;
 
+export const toApiUrl = (path = "") => {
+  if (!path) return API_BASE_URL;
+  return `${API_BASE_URL}${String(path).startsWith("/") ? path : `/${path}`}`;
+};
+
 const ABSOLUTE_URL_REGEX = /^https?:\/\//i;
 
 export const resolveUploadUrl = (imagePathOrName) => {

@@ -12,6 +12,8 @@ import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-reac
 import Swal from "sweetalert2";
 import "./login.css";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 const ROLE_REDIRECT = {
   vendor_admin: "/vendor-admin",
@@ -60,7 +62,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data } = await axios.post("http://localhost:5000/api/auth/login", {
+      const { data } = await axios.post(toApiUrl(API_ENDPOINTS.auth.login), {
         email: normalizedEmail,
         password,
       });
