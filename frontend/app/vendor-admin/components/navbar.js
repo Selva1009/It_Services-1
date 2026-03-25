@@ -24,7 +24,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/app/services/notificationsService";
-import "./VendorAdminNavbar.css";
+import "./vendorAdminNavbar.css";
 
 const NOTIFICATION_LIMIT = 50;
 

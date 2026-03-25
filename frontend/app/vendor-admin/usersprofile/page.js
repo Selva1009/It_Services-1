@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
 import {
@@ -17,7 +17,7 @@ import {
   TablePagination,
 } from "@mui/material";
 import { Search, GroupOutlined } from "@mui/icons-material";
-import "./vendorUsers.css";
+import "./Vendorusers.css";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchVendorAdminUsers } from "@/app/services/vendorAdminService";
 

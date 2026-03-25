@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
-import "./itUserProfile.css";
+import "./ItUserProfile.css";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { fetchItUserProfile, updateItUserProfile } from "@/app/services/profileService";
 
