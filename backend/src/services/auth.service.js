@@ -119,9 +119,9 @@ exports.login = async ({ email, password }) => {
     }
   }
 
-  // ❌ If no user found
+  // ❌ If no user found (generic auth error to avoid user enumeration)
   if (!foundUser)
-    throw { status: 404, message: "User not found" };
+    throw { status: 401, message: "Invalid email or password" };
 
   // 🔐 Check password
   const valid = await bcrypt.compare(password, foundUser.password);

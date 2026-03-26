@@ -136,7 +136,7 @@ exports.sendOtp = async (email) => {
   );
 
   if (vendors.length) {
-    throw new Error("Vendor already registered. Please login.");
+    throw new Error("If the account exists, an OTP will be sent");
   }
 
 

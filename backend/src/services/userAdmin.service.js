@@ -38,7 +38,7 @@ exports.signup = async (data) => {
   );
 
   if (existing.length)
-    throw { status: 400, message: "User already exists" };
+    throw { status: 400, message: "If the account exists, an OTP will be sent" };
 
   /* OTP Verification */
   const [otpRows] = await db.query(
@@ -47,7 +47,7 @@ exports.signup = async (data) => {
   );
 
   if (!otpRows.length)
-    throw { status: 400, message: "OTP expired" };
+    throw { status: 400, message: "Invalid OTP" };
 
   if (String(otpRows[0].otp) !== String(otp))
     throw { status: 400, message: "Invalid OTP" };
