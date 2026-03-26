@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../../db");   // correct path
 require("dotenv").config();
 const {generateOtp,getOtpExpiry} =require("../utils/otp")
+const { sendEmail } = require("../utils/email");
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto=require("crypto")
 
@@ -108,7 +109,7 @@ exports.signup = async (data) => {
 
   /* ---------- Auth JWT Token ---------- */
   const authToken = jwt.sign(
-    { vendorId },
+    { id: vendorId, role: "vendor_admin" },
     JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -148,9 +149,10 @@ exports.sendOtp = async (email) => {
      ON DUPLICATE KEY UPDATE otp=?, expires_at=?`,
     [email, otp, expiry, otp, expiry]
   );
-
-  console.log("Generated OTP:", otp);
-
+  const subject = "Your OTP Code";
+  const text = `Your OTP is ${otp}. It expires in 5 minutes.`;
+  const html = `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`;
+  await sendEmail({ to: email, subject, text, html });
   return { message: "OTP sent successfully" };
 };
 

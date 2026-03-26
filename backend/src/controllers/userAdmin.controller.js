@@ -24,7 +24,6 @@ exports.sendOtp = async (req, res) => {
 
 
 exports.getUserAdminProfile = async (req, res) => {
-  console.log(req,"request")
   try {
     const result = await service.getUserAdminProfile(req.users.id);
     res.json(result);
@@ -43,7 +42,6 @@ exports.editUserAdminProfile = async (req, res) => {
 };
 
 exports.getItUsers = async (req, res) => {
-  console.log(req,"req")
   try {
     const user_id = req.users.id; 
     const result = await service.getAllItUsers(user_id);

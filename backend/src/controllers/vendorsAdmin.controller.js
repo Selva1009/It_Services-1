@@ -49,7 +49,6 @@ exports.updateVendorProfile = async (req, res) => {
 };
 
 exports.getVendorUsers = async (req, res) => {
-  console.log(req,"req")
   try {
     const vendor_id = req.users.id; 
     const result = await vendorService.getVendorUsers(vendor_id);

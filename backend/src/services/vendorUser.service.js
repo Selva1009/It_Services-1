@@ -33,17 +33,18 @@ exports.createVendorUser=async(data)=>{
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
    const vendorUserToken = crypto.randomBytes(32).toString("hex");
-    const authToken = jwt.sign(
-    { vendor_id },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
    // Insert vendor user
-  await db.query(
+  const [result] = await db.query(
     `INSERT INTO vendor_users
      (vendor_id, company_name, name, email, mobile, designation, password,token)
      VALUES (?, ?, ?, ?, ?, ?, ?,?)`,
     [vendor_id, companyName, name, email, mobile, designation, hashedPassword,vendorUserToken]
+  );
+  const vendorUserId = result.insertId;
+  const authToken = jwt.sign(
+    { id: vendorUserId, role: "vendor_user", parentId: vendor_id },
+    JWT_SECRET,
+    { expiresIn: "7d" }
   );
 
   return { message: "Vendor user created successfully", 

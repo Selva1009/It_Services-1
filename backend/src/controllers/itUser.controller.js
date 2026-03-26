@@ -18,7 +18,6 @@ exports.signup = async (req, res) => {
 
 
 exports.getItUserEmployeeProfile = async (req, res) => {
-  console.log(req,"req")
   try {
     const result = await itUserEmployeeService.getItUserEmployeeProfile(req.users.id);
     res.json(result);

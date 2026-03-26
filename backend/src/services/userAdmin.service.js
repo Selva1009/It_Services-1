@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../../db");
 const { generateOtp, getOtpExpiry } = require("../utils/otp");
+const { sendEmail } = require("../utils/email");
 require("dotenv").config();
 
 const crypto=require("crypto")
@@ -92,7 +93,7 @@ exports.signup = async (data) => {
 
   /* Generate token */
   const token = jwt.sign(
-    { id: userId, role: "buyer" },
+    { id: userId, role: "it_admin" },
     JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -106,9 +107,6 @@ exports.signup = async (data) => {
 };
 
 exports.sendOtp = async (email) => {
-
-  console.log("sendOtp called:", email);
-
   const otp = generateOtp();
   const expiry = getOtpExpiry();
 
@@ -119,14 +117,13 @@ exports.sendOtp = async (email) => {
        ON DUPLICATE KEY UPDATE otp=?, expires_at=?`,
       [email, otp, expiry, otp, expiry]
     );
-
-    console.log("DB result:", result);
   } catch (err) {
-    console.error("DB insert error:", err);
+    throw err;
   }
-
-  console.log("Generated OTP:", otp);
-
+  const subject = "Your OTP Code";
+  const text = `Your OTP is ${otp}. It expires in 5 minutes.`;
+  const html = `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`;
+  await sendEmail({ to: email, subject, text, html });
   return { message: "OTP sent successfully" };
 };
 

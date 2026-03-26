@@ -33,19 +33,19 @@ exports.createItUserEmployee=async(data)=>{
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
   const itUserEmployeeToken = crypto.randomBytes(32).toString("hex");
-
-   const authToken = jwt.sign(
-      { user_id },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
    // Insert vendor user
-  await db.query(
+  const [result] = await db.query(
     `INSERT INTO it_users_employee
      (user_id, company_name, name, email, mobile, designation, password,token)
      VALUES (?, ?, ?, ?, ?, ?, ?,?)`,
     [user_id, companyName, name, email, mobile, designation, hashedPassword,itUserEmployeeToken]
   );
+  const itUserEmployeeId = result.insertId;
+  const authToken = jwt.sign(
+      { id: itUserEmployeeId, role: "it_user", parentId: user_id },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
   return { 
     message: "It user Employee created successfully",
