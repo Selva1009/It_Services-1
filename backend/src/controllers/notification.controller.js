@@ -43,8 +43,18 @@ exports.getUnreadCount = async (req, res) => {
 
 exports.markRead = async (req, res) => {
   try {
+    const user = getUser(req);
+    const recipientType = user?.role;
+    const recipientId = user?.id;
+    if (!recipientType || !recipientId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const notificationId = req.params.id;
-    await markNotificationRead(notificationId);
+    const updatedRows = await markNotificationRead(notificationId, recipientType, recipientId);
+    if (!updatedRows) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
     return res.status(200).json({ message: "Marked as read" });
   } catch (err) {
     return res.status(500).json({ message: err.message || "Failed to update notification" });

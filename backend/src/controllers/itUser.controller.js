@@ -2,7 +2,17 @@ const itUserEmployeeService=require("../services/itUsers.service")
 
 exports.signup = async (req, res) => {
   try {
-    const result = await itUserEmployeeService.createItUserEmployee(req.body);
+    if (req.users?.role !== "it_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only IT admins can create IT users",
+      });
+    }
+
+    const result = await itUserEmployeeService.createItUserEmployee({
+      ...req.body,
+      user_id: req.users.id,
+    });
 
     res.status(201).json({
       result

@@ -25,11 +25,15 @@ exports.getNotificationsByRecipient = async (recipientType, recipientId) => {
   return rows;
 };
 
-exports.markNotificationRead = async (notificationId) => {
-  await db.query(
-    "UPDATE notifications SET is_read = 1 WHERE id = ?",
-    [notificationId]
+exports.markNotificationRead = async (notificationId, recipientType, recipientId) => {
+  const [result] = await db.query(
+    `UPDATE notifications
+     SET is_read = 1
+     WHERE id = ? AND recipient_type = ? AND recipient_id = ?`,
+    [notificationId, recipientType, recipientId]
   );
+
+  return result.affectedRows;
 };
 
 exports.markAllNotificationsRead = async (recipientType, recipientId) => {

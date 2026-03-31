@@ -2,7 +2,17 @@ const vendorUserService = require("../services/vendorUser.service");
 
 exports.signup = async (req, res) => {
   try {
-    const result = await vendorUserService.createVendorUser(req.body);
+    if (req.users?.role !== "vendor_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only vendor admins can create vendor users",
+      });
+    }
+
+    const result = await vendorUserService.createVendorUser({
+      ...req.body,
+      vendor_id: req.users.id,
+    });
     
    res.json(result)
 

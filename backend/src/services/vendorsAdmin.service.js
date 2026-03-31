@@ -91,14 +91,16 @@ exports.signup = async (data) => {
 
   /* ---------- Insert Services ---------- */
   if (services && services.length) {
-    for (const svc of services) {
-      await db.query(
-        `INSERT INTO vendor_services
-         (vendor_id, service_name,  support_level)
-         VALUES (?, ?, ?)`,
-        [vendorId, svc.name, svc.level]
-      );
-    }
+   for (const svc of services) {
+  for (const level of svc.level) {
+    await db.query(
+      `INSERT INTO vendor_services
+       (vendor_id, service_name, support_level)
+       VALUES (?, ?, ?)`,
+      [vendorId, svc.name, level]
+    );
+  }
+}
   }
 
   /* ---------- Remove OTP ---------- */

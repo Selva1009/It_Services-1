@@ -16,6 +16,16 @@ const {
 const { createNotification } = require("../services/notifications.service");
 
 const getUser = (req) => req.user || req.users || null;
+const isVendorRole = (role) => role === "vendor_admin" || role === "vendor_user";
+
+const canAccessTicket = (user, ticket) => {
+  if (!user || !ticket) return false;
+  if (user.role === "it_admin") return ticket.it_admin_id === user.id;
+  if (user.role === "it_user") return ticket.it_user_id === user.id;
+  if (user.role === "vendor_admin") return ticket.vendor_id === user.id;
+  if (user.role === "vendor_user") return ticket.vendor_id === user.parentId;
+  return false;
+};
 
 exports.raiseTicket = async (req, res) => {
   try {
@@ -115,6 +125,10 @@ exports.claimTicket = async (req, res) => {
     const user = getUser(req);
     const ticketId = req.params.id;
 
+    if (!isVendorRole(user?.role)) {
+      return res.status(403).json({ message: "Only vendor users can claim tickets." });
+    }
+
     const vendorId = user?.role === "vendor_user"
       ? user?.parentId
       : user?.id;
@@ -134,6 +148,12 @@ exports.claimTicket = async (req, res) => {
 
     if (ticket.vendor_id !== null) {
       return res.status(400).json({ message: "Ticket already claimed by another vendor." });
+    }
+
+    const allowedVendors = await getVendorsByCategory(ticket.category);
+    const canClaim = allowedVendors.some((row) => row.vendor_id === vendorId);
+    if (!canClaim) {
+      return res.status(403).json({ message: "Your vendor is not eligible for this ticket category." });
     }
 
     const affectedRows = await claimTicket(ticketId, vendorId, vendorUserId);
@@ -245,6 +265,7 @@ exports.getMyTickets = async (req, res) => {
 
 exports.getTicketDetail = async (req, res) => {
   try {
+    const user = getUser(req);
     const ticketId = req.params.id;
 
     const [ticket, activity] = await Promise.all([
@@ -254,6 +275,10 @@ exports.getTicketDetail = async (req, res) => {
 
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (!canAccessTicket(user, ticket)) {
+      return res.status(403).json({ message: "You are not allowed to view this ticket." });
     }
 
     return res.status(200).json({ ticket, activity });
@@ -275,6 +300,10 @@ exports.updateStatus = async (req, res) => {
     const currentTicket = await getTicketById(ticketId);
     if (!currentTicket) {
       return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (!canAccessTicket(user, currentTicket)) {
+      return res.status(403).json({ message: "You are not allowed to update this ticket." });
     }
 
     await updateTicketStatus(ticketId, status, status === "Resolved" ? new Date() : null);
