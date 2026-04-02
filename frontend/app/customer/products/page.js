@@ -831,11 +831,7 @@ export default function CustomerSupportHomePage() {
                   onKeyDown={(e) => e.key === "Enter" && openDialog(service.name)}>
                   <div className="ch-card-top">
                     <div className="ch-card-icon-wrap"><Icon className="ch-card-icon" /></div>
-                    <div className="ch-card-levels">
-                      <span>L1 · {(service.levels.L1 || []).length}</span>
-                      <span>L2 · {(service.levels.L2 || []).length}</span>
-                      <span>L3 · {(service.levels.L3 || []).length}</span>
-                    </div>
+                    
                   </div>
                   <h3 className="ch-card-title">{service.name}</h3>
                   <p className="ch-card-desc">{service.desc}</p>

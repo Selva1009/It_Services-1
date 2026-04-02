@@ -8,17 +8,9 @@ export const fetchItUsers = (token) =>
     token,
   });
 
-export const fetchCustomerAdminCompanyName = (customerId) =>
-  apiRequest({
-    path: `/api/customer-users/company-name/${customerId}`,
-  });
 
-export const createCustomerUser = (payload) =>
-  apiRequest({
-    path: "/api/customer-users/customerUser",
-    method: "POST",
-    body: payload,
-  });
+
+
 
 export const createItUserEmployee = (token, payload) =>
   apiRequest({

@@ -2,12 +2,6 @@
 
 import { apiRequest } from "@/app/services/apiClient";
 
-export const fetchVendorProfile = (token) =>
-  apiRequest({
-    path: "/api/vendors/profile",
-    token,
-    cache: "no-store",
-  });
 
 export const fetchVendorAdminProfile = (token) =>
   apiRequest({
@@ -53,11 +47,7 @@ export const updateCustomerProfile = (token, payload) =>
     body: payload,
   });
 
-export const fetchCustomerUserProfile = (token) =>
-  apiRequest({
-    path: "/api/customer-users/profile",
-    token,
-  });
+
 
 export const fetchItUserProfile = (token) =>
   apiRequest({

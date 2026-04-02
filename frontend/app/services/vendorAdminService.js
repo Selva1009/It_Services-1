@@ -15,10 +15,6 @@ export const fetchVendorAdminUsers = (token) =>
     token,
   });
 
-export const fetchVendorCompanyName = (vendorId) =>
-  apiRequest({
-    path: `/api/vendor-users/company-name/${vendorId}`,
-  });
 
 export const createVendorUser = (token, payload) =>
   apiRequest({
