@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -55,29 +54,9 @@ export default function ForgotPassOtp() {
         setLoading(false);
         return;
       }
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/password/verify-otp`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            otp: data.otp,
-          }),
-        }
+      setErrorMessage(
+        "OTP verification is unavailable because the API endpoint is not available in this backend."
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Invalid OTP");
-      }
-
-      const result = await response.json();
-      setSuccessMessage(result.message || "OTP validated successfully.");
-      router.push("/ResetPassword");
     } catch (error) {
       setErrorMessage(error.message || "Failed to validate OTP");
     } finally {

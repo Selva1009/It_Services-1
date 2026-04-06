@@ -20,14 +20,6 @@ export const createItUserEmployee = (token, payload) =>
     body: payload,
   });
 
-export const updateCustomerUserProfile = (customerUserId, token, payload) =>
-  apiRequest({
-    path: `/api/customer-users/profile/${customerUserId}`,
-    method: "PUT",
-    token,
-    body: payload,
-  });
-
 export const fetchItAdminTickets = (token) =>
   apiRequest({
     path: "/api/tickets/admin/list",

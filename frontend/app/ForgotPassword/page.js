@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -40,30 +39,10 @@ export default function ForgotPassword() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/password/forgot-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: data.email }),
-        }
+      setOtpSent(false);
+      setOtpMessage(
+        "Password reset is unavailable because the API endpoint is not available in this backend."
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setOtpMessage(errorData.error || errorData.message || "Unknown error.");
-        return;
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        setOtpSent(true);
-        setOtpMessage("OTP sent successfully!");
-        sessionStorage.setItem("userEmail", data.email);
-        router.push("./ForgotPassOtp");
-      } else {
-        setOtpMessage(result.message || "Failed to send OTP");
-      }
     } catch (error) {
       setOtpMessage("Error sending OTP. Try again.");
     } finally {

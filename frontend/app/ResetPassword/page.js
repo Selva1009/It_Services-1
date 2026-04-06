@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -55,35 +54,12 @@ export default function ResetPassword() {
     const email = sessionStorage.getItem("userEmail");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/password/reset-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email,
-            newPassword: data.newPassword,
-            confirmPassword: data.confirmPassword,
-          }),
-        }
-      );
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || "Failed to reset password");
-      }
-
       Swal.fire({
-        title: "Password Reset Successful!",
-        text: "You can now log in with your new password.",
-        icon: "success",
-        confirmButtonColor: "#4BB543",
-        confirmButtonText: "Go to Signin",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push("/SignIn");
-        }
+        title: "Unavailable",
+        text: "Password reset is disabled because the API endpoint is not available in this backend.",
+        icon: "warning",
+        confirmButtonColor: "#D9534F",
+        confirmButtonText: "OK",
       });
     } catch (error) {
       Swal.fire({

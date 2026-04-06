@@ -198,7 +198,6 @@ const VendorDashboard = () => {
       try {
 
 
-        // Users → fetchVendorUsers(vendorId)
         const userData = await fetchVendorAdminUsers(authToken);
 
         console.log(userData);

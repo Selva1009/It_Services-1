@@ -21,11 +21,8 @@ import {
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UserCog, Loader2 } from "lucide-react";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { updateCustomerUserProfile } from "@/app/services/customerAdminService";
 
 export const EditUserForm = ({ user, onClose, onUpdate }) => {
-  const { getAuthToken: getAuthTokenFromContext } = useAuth();
   const [formData, setFormData] = useState({
     companyName: "",
     personName: "",
@@ -61,32 +58,12 @@ export const EditUserForm = ({ user, onClose, onUpdate }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const { companyName, personName, contactNumber, Email, status } = formData;
-
     try {
-      let userId = user?.id;
-
-      if (!userId) {
-        throw new Error("No user ID found in user object");
-      }
-
-      // Force userId to be number
-      userId = Number(userId);
-      if (isNaN(userId)) {
-        throw new Error(`Invalid user ID format: ${user.id}`);
-      }
-
-      const data = await updateCustomerUserProfile(user.id, getAuthTokenFromContext(), {
-        companyName,
-        personName,
-        contactNumber,
-        Email,
-        status,
-      });
-
-      Swal.fire("Success", data.message, "success");
-      onUpdate(); // Refresh the user list
-      onClose(); // Close the modal
+      Swal.fire(
+        "Unavailable",
+        "Customer profile updates are disabled because the API endpoint is not available in this backend.",
+        "warning"
+      );
     } catch (error) {
       console.error("Update error details:", error);
       Swal.fire("Error", error.message, "error");

@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
@@ -49,38 +48,14 @@ export default function AddProduct() {
         return;
       }
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/vendor-users/profile`, {
-          headers: { Authorization: `Bearer ${authToken}` },
-          cache: "no-store",
-        });
+      const resolvedId = Number(storedVendorId);
+      if (resolvedId && isMounted) {
+        setVendorUserId(resolvedId);
+        sessionStorage.setItem("vendorUserId", String(resolvedId));
+      }
 
-        if (!response.ok) {
-          throw new Error("Unable to load vendor profile");
-        }
-
-        const profile = await response.json();
-        if (!isMounted) return;
-
-        const resolvedId = profile?.id || Number(storedVendorId);
-        if (resolvedId) {
-          setVendorUserId(Number(resolvedId));
-          sessionStorage.setItem("vendorUserId", String(resolvedId));
-        }
-
-        setVendorUser(profile);
-      } catch (error) {
-        if (!storedVendorId) {
-          Swal.fire({
-            title: "Session Expired!",
-            text: "Please log in again.",
-            icon: "warning",
-            confirmButtonColor: "#d33",
-            confirmButtonText: "OK",
-          }).then(() => {
-            window.location.href = "/SignIn";
-          });
-        }
+      if (auth?.vendorUser && isMounted) {
+        setVendorUser(auth.vendorUser);
       }
     };
 
@@ -125,67 +100,14 @@ export default function AddProduct() {
       return;
     }
 
-    const formDataToSend = new FormData();
-    formDataToSend.append("productName", formData.productName);
-    formDataToSend.append("brand", formData.brand);
-    formDataToSend.append("category", formData.category);
-    formDataToSend.append("price", formData.price);
-    formDataToSend.append("seller", formData.seller);
-    formDataToSend.append("description", formData.description);
-    formDataToSend.append("vendor_user_id", vendorUserId);
-    if (productImage) {
-      formDataToSend.append("productImage", productImage);
-    }
-
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/products/add-product`,
-        {
-          method: "POST",
-          body: formDataToSend,
-        }
-      );
-
-      if (response.status === 403) {
-        const data = await response.json();
-        Swal.fire({
-          title: "Product Limit Reached!",
-          text:
-            data.message ||
-            "You have reached the product limit. Please upgrade your subscription to add more products.",
-          imageUrl: "/subscription.gif",
-          imageWidth: 127,
-          imageHeight: 151,
-          imageAlt: "Update Success",
-          confirmButtonColor: "#d33",
-          confirmButtonText: "OK",
-        });
-        return; // Stop further execution if limit is reached
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to add product");
-      }
-
       Swal.fire({
-        title: "Success!",
-        text: "Product added successfully!",
-        icon: "success",
-        confirmButtonColor: "#3085d6",
+        title: "Unavailable",
+        text: "Adding products is disabled because the API endpoint is not available in this backend.",
+        icon: "warning",
+        confirmButtonColor: "#d33",
         confirmButtonText: "OK",
       });
-
-      // Reset form
-      setFormData({
-        category: "",
-        brand: "",
-        productName: "",
-        price: "",
-        description: "",
-        seller: "",
-      });
-      setProductImage(null);
-      setPreviewImage(null);
     } catch (error) {
       Swal.fire({
         title: "Error!",

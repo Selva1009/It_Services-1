@@ -1,6 +1,5 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send, User, MessageSquare, ArrowRight } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -39,7 +38,6 @@ export default function ContactSection() {
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors },
   } = useForm();
 
@@ -49,15 +47,11 @@ export default function ContactSection() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/support/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      Swal.fire({
+        title: "Unavailable",
+        text: "Contact form is disabled because the API endpoint is not available in this backend.",
+        icon: "warning",
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Unable to send message.");
-      Swal.fire({ title: "Message Sent", text: "We will get back to you within 24 hours.", icon: "success" });
-      reset();
     } catch (error) {
       Swal.fire({ icon: "error", title: "Request Failed", text: error.message || "Please try again later." });
     } finally {

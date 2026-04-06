@@ -831,7 +831,7 @@ export default function CustomerSupportHomePage() {
                   onKeyDown={(e) => e.key === "Enter" && openDialog(service.name)}>
                   <div className="ch-card-top">
                     <div className="ch-card-icon-wrap"><Icon className="ch-card-icon" /></div>
-                    
+                     
                   </div>
                   <h3 className="ch-card-title">{service.name}</h3>
                   <p className="ch-card-desc">{service.desc}</p>

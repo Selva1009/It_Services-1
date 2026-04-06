@@ -14,11 +14,8 @@ import {
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, RefreshCw, X } from "lucide-react";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { transferProducts } from "@/app/services/vendorAdminService";
 
 export default function TransferProducts({ onClose }) {
-  const { auth, setVendorUser } = useAuth();
   const [oldUsername, setOldUsername] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,27 +31,11 @@ export default function TransferProducts({ onClose }) {
     }
 
     try {
-      const data = await transferProducts({ oldUsername, newUsername });
-      if (data) {
-        if (data.newUserId) {
-          const nextVendorUser = {
-            ...(auth.vendorUser || {}),
-            id: Number(data.newUserId),
-          };
-          setVendorUser(nextVendorUser);
-        }
-
-        Swal.fire({
-          title: "Success",
-          text: data.message || "Products transferred successfully",
-          icon: "success",
-        }).then(() => {
-          setOldUsername("");
-          setNewUsername("");
-          if (onClose) onClose(); // close modal
-          window.location.reload(); // ✅ Reload everything with updated ID
-        });
-      }
+      Swal.fire(
+        "Unavailable",
+        "Product transfer is disabled because the API endpoint is not available in this backend.",
+        "warning"
+      );
     } catch (error) {
       console.error("Transfer error:", error);
       Swal.fire("Error", "Server error occurred", "error");

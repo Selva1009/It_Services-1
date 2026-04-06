@@ -22,7 +22,6 @@ import {
 import { Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { fetchVendorUserById, updateVendorUserById } from "@/app/services/vendorAdminService";
 
 const UpdateUserPage = () => {
   const router = useRouter();
@@ -47,25 +46,6 @@ const UpdateUserPage = () => {
       return;
     }
     setVendorUserId(id); // <-- Store the vendorUserId
-
-    const fetchUser = async () => {
-      try {
-        const data = await fetchVendorUserById(id);
-        if (data) {
-          setForm({
-            companyName: data.companyName || "",
-            personName: data.personName || "",
-            phoneNumber: data.phoneNumber || "",
-            email: data.Email || data.email || "",
-            status: data.status || "Active",
-          });
-        }
-      } catch (err) {
-        Swal.fire("Error", "Failed to fetch user details", "error");
-      }
-    };
-
-    fetchUser();
   }, []);
 
   const handleChange = (e) => {
@@ -81,13 +61,6 @@ const UpdateUserPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const { companyName, personName, phoneNumber, email, status } = form;
-
-    if (!companyName || !personName || !phoneNumber || !email) {
-      setIsSubmitting(false);
-      return Swal.fire("Error", "All fields are required", "error");
-    }
-
     // Check for vendorUserId state
     if (!vendorUserId) {
       setIsSubmitting(false);
@@ -95,24 +68,14 @@ const UpdateUserPage = () => {
     }
 
     try {
-      const result = await updateVendorUserById(vendorUserId, {
-        companyName,
-        personName,
-        phoneNumber,
-        Email: email,
-        status,
-      });
-
       await Swal.fire({
-        title: "Success!",
-        text: result.message || "User updated successfully",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
+        title: "Unavailable",
+        text: "Vendor user updates are disabled because the API endpoint is not available in this backend.",
+        icon: "warning",
+        timer: 2500,
+        showConfirmButton: true,
         background: "#f8fafc",
       });
-
-      router.push("/vendor-admin/usersprofile");
     } catch (error) {
       Swal.fire("Update Failed", error.message, "error");
     } finally {
