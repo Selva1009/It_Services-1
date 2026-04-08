@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../../db");
 const { generateOtp, getOtpExpiry } = require("../utils/otp");
+const { sendEmail } = require("../utils/email");
 require("dotenv").config();
 
 const crypto=require("crypto")
@@ -37,7 +38,7 @@ exports.signup = async (data) => {
   );
 
   if (existing.length)
-    throw { status: 400, message: "User already exists" };
+    throw { status: 400, message: "If the account exists, an OTP will be sent" };
 
   /* OTP Verification */
   const [otpRows] = await db.query(
@@ -46,7 +47,7 @@ exports.signup = async (data) => {
   );
 
   if (!otpRows.length)
-    throw { status: 400, message: "OTP expired" };
+    throw { status: 400, message: "Invalid OTP" };
 
   if (String(otpRows[0].otp) !== String(otp))
     throw { status: 400, message: "Invalid OTP" };
@@ -92,7 +93,7 @@ exports.signup = async (data) => {
 
   /* Generate token */
   const token = jwt.sign(
-    { id: userId, role: "buyer" },
+    { id: userId, role: "it_admin" },
     JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -106,9 +107,6 @@ exports.signup = async (data) => {
 };
 
 exports.sendOtp = async (email) => {
-
-  console.log("sendOtp called:", email);
-
   const otp = generateOtp();
   const expiry = getOtpExpiry();
 
@@ -119,13 +117,72 @@ exports.sendOtp = async (email) => {
        ON DUPLICATE KEY UPDATE otp=?, expires_at=?`,
       [email, otp, expiry, otp, expiry]
     );
-
-    console.log("DB result:", result);
   } catch (err) {
-    console.error("DB insert error:", err);
+    throw err;
   }
-
-  console.log("Generated OTP:", otp);
-
+  const subject = "Your OTP Code";
+  const text = `Your OTP is ${otp}. It expires in 5 minutes.`;
+  const html = `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`;
+  await sendEmail({ to: email, subject, text, html });
   return { message: "OTP sent successfully" };
+};
+
+
+// GET /profile/:userId
+exports.getUserAdminProfile = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT 
+       u.id, u.company_name, u.registration_number, u.company_website,
+       u.gst_number, u.first_name, u.last_name, u.phone, u.email,
+       a.address, a.country, a.state, a.city, a.pincode
+     FROM it_user_admin_signup u
+     LEFT JOIN it_user_addresses a ON a.user_id = u.id
+     WHERE u.id = ?`,
+    [userId]
+  );
+
+  if (!rows.length) throw { status: 404, message: "User not found" };
+
+  return { profile: rows[0] };
+};
+
+// PUT
+exports.editUserAdminProfile = async (userId, data) => {
+  const {
+    companyName, registrationNumber, companyWebsite,
+    gstNumber, firstName, lastName, phone,
+    address, country, state, city, pincode
+  } = data;
+
+  // Update user table (email & password excluded from edit)
+  await db.query(
+    `UPDATE it_user_admin_signup SET
+       company_name=?, registration_number=?, company_website=?,
+       gst_number=?, first_name=?, last_name=?, phone=?
+     WHERE id=?`,
+    [companyName, registrationNumber, companyWebsite,
+     gstNumber, firstName, lastName, phone, userId]
+  );
+
+  // Upsert address
+  await db.query(
+    `INSERT INTO it_user_addresses (user_id, address, country, state, city, pincode)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       address=VALUES(address), country=VALUES(country),
+       state=VALUES(state), city=VALUES(city), pincode=VALUES(pincode)`,
+    [userId, address, country, state, city, pincode]
+  );
+
+  return { message: "Profile updated successfully" };
+};
+
+exports.getAllItUsers = async (user_id) => {
+  const [users] = await db.query(
+    `SELECT id, name, email, mobile, designation, created_at 
+     FROM it_users_employee 
+     WHERE user_id = ?`,
+    [user_id]
+  );
+  return { total: users.length, users };
 };

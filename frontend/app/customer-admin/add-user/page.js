@@ -1,243 +1,369 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import CustomerAdminNavbar from "../components/customerAdminNavbar";
-import { CustomerAddUser } from "@/app/Components/auth/CustomerAddUser";
-import { PasswordSection } from "@/app/Components/auth/PasswordSection";
+
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
-import { useUserFormValidation } from "@/app/hooks/useUserFormValidation";
-import { UserPlus } from "lucide-react";
+import Swal from "sweetalert2";
+import CustomerAdminNavbar from "../components/customerAdminNavbar";
+import {
+  Eye, EyeOff,
+  User, Mail, Phone, Briefcase,
+  Lock, ArrowRight, CheckCircle2, UserPlus,
+} from "lucide-react";
+import "./customer-addUser.css";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { createItUserEmployee } from "@/app/services/customerAdminService";
 
-const Page = () => {
+/* ── Validation helpers ── */
+const validateMobile   = (mobile)   => /^[6-9]\d{9}$/.test(mobile);
+const validateEmail    = (email)    => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validatePassword = (password) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
+
+const CustomerAddUserPage = () => {
   const router = useRouter();
-  const { validateForm } = useUserFormValidation();
-  const [adminID, setAdminId] = useState(null);
-  const [formValues, setFormValues] = useState({
+  const { auth, getAuthToken: getAuthTokenFromContext } = useAuth();
 
-    personName: "",
-    contactNumber: "",
-    Email: "",
-    password: "",
+
+  const [formValues, setFormValues] = useState({
+    name:            "",
+    email:           "",
+    mobile:          "",
+    designation:     "",
+    password:        "",
     confirmPassword: "",
-    adminID: null,
   });
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [errors,              setErrors]              = useState({});
+  const [showPassword,        setShowPassword]        = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    const storedCustomer = localStorage.getItem("customer");
-    if (storedCustomer) {
-      try {
-        const customerData = JSON.parse(storedCustomer);
-        setAdminId(customerData.id);
-        setFormValues((prev) => ({
-          ...prev,
-          adminID: customerData.id,
-        }));
-      } catch (err) {
-        console.error("Invalid customer data in localStorage:", err);
-      }
-    }
-  }, []);
+  const [isSubmitting,        setIsSubmitting]        = useState(false);
+  const [submitted,           setSubmitted]           = useState(false);
+  const [focused,             setFocused]             = useState(null);
+  const [userId,              setUserId]              = useState(null);
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
-  const toggleConfirmPasswordVisibility = () =>
-    setShowConfirmPassword(!showConfirmPassword);
+  /* ── Decode user id from authToken ── */
+  useEffect(() => {
+  const customerData = auth.customer;
+  if (customerData?.id) {
+    setUserId(customerData.id);
+  }
+}, [auth.customer]);
+
+  /* ── Per-field validation ── */
+  const validateField = (name, value) => {
+    switch (name) {
+      case "name":
+        return value.trim().length < 2 ? "Name must be at least 2 characters." : "";
+
+      case "mobile":
+        if (!value) return "Mobile number is required.";
+        if (!/^\d+$/.test(value)) return "Mobile must contain digits only.";
+        if (value.length !== 10) return "Mobile number must be exactly 10 digits.";
+        if (!validateMobile(value)) return "Enter a valid Indian mobile number (starts with 6-9).";
+        return "";
+
+      case "email":
+        if (!value) return "Email is required.";
+        if (!validateEmail(value)) return "Enter a valid email address (e.g. user@example.com).";
+        return "";
+
+      case "designation":
+        return value.trim().length < 2 ? "Designation must be at least 2 characters." : "";
+
+      case "password":
+        if (!value) return "Password is required.";
+        if (value.length < 8) return "Password must be at least 8 characters.";
+        if (!validatePassword(value))
+          return "Must include uppercase, lowercase, number & special character (@$!%*?&).";
+        return "";
+
+      case "confirmPassword":
+        if (!value) return "Please confirm your password.";
+        if (value !== formValues.password) return "Passwords do not match.";
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "mobile") {
+      if (!/^\d*$/.test(value)) return;
+      if (value.length > 10) return;
+    }
+
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+
+    const error = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: error }));
+
+    if (name === "password") {
+      const cpError = formValues.confirmPassword
+        ? value !== formValues.confirmPassword ? "Passwords do not match." : ""
+        : "";
+      setErrors((prev) => ({ ...prev, confirmPassword: cpError }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setFocused(null);
+    const error = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
+  const handleCancel = () => router.push("/customer-admin");
+
+  /* ── Full form validation before submit ── */
+  const validateAll = () => {
+    const newErrors = {};
+    Object.keys(formValues).forEach((key) => {
+      newErrors[key] = validateField(key, formValues[key]);
+    });
+    setErrors(newErrors);
+    return Object.values(newErrors).every((e) => e === "");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    if (!validateAll()) return;
+
     setIsSubmitting(true);
 
-    if (!formValues.adminID) {
+    if (!userId) {
       Swal.fire({
         title: "Error",
-        text: "Admin session not found. Please login again.",
+        text: "Auth token not found. Please login again.",
         icon: "error",
+        confirmButtonColor: "#1a56db",
       });
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { isValid, errors: validationErrors } = validateForm(formValues);
-    if (!isValid) {
-      setErrors(validationErrors);
       setIsSubmitting(false);
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/customer-users/customerUser`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formValues),
-        }
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
-        Swal.fire({
-          title: "Success!",
-          text: "User created successfully",
-          icon: "success",
-          confirmButtonColor: "#4BB543",
-        }).then(() => {
-          router.push("/customer-admin/user-profile");
-        });
-      } else {
+      const token = getAuthTokenFromContext();
+      if (!token) {
         Swal.fire({
           title: "Error",
-          text: result.message || "Failed to create user",
+          text: "Auth token not found. Please login again.",
           icon: "error",
-          confirmButtonColor: "#D9534F",
+          confirmButtonColor: "#1a56db",
         });
+        setIsSubmitting(false);
+        return;
       }
-    } catch (error) {
-      Swal.fire({
-        title: "Error",
-        text: error.message || "Network error occurred",
-        icon: "error",
-        confirmButtonColor: "#D9534F",
+      await createItUserEmployee(token, {
+        name:        formValues.name,
+        email:       formValues.email,
+        mobile:      formValues.mobile,
+        designation: formValues.designation,
+        password:    formValues.password,
+        user_id:     userId,
       });
+
+      setSubmitted(true);
+
+      Swal.fire({
+        icon: "success",
+        title: "User Created",
+        text: "The new user has been added successfully.",
+        confirmButtonColor: "#1a56db",
+        timer: 2000,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push("/customer-admin");
+      });
+
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Creation Failed", text: err.message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const fields = [
+    { name: "name",        label: "Full Name",     icon: User,      placeholder: "Enter full name",     type: "text",  col: 1 },
+    { name: "mobile",      label: "Mobile",        icon: Phone,     placeholder: "Enter mobile number", type: "tel",   col: 1 },
+    { name: "email",       label: "Email Address", icon: Mail,      placeholder: "Enter email address", type: "email", col: 2 },
+    { name: "designation", label: "Designation",   icon: Briefcase, placeholder: "Enter designation",   type: "text",  col: 2 },
+  ];
 
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      const storedCustomer = localStorage.getItem("customer");
-      if (storedCustomer) {
-        try {
-          const customerData = JSON.parse(storedCustomer);
-          setAdminId(customerData.id);
-
-          // Fetch admin's company details
-          const response = await fetch(
-            `${API_BASE_URL}/api/customer-users/company-name/${customerData.id}`
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            setFormValues((prev) => ({
-              ...prev,
-              companyName: data.companyName,
-              adminID: customerData.id,
-            }));
-          } else {
-            console.error("Failed to fetch admin details");
-          }
-        } catch (err) {
-          console.error("Error:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchAdminData();
-  }, []);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === "companyName" && formValues.companyName) {
-      return;
-    }
-    setFormValues((prevValues) => ({
-      ...prevValues,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        [name]: "",
-      }));
-    }
-  };
-
+  const btnClass = [
+    "cau-btn-submit",
+    isSubmitting ? "loading" : "",
+    submitted    ? "success" : "",
+  ].filter(Boolean).join(" ");
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <>
       <CustomerAdminNavbar />
-      <main className="flex-1 flex items-center justify-center py-10 px-4">
-        <div className="w-full max-w-2xl bg-white rounded-xl shadow-md border border-gray-200">
-          {/* Form Header */ }
-          <div className="flex items-center justify-between px-6 py-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-md">
-                <UserPlus className="text-blue-600" size={ 22 } />
+      <div className="cau-page">
+        <div className="cau-card">
+
+          {/* ── Header ── */}
+          <div className="cau-header">
+            <div className="cau-header-inner">
+              <div className="cau-avatar">
+                <UserPlus size={22} color="rgba(255,255,255,0.85)" />
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800">Create New User</h2>
-                <p className="text-sm text-gray-500">Add a user to your organization</p>
+              <div className="cau-header-text">
+                <h1>Create User</h1>
+                <p>Add a new member to your team</p>
               </div>
             </div>
           </div>
 
-          <form onSubmit={ handleSubmit } className="px-6 py-6 space-y-6">
-            {/* Basic Info Section */ }
-            <div>
-              <div className="text-sm font-medium text-gray-700 bg-blue-50 rounded-md px-3 py-1 inline-block mb-3">
-                Basic Information
+          {/* ── Form ── */}
+          <div className="cau-body">
+            <form onSubmit={handleSubmit} autoComplete="off">
+
+              {/* Dummy fields to prevent browser autofill */}
+              <input type="text"     style={{ display: "none" }} />
+              <input type="password" style={{ display: "none" }} />
+
+              <div className="cau-grid">
+
+                {/* Text fields */}
+                {fields.map(({ name, label, icon: Icon, placeholder, type, col }) => (
+                  <div
+                    key={name}
+                    className={`cau-field cau-col-${col}${focused === name ? " focused" : ""}${errors[name] ? " error" : ""}`}
+                  >
+                    <label htmlFor={name}>{label}</label>
+                    <div className="cau-input-wrap">
+                      <span className="cau-input-icon"><Icon size={15} /></span>
+                      <input
+                        id={name}
+                        name={name}
+                        type={type}
+                        value={formValues[name]}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        placeholder={placeholder}
+                        onFocus={() => setFocused(name)}
+                        className="cau-input"
+                        autoComplete="off"
+                        maxLength={name === "mobile" ? 10 : undefined}
+                      />
+                      {formValues[name] && !errors[name] && (
+                        <span className="cau-input-check">
+                          <CheckCircle2 size={14} />
+                        </span>
+                      )}
+                    </div>
+                    {errors[name] && (
+                      <span className="cau-error-msg">{errors[name]}</span>
+                    )}
+                  </div>
+                ))}
+
+                {/* Password */}
+                <div className={`cau-field cau-col-1${focused === "password" ? " focused" : ""}${errors.password ? " error" : ""}`}>
+                  <label htmlFor="password">Password</label>
+                  <div className="cau-input-wrap">
+                    <span className="cau-input-icon"><Lock size={15} /></span>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formValues.password}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="••••••••"
+                      onFocus={() => setFocused("password")}
+                      className="cau-input cau-input-password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="cau-toggle-btn"
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <span className="cau-error-msg">{errors.password}</span>
+                  )}
+                  {focused === "password" && !errors.password && (
+                    <span className="cau-hint-msg">
+                      Min 8 chars · Uppercase · Lowercase · Number · Special (@$!%*?&)
+                    </span>
+                  )}
+                </div>
+
+                {/* Confirm Password */}
+                <div className={`cau-field cau-col-1${focused === "confirmPassword" ? " focused" : ""}${errors.confirmPassword ? " error" : ""}`}>
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <div className="cau-input-wrap">
+                    <span className="cau-input-icon"><Lock size={15} /></span>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formValues.confirmPassword}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="••••••••"
+                      onFocus={() => setFocused("confirmPassword")}
+                      className="cau-input cau-input-password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      className="cau-toggle-btn"
+                    >
+                      {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <span className="cau-error-msg">{errors.confirmPassword}</span>
+                  )}
+                </div>
+
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <CustomerAddUser
-                  formValues={ formValues }
-                  handleInputChange={ handleInputChange }
-                  errors={ errors }
 
-                />
+              {/* Divider */}
+              <div className="cau-divider" />
+
+              {/* Actions */}
+              <div className="cau-actions">
+                <button
+                  type="button"
+                  className="cau-btn-cancel"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={btnClass}
+                >
+                  {submitted ? (
+                    <><CheckCircle2 size={15} /> Created!</>
+                  ) : isSubmitting ? (
+                    <><div className="cau-spinner" /> Creating...</>
+                  ) : (
+                    <>Create User <ArrowRight size={15} /></>
+                  )}
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <PasswordSection
-                  formValues={ formValues }
-                  handleInputChange={ handleInputChange }
-                  errors={ errors }
-                  showPassword={ showPassword }
-                  togglePasswordVisibility={ togglePasswordVisibility }
-                  showConfirmPassword={ showConfirmPassword }
-                  toggleConfirmPasswordVisibility={ toggleConfirmPasswordVisibility }
-                />
-              </div>
-            </div>
+            </form>
+          </div>
 
-
-
-            {/* Action Buttons */ }
-            <div className="flex justify-end gap-4 border-t pt-5">
-              <Button
-                type="button"
-                variant="outline"
-                className="text-sm text-gray-700 px-4 py-2 border-gray-300 hover:bg-gray-50"
-                onClick={ () => window.history.back() }
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="text-sm px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={ isSubmitting }
-              >
-                { isSubmitting ? "Creating..." : "Create" }
-              </Button>
-            </div>
-          </form>
         </div>
-      </main>
-    </div>
-
+      </div>
+    </>
   );
 };
 
-export default Page;
+export default CustomerAddUserPage;

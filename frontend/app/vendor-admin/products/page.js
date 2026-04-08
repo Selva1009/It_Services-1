@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import Navbar from "../components/navbar";
 import ExportMenu from "@/app/Components/auth/ExportMenu";
 import { resolveProductImageUrl } from "@/lib/api/config";
-import { getProducts, deleteProductById } from "@/lib/api/products";
 
 export default function VendorAdminProducts() {
   const [vendorAdminId, setVendorAdminId] = useState(null);
@@ -22,7 +21,6 @@ export default function VendorAdminProducts() {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [refreshKey, setRefreshKey] = useState(0);
   const router = useRouter();
 
   // Adjust items per page based on screen size
@@ -54,45 +52,12 @@ export default function VendorAdminProducts() {
 
   useEffect(() => {
     if (!vendorAdminId) return;
-
-    const controller = new AbortController();
-
-    const fetchProducts = async () => {
-      setLoading(true);
-
-      try {
-        const data = await getProducts({
-          page: currentPage,
-          pageSize: itemsPerPage,
-          search: searchTerm.trim(),
-          vendorAdminId,
-        }, { signal: controller.signal });
-
-        const nextTotalPages = data.pagination?.totalPages || 0;
-        const nextTotal = data.pagination?.total || 0;
-
-        if (nextTotalPages > 0 && currentPage > nextTotalPages) {
-          setCurrentPage(nextTotalPages);
-          return;
-        }
-
-        setProducts(data.products || []);
-        setTotalPages(nextTotalPages);
-        setTotalCount(nextTotal);
-        setMessage(nextTotal === 0 ? "No products found." : "");
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        console.error("Error fetching products:", err);
-        setMessage("Failed to load products.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-
-    return () => controller.abort();
-  }, [vendorAdminId, currentPage, itemsPerPage, searchTerm, refreshKey]);
+    setProducts([]);
+    setTotalPages(0);
+    setTotalCount(0);
+    setMessage("Product list is unavailable because the API endpoint is not available in this backend.");
+    setLoading(false);
+  }, [vendorAdminId, currentPage, itemsPerPage, searchTerm]);
 
   const handleEdit = (product) => {
     if (!product.id) {
@@ -108,16 +73,18 @@ export default function VendorAdminProducts() {
       text: "This product will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
+      confirmButtonColor: "#1a56db",
+      cancelButtonColor: "#ef4444",
       confirmButtonText: "Yes, delete it!",
     });
 
     if (confirmed.isConfirmed) {
       try {
-        await deleteProductById(productId);
-        setRefreshKey((prev) => prev + 1);
-        Swal.fire("Deleted!", "Product has been deleted.", "success");
+        Swal.fire(
+          "Unavailable",
+          "Deleting products is disabled because the API endpoint is not available in this backend.",
+          "warning"
+        );
       } catch (err) {
         console.error("Delete error:", err);
         Swal.fire("Error!", "An error occurred while deleting the product.", "error");

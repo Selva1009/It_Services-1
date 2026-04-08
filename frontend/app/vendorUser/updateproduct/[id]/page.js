@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
@@ -38,26 +37,7 @@ export default function UpdateProduct() {
   useEffect(() => {
     if (!id) return;
 
-    const fetchProduct = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/products/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch product");
-        }
-        const data = await response.json();
-        console.log("Fetched data:", data);
-        setFormData(data.product);
-        if (data.product.productImagePath) {
-          setPreviewImage(`${API_BASE_URL}${data.product.productImagePath}`);
-        } else if (data.product.productImage) {
-          setPreviewImage(`${API_BASE_URL}/uploads/${data.product.productImage}`);
-        }
-      } catch (error) {
-        console.error("Error fetching:", error.message);
-      }
-    };
-
-    fetchProduct();
+    setFormData((prev) => ({ ...prev }));
   }, [id]);
 
   const handleInputChange = (e) => {
@@ -75,51 +55,13 @@ export default function UpdateProduct() {
     e.preventDefault();
     setUpdating(true);
 
-    const formDataToSend = new FormData();
-    formDataToSend.append("productName", formData.productName);
-    formDataToSend.append("brand", formData.brand);
-    formDataToSend.append("category", formData.category);
-    formDataToSend.append("price", formData.price);
-    formDataToSend.append("seller", formData.seller);
-    formDataToSend.append("description", formData.description);
-    if (selectedImage) {
-      formDataToSend.append("productImage", selectedImage);
-    }
-
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/products/${id}`,
-        {
-          method: "PUT",
-          body: formDataToSend,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update product");
-      }
-
       Swal.fire({
-        title: "Success!",
-        text: "Product updated successfully!",
-        imageUrl: "/updated.gif",
-        imageWidth: 127,
-        imageHeight: 151,
-        imageAlt: "Update Success",
-        timer: 1500,
-        showConfirmButton: false,
+        title: "Unavailable",
+        text: "Product updates are disabled because the API endpoint is not available in this backend.",
+        icon: "warning",
+        showConfirmButton: true,
       });
-
-      // ✅ Redirect after update
-      setTimeout(() => {
-        if (vendorId) {
-          router.push(
-            `/vendorUser/productdetails?page=${encodeURIComponent(
-              currentPage
-            )}`
-          );
-        }
-      }, 1500);
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     } finally {

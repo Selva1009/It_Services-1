@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./customerSignup.css";
 import { useCountriesStatesCities } from "../hooks/useCountriesStatesCities";
 
@@ -44,9 +44,14 @@ import {
 
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
+import { toApiUrl } from "@/lib/api/config";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 const CustomerSignup = () => {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
 
   const [formValues, setFormValues] = useState({
     companyName: "",
@@ -228,7 +233,7 @@ const CustomerSignup = () => {
 
     try {
       const res = await fetch(
-        'http://localhost:5000/api/user-admin/send-otp',
+        toApiUrl(API_ENDPOINTS.userAdmin.sendOtp),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -323,7 +328,7 @@ const CustomerSignup = () => {
     try {
       const { confirmPassword, ...payload } = formValues;
       const response = await fetch(
-        'http://localhost:5000/api/user-admin/signup',
+        toApiUrl(API_ENDPOINTS.userAdmin.signup),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -334,9 +339,6 @@ const CustomerSignup = () => {
       const result = await response.json();
 
       if (response.ok) {
-        if (result.authToken) localStorage.setItem("authToken", result.authToken);
-        if (result.userId) localStorage.setItem("userId", result.userId);
-
         Swal.fire({
           title: "The user created successfully",
           html: `

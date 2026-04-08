@@ -1,338 +1,238 @@
-﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowBigLeftDash, DiscAlbum } from "lucide-react";
-import { FiEdit2 } from "react-icons/fi";
-import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import Navbar from "../components/Navbar";
 import Swal from "sweetalert2";
-import Footer from "@/app/LandingPage/Footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  CUSTOMER_USER_UPDATED_EVENT,
-  notifyCustomerUserUpdated,
-} from "@/lib/events";
+import "./ItUserProfile.css";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchItUserProfile, updateItUserProfile } from "@/app/services/profileService";
 
-const CustomerProfile = () => {
-  const [customerUser, setCustomerUser] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    companyName: "",
-    personName: "",
-    Email: "",
-    contactNumber: "",
-    status: "",
-    id: ""
-  });
-  const [isLoading, setIsLoading] = useState(false);
+/* ─── Field Config ───────────────────────────────────────── */
+const PROFILE_FIELDS = [
+  { label: "Company Name", key: "company_name", editable: false },
+  { label: "Name",         key: "name",         editable: true,  type: "text" },
+  { label: "Email",        key: "email",        editable: false, type: "email" },
+  { label: "Mobile",       key: "mobile",       editable: true,  type: "tel"  },
+  { label: "Designation",  key: "designation",  editable: true,  type: "text" },
+];
+
+/* ─── Helpers ────────────────────────────────────────────── */
+const getInitials = (name) =>
+  name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "IT";
+
+/* ─── Sub-components ─────────────────────────────────────── */
+function SectionTitle({ children }) {
+  return <p className="vp-section-title">{children}</p>;
+}
+
+function InfoItem({ label, value }) {
+  return (
+    <div className="vp-info-item">
+      <span className="vp-info-label">{label}</span>
+      <span className={`vp-info-value ${!value ? "not-provided" : ""}`}>
+        {value || "Not provided"}
+      </span>
+    </div>
+  );
+}
+
+function FormField({ label, fieldKey, value, onChange, editable = true, type = "text" }) {
+  return (
+    <div className="vp-form-field">
+      <label className="vp-form-label" htmlFor={fieldKey}>{label}</label>
+      <input
+        id={fieldKey}
+        name={fieldKey}
+        type={type}
+        value={value || ""}
+        onChange={onChange}
+        disabled={!editable}
+        className="vp-form-input"
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────────────── */
+export default function ITUserProfilePage() {
   const router = useRouter();
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
-
-  const buildCustomerUserState = (user = {}) => ({
-    companyName: user.companyName || "",
-    personName: user.personName || "",
-    Email: user.Email || "",
-    contactNumber: user.contactNumber || "",
-    status: user.status || "",
-    id: user.id || "",
-  });
-
   useEffect(() => {
-    let isMounted = true;
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
+  const { getAuthToken: getAuthTokenFromContext } = useAuth();
 
-    const loadUserData = async () => {
-      const storedUser = localStorage.getItem("customerUser");
-      if (!storedUser) {
-        router.push("/SignIn");
-        return;
-      }
+  const [profile, setProfile]     = useState(null);
+  const [formData, setFormData]   = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving]   = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-      try {
-        const userData = JSON.parse(storedUser);
+  /* ── Fetch profile ── */
+  const fetchProfile = useCallback(async () => {
+    const token = getAuthTokenFromContext();
+    if (!token) { router.push("/SignIn"); return; }
 
-        if (!userData?.id) {
-          router.push("/SignIn");
-          return;
-        }
+    try {
+      const data = await fetchItUserProfile(token);
+      setProfile(data.profile);
+      setFormData(data.profile);
+    } catch (err) {
+      console.error("Profile fetch error:", err);
+      Swal.fire({ icon: "error", title: "Error", text: "Could not load your profile." });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getAuthTokenFromContext, router]);
 
-        try {
-          const authToken = getAuthToken();
-          const response = await fetch(
-            `${API_BASE_URL}/api/customer-users/profile`,
-            {
-              cache: "no-store",
-              headers: authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : undefined,
-            }
-          );
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-          if (response.ok) {
-            const latestUser = await response.json();
-            const completeUserData = {
-              ...userData,
-              ...latestUser,
-            };
-            const normalizedUser = {
-              ...completeUserData,
-              ...buildCustomerUserState(completeUserData),
-            };
-
-            if (isMounted) {
-              setCustomerUser(normalizedUser);
-              setFormData(buildCustomerUserState(normalizedUser));
-              localStorage.setItem("customerUser", JSON.stringify(normalizedUser));
-            }
-            return;
-          }
-        } catch (fetchError) {
-          console.error("Error fetching latest customer profile:", fetchError);
-        }
-
-        const fallbackUser = {
-          ...userData,
-          ...buildCustomerUserState(userData),
-        };
-        if (isMounted) {
-          setCustomerUser(fallbackUser);
-          setFormData(buildCustomerUserState(fallbackUser));
-        }
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        router.push("/SignIn");
-      }
-    };
-
-    void loadUserData();
-
-    const handleStorageChange = () => {
-      void loadUserData();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener(CUSTOMER_USER_UPDATED_EVENT, handleStorageChange);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener(CUSTOMER_USER_UPDATED_EVENT, handleStorageChange);
-    };
-  }, [router]);
-
+  /* ── Handlers ── */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (isLoading) return;
-    setIsLoading(true);
+    if (isSaving) return;
+    setIsSaving(true);
 
     try {
-      const authToken = getAuthToken();
-      const response = await fetch(
-        `${API_BASE_URL}/api/customer-users/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-          },
-          body: JSON.stringify({
-            companyName: formData.companyName,
-            personName: formData.personName,
-            Email: formData.Email,
-            contactNumber: formData.contactNumber,
-            status: formData.status
-          }),
-        }
-      );
+      const token = getAuthTokenFromContext();
+      await updateItUserProfile(token, {
+        name: formData.name,
+        mobile: formData.mobile,
+        designation: formData.designation,
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update profile");
-      }
-
-      const responseData = await response.json().catch(() => ({}));
-      const updatedUser = responseData.user || responseData;
-      const completeUserData = {
-        ...customerUser,
-        ...formData,
-        ...updatedUser,
-        id: formData.id
-      };
-      const normalizedUser = {
-        ...completeUserData,
-        ...buildCustomerUserState(completeUserData),
-      };
-
-      localStorage.setItem("customerUser", JSON.stringify(normalizedUser));
-      setCustomerUser(normalizedUser);
-      setFormData(buildCustomerUserState(normalizedUser));
+      await fetchProfile();
       setIsEditing(false);
-      notifyCustomerUserUpdated();
 
       Swal.fire({
         icon: "success",
-        title: "Profile Updated!",
-        text: "Your changes have been saved successfully",
-        confirmButtonColor: "#3085d6",
+        title: "Profile Updated",
+        text: "Your changes have been saved.",
+        confirmButtonColor: "#1a56db",
+        timer: 2500,
+        showConfirmButton: false,
       });
-    } catch (error) {
-      console.error("Profile update error:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Update Failed",
-        text: error.message || "Could not update profile. Please try again.",
-      });
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Update Failed", text: err.message });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  if (!customerUser) {
+  const handleCancelEdit = () => {
+    setFormData(profile);
+    setIsEditing(false);
+  };
+
+  /* ── Loading ── */
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading profile...</div>
+      <div className="vp-loading">
+        <div className="vp-loading-spinner" />
+        <span>Loading your profile…</span>
       </div>
     );
   }
 
-  const profileFields = [
-    { label: "Company Name", name: "companyName", type: "text", disabled: true },
-    { label: "Contact Person", name: "personName", type: "text" },
-    { label: "Email", name: "Email", type: "email" },
-    { label: "Contact Number", name: "contactNumber", type: "tel" },
-    { label: "Status", name: "status", disabled: true }
-  ];
+  if (!profile) return null;
 
+  /* ── Render ── */
   return (
-    <>
-      <Navbar disableFilters={ true } disableSearch={ true } />
-      <div className="bg-gray-50 min-h-screen pt-24 pb-12">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center mb-8">
-            <button
-              onClick={ () => router.push("/customer/products") }
-              className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Back to products"
-            >
-              <ArrowBigLeftDash className="h-6 w-6 text-gray-600" />
-            </button>
-            <h1 className="text-2xl -ml-4 font-bold text-gray-800">My Profile</h1>
-          </div>
+    <div className="vp-page">
+      <div className="vp-container">
 
-          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 flex items-center">
-              <div className="relative">
-                <img
-                  src="/User_Icon.jpg"
-                  alt="Profile"
-                  className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-md"
-                />
-                { isEditing && (
-                  <div className="absolute bottom-0 right-0 bg-blue-100 p-1.5 rounded-full border-2 border-white">
-                    <FiEdit2 className="text-blue-600 h-4 w-4" />
-                  </div>
-                ) }
+        <button className="vp-back-btn" onClick={() => router.back()}>
+          ← Back
+        </button>
+
+        <div className="vp-card">
+
+          {/* ── Header ── */}
+          <div className="vp-card-header">
+            <div className="vp-avatar-wrapper">
+              <div className="vp-avatar-initials">
+                {getInitials(profile.name)}
               </div>
-              <div className="ml-5">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  { customerUser.personName }
-                </h2>
-                <p className="text-sm text-gray-600">Customer Account</p>
-              </div>
+              <div className="vp-avatar-badge" />
             </div>
 
-            <div className="p-6">
-              { !isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  { profileFields.map(({ label, name }) => (
-                    <div key={ name } className="space-y-1">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        { label }
-                      </p>
-                      <p className="text-base font-medium text-gray-800 break-words">
-                        { customerUser[name] || (
-                          <span className="text-gray-400 italic">Not provided</span>
-                        ) }
-                      </p>
-                    </div>
-                  )) }
+            <div className="vp-header-info">
+              <h1 className="vp-header-name">{profile.name || "IT User"}</h1>
+              <p className="vp-header-role">{profile.email}</p>
+              <span className="vp-header-badge">✦ {profile.designation || "Employee"}</span>
+            </div>
+          </div>
+
+          {/* ── Body ── */}
+          <div className="vp-card-body">
+            {!isEditing ? (
+              <>
+                <SectionTitle>Profile Information</SectionTitle>
+                <div className="vp-info-grid">
+                  {PROFILE_FIELDS.map(({ label, key }) => (
+                    <InfoItem key={key} label={label} value={profile[key]} />
+                  ))}
                 </div>
-              ) : (
-                <form onSubmit={ handleSave } className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    { profileFields.map(({ label, name, type, disabled }) => (
-                      <div key={ name } className="space-y-2">
-                        <Label htmlFor={ name } className="text-gray-700">
-                          { label }
-                        </Label>
-                        <Input
-                          id={ name }
-                          name={ name }
-                          type={ type }
-                          value={ formData[name] || "" }
-                          onChange={ handleChange }
-                          required
-                          className="focus:ring-2 focus:ring-blue-500"
-                          disabled={ disabled }
-                        />
-                      </div>
-                    )) }
-                  </div>
 
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={ () => {
-                        setFormData(customerUser);
-                        setIsEditing(false);
-                      } }
-                      disabled={ isLoading }
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={ isLoading }>
-                      { isLoading ? (
-                        <span className="flex items-center">
-                          <AiOutlineLoading3Quarters className="animate-spin mr-2 h-4 w-4" />
-                          Saving...
-                        </span>
-                      ) : (
-                        "Save Changes"
-                      ) }
-                    </Button>
-                  </div>
-                </form>
-              ) }
+                <div className="vp-actions">
+                  <button className="vp-btn vp-btn-primary" onClick={() => setIsEditing(true)}>
+                    ✎ Edit Profile
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleSave}>
+                <SectionTitle>Edit Profile</SectionTitle>
+                <div className="vp-form-grid">
+                  {PROFILE_FIELDS.map(({ label, key, editable, type }) => (
+                    <FormField
+                      key={key}
+                      label={label}
+                      fieldKey={key}
+                      value={formData[key]}
+                      onChange={handleChange}
+                      editable={editable}
+                      type={type}
+                    />
+                  ))}
+                </div>
 
-              { !isEditing && (
-                <div className="flex justify-end mt-8">
-                  <Button
-                    onClick={ () => setIsEditing(true) }
-                    className="bg-blue-600 hover:bg-blue-700"
+                <div className="vp-btn-group">
+                  <button
+                    type="button"
+                    className="vp-btn vp-btn-outline"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
                   >
-                    Edit Profile
-                  </Button>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="vp-btn vp-btn-primary"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <svg className="vp-spin" width="15" height="15" viewBox="0 0 24 24"
+                          fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                        Saving…
+                      </>
+                    ) : "Save Changes"}
+                  </button>
                 </div>
-              ) }
-            </div>
+              </form>
+            )}
           </div>
+
         </div>
       </div>
-      <Footer />
-    </>
+    </div>
   );
-};
-
-export default CustomerProfile;
-
+}

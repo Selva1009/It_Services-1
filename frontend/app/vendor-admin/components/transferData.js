@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,39 +31,11 @@ export default function TransferProducts({ onClose }) {
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/products/transfer-products`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ oldUsername, newUsername }),
-        }
+      Swal.fire(
+        "Unavailable",
+        "Product transfer is disabled because the API endpoint is not available in this backend.",
+        "warning"
       );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        if (data.newUserId) {
-          // ✅ Update both keys so other pages get the correct ID
-          localStorage.setItem("vendor_user_id", data.newUserId);
-          localStorage.setItem("userId", data.newUserId); // <-- Critical for products page
-        }
-
-        Swal.fire({
-          title: "Success",
-          text: data.message || "Products transferred successfully",
-          icon: "success",
-        }).then(() => {
-          setOldUsername("");
-          setNewUsername("");
-          if (onClose) onClose(); // close modal
-          window.location.reload(); // ✅ Reload everything with updated ID
-        });
-      } else {
-        Swal.fire("Error", data.message || "Transfer failed", "error");
-      }
     } catch (error) {
       console.error("Transfer error:", error);
       Swal.fire("Error", "Server error occurred", "error");

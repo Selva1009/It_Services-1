@@ -10,7 +10,6 @@ import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import { resolveProductImageUrl } from "@/lib/api/config";
-import { getProducts, deleteProductById } from "@/lib/api/products";
 
 export default function ProductDetails() {
   const router = useRouter();
@@ -21,8 +20,6 @@ export default function ProductDetails() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const itemsPerPage = 5;
 
   const vendorUserId = typeof window !== "undefined" ? localStorage.getItem("vendorUserId") : null;
@@ -34,46 +31,12 @@ export default function ProductDetails() {
       return;
     }
 
-    const controller = new AbortController();
-
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await getProducts({
-          page: currentPage,
-          pageSize: itemsPerPage,
-          search: searchQuery.trim(),
-          vendorUserId,
-        }, {
-          signal: controller.signal,
-        });
-
-        const nextTotalPages = data.pagination?.totalPages || 0;
-        const nextTotal = data.pagination?.total || 0;
-
-        if (nextTotalPages > 0 && currentPage > nextTotalPages) {
-          setCurrentPage(nextTotalPages);
-          return;
-        }
-
-        setProducts(data.products || []);
-        setTotalPages(nextTotalPages);
-        setTotalCount(nextTotal);
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        setError(err.message);
-        toast.error(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-
-    return () => controller.abort();
-  }, [vendorUserId, currentPage, searchQuery, refreshKey]);
+    setProducts([]);
+    setTotalPages(0);
+    setTotalCount(0);
+    setError("Product list is unavailable because the API endpoint is not available in this backend.");
+    setLoading(false);
+  }, [vendorUserId, currentPage, searchQuery]);
 
   const handleDelete = async (productId) => {
     try {
@@ -85,11 +48,11 @@ export default function ProductDetails() {
         imageHeight: 151,
         imageAlt: "Delete Confirmation",
         showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
+        confirmButtonColor: "#1a56db",
+        cancelButtonColor: "#ef4444",
         confirmButtonText: "Yes, delete it!",
         cancelButtonText: "No, cancel!",
-        reverseButtons: true,
+        reverseButtons: false,
         customClass: {
           popup: "rounded-lg shadow-xl",
           confirmButton: "px-4 py-2 rounded-md",
@@ -98,27 +61,17 @@ export default function ProductDetails() {
       });
 
       if (result.isConfirmed) {
-        setDeletingId(productId);
-
-        await deleteProductById(productId, localStorage.getItem("token"));
-
-        setRefreshKey((prev) => prev + 1);
-
-        await Swal.fire({
-          title: "Deleted!",
-          text: "Product has been successfully deleted.",
-          icon: "success",
-          confirmButtonColor: "#4BB543",
-          customClass: {
-            popup: "rounded-lg shadow-md",
-          },
-        });
+        Swal.fire(
+          "Unavailable",
+          "Deleting products is disabled because the API endpoint is not available in this backend.",
+          "warning"
+        );
       }
     } catch (deleteError) {
       console.error("Delete error:", deleteError);
       toast.error(deleteError.message || "Failed to delete product. Please try again.");
     } finally {
-      setDeletingId(null);
+      // no-op
     }
   };
 
@@ -215,10 +168,9 @@ export default function ProductDetails() {
                         </button>
                         <button
                           onClick={ () => handleDelete(product.id) }
-                          disabled={ deletingId === product.id }
-                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 disabled:opacity-50"
+                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
                         >
-                          { deletingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" /> }
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>

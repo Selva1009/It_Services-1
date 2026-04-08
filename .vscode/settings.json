@@ -1,0 +1,26 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "backend/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "backend/node_modules/**": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  "javascript.suggest.enabled": true,
+  "typescript.suggest.enabled": true,
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "editor.suggestOnTriggerCharacters": true,
+  "editor.wordBasedSuggestions": "on",
+  "editor.parameterHints.enabled": true,
+  "editor.multiCursorModifier": "alt"
+}

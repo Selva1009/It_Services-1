@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import {
@@ -10,29 +9,30 @@ import {
   Gift,
   CalendarCheck2,
 } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchCustomerVouchers } from "@/app/services/customerService";
 
 const CustomerUserVouchers = () => {
+  const { auth, getCustomerUserId } = useAuth();
   const [customerId, setCustomerId] = useState(null);
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedCustomerUserId = localStorage.getItem("customerUserId");
-    if (storedCustomerUserId) {
-      setCustomerId(storedCustomerUserId.toString());
-    } else {
-      const storedCustomerUser = localStorage.getItem("customerUser");
-      if (storedCustomerUser) {
-        const customerData = JSON.parse(storedCustomerUser);
-        if (customerData?.id) {
-          setCustomerId(customerData.id.toString());
-        }
-      } else {
-        setLoading(false);
-      }
+    const resolvedCustomerUserId =
+      getCustomerUserId() || auth.customerUser?.id || auth.userId || null;
+    if (resolvedCustomerUserId) {
+      setCustomerId(resolvedCustomerUserId.toString());
+      return;
     }
-  }, []);
+
+    if (auth.customerUser?.id) {
+      setCustomerId(auth.customerUser.id.toString());
+    } else {
+      setLoading(false);
+    }
+  }, [auth.customerUser, auth.userId, getCustomerUserId]);
 
   useEffect(() => {
     if (!customerId) return;
@@ -42,15 +42,7 @@ const CustomerUserVouchers = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/voucher-management/customer-users/${customerId}/vouchers`
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch vouchers: ${response.statusText}`);
-        }
-
-        const data = await response.json();
+        const data = await fetchCustomerVouchers(customerId);
         setVouchers(data);
       } catch (err) {
         setError(err.message || "An error occurred");

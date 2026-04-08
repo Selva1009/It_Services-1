@@ -1,14 +1,10 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/api/config";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Home,
   Users,
-  List,
-  BarChart,
   User,
   LogOut,
   Calendar,
@@ -16,430 +12,381 @@ import {
   UserPlus,
   UserRoundPen,
   Menu,
-  Bell,
-  Clipboard,
   X,
+  ChevronDown,
+  Bell,
+  Ticket,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/app/contexts/AuthContext";
+import {
+  fetchVendorAdminNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/app/services/notificationsService";
+import "./vendorAdminNavbar.css";
 
-const PROFILE_SYNC_TTL_MS = 5 * 60 * 1000;
+const NOTIFICATION_LIMIT = 50;
+
+const isHighPriorityNotification = (notification) => {
+  const priority = String(notification?.priority || "").toLowerCase();
+  const message = String(notification?.message || "").toLowerCase();
+  return priority === "high" || priority === "critical" || message.includes("high priority");
+};
+
+const highPriorityCardStyle = {
+  background:
+    "linear-gradient(135deg, rgba(239, 68, 68, 0.08), transparent 35%), linear-gradient(180deg, #fff7f7 0%, #ffecec 100%)",
+  borderColor: "#f87171",
+  boxShadow: "0 10px 22px rgba(239, 68, 68, 0.08)",
+};
+
+const highPriorityBannerStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  marginBottom: "8px",
+  padding: "4px 9px",
+  borderRadius: "999px",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#b91c1c",
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+};
+
+const highPrioritySignalStyle = {
+  width: "7px",
+  height: "7px",
+  borderRadius: "50%",
+  background: "#ef4444",
+  boxShadow: "0 0 0 3px rgba(239, 68, 68, 0.14)",
+};
+
+const highPriorityMetaPillStyle = {
+  border: "1px solid rgba(254, 202, 202, 0.9)",
+};
+
+const highPriorityReadButtonStyle = {
+  borderColor: "#fecaca",
+  background: "#fef2f2",
+  color: "#b91c1c",
+  position: "relative",
+  zIndex: 1,
+};
 
 export default function Navbar() {
-  const NOTIFICATION_LIMIT = 50;
-  const [vendor, setVendor] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [vendorAdminID, setVendorAdminID] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { auth, clearAuth, getAuthToken: getAuthTokenFromContext } = useAuth();
+  const pathname = usePathname();
   const router = useRouter();
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifFilter, setNotifFilter] = useState("all");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    let isMounted = true;
+    ["/vendor-admin", "/vendor-admin/tickets", "/vendor-admin/addUser", "/vendor-admin/usersprofile", "/vendor-admin/myProfile"]
+      .forEach((path) => router.prefetch(path));
+  }, [router]);
 
-    const loadVendor = async () => {
-      setLoading(true);
-      setError("");
+  const vendorDisplayName = useMemo(
+    () =>
+      auth.vendor?.personName ||
+      auth.vendor?.name ||
+      auth.vendor?.contactPerson ||
+      auth.vendor?.vendor_name ||
+      auth.vendor?.email ||
+      null,
+    [auth.vendor]
+  );
 
-      try {
-        const storedVendor = localStorage.getItem("vendor");
-        if (!storedVendor) {
-          return;
-        }
+  const initials = useMemo(() => {
+    const name = vendorDisplayName || "";
+    if (!name) return "VA";
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join("");
+  }, [vendorDisplayName]);
 
-        const vendorData = JSON.parse(storedVendor);
-        if (isMounted) {
-          setVendor(vendorData);
-          setVendorAdminID(vendorData.id);
-        }
-
-        if (!vendorData?.id) {
-          return;
-        }
-
-        const lastSync = Number(sessionStorage.getItem("vendorProfileLastSync") || 0);
-        const shouldSync = Date.now() - lastSync > PROFILE_SYNC_TTL_MS;
-
-        if (shouldSync) {
-          try {
-            const authToken = getAuthToken();
-            const response = await fetch(
-              `${API_BASE_URL}/api/vendors/profile`,
-              {
-                cache: "no-store",
-                headers: authToken
-                  ? { Authorization: `Bearer ${authToken}` }
-                  : undefined,
-              }
-            );
-
-            if (response.ok) {
-              const payload = await response.json();
-              const latestVendor = payload.vendor || payload;
-              if (isMounted) {
-                setVendor(latestVendor);
-                setVendorAdminID(latestVendor.id);
-                localStorage.setItem("vendor", JSON.stringify(latestVendor));
-                sessionStorage.setItem("vendorProfileLastSync", String(Date.now()));
-              }
-            }
-          } catch (fetchError) {
-            console.error("Failed to fetch latest vendor details:", fetchError);
-          }
-        }
-      } catch (err) {
-        setError("Failed to load vendor details");
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadVendor();
-
-    const handleStorage = () => {
-      void loadVendor();
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
-
-  const fetchNotifications = async () => {
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
-      return;
-    }
+  const fetchNotifications = useCallback(async () => {
+    const token = getAuthTokenFromContext();
+    if (!token) return;
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/vendor-admin`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getAuthToken() || localStorage.getItem("vendorToken") || ""}`,
-          },
-          body: JSON.stringify({ vendorAdminID, limit: NOTIFICATION_LIMIT }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch notifications");
-      }
-
-      const data = await response.json();
-      setNotifications(data.notifications);
-      setUnreadCount(
-        data.notifications.filter((n) => n.status === "unread").length
-      );
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
+      const data = await fetchVendorAdminNotifications({ token, limit: NOTIFICATION_LIMIT });
+      const list = data?.notifications || [];
+      setNotifications(list);
+      setUnreadCount(list.filter((n) => !n.is_read).length);
+    } catch (err) {
+      console.error("Notifications fetch failed:", err);
     }
-  };
+  }, [getAuthTokenFromContext]);
 
   useEffect(() => {
-    if (!vendorAdminID) return;
     fetchNotifications();
-
-    // Refresh notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [vendorAdminID]);
+  }, [fetchNotifications]);
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "all") return notifications;
+    return notifications.filter((n) => (notifFilter === "read" ? Boolean(n.is_read) : !n.is_read));
+  }, [notifFilter, notifications]);
+
+  const isActive = (path) => pathname === path;
 
   const handleLogout = () => {
+    setDropdownOpen(false);
+    setMobileMenuOpen(false);
     Swal.fire({
       title: "Are you sure want to logout?",
       imageUrl: "/logout.gif",
       imageWidth: 127,
       imageHeight: 151,
-      imageAlt: "Logout Image",
+      imageAlt: "Logout",
       showCancelButton: true,
-      confirmButtonColor: "#3085D6",
-      cancelButtonColor: "#3085D6",
+      reverseButtons: false,
+      confirmButtonColor: "#1a56db",
+      cancelButtonColor: "#ef4444",
       confirmButtonText: "<b>Yes</b>",
       cancelButtonText: "<b>Cancel</b>",
-      customClass: {
-        confirmButton: "swal-button",
-        cancelButton: "swal-button",
-        popup: "rounded-alert",
-      },
+      customClass: { popup: "rounded-alert" },
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
+        clearAuth();
         router.push("/SignIn");
       }
     });
   };
 
-  if (!vendor) return null;
+  const handleMarkRead = async (id) => {
+    try {
+      const token = getAuthTokenFromContext();
+      if (!token) return;
+      await markNotificationRead(id, token);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = getAuthTokenFromContext();
+      if (!token) return;
+      await markAllNotificationsRead(token);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications as read", err);
+    }
+  };
+
+  const toggleNotification = async () => {
+    const next = !notificationOpen;
+    setNotificationOpen(next);
+    if (next) {
+      await fetchNotifications();
+    }
+  };
+
+  const menuItems = [
+    { href: "/vendor-admin", icon: <LayoutDashboard size={16} />, label: "Dashboard" },
+    
+    { href: "/vendor-admin/addUser", icon: <UserPlus size={16} />, label: "Add User" },
+    { href: "/vendor-admin/usersprofile", icon: <Users size={16} />, label: "User Profiles" },
+
+    { href: "/vendor-admin/tickets", icon: <Ticket size={16} />, label: "Tickets" },
+  ];
+
+  const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <>
-      {/* Desktop Navbar */ }
-      <nav className="hidden sm:flex fixed top-0 left-0 w-full h-20 bg-white border-b shadow-sm items-center justify-between px-4 sm:px-6 z-50">
-        {/* Left: Brand Name */ }
-        <div className="flex items-center gap-4">
-          <Link href="/vendor-admin" >
-            <div className="cursor-pointer w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-lg bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-              <div className="w-full h-full bg-white rounded-xl flex items-center justify-center border border-gray-300 shadow-inner">
-                <img
-                  src="/Logo.png"
-                  alt="M-Place Logo"
-                  className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
-                />
-              </div>
-            </div>
+      <nav className="va-nav">
+        <div className="va-nav-left">
+          <Link href="/vendor-admin" className="ca-logo">
+            <span className="ca-logo-text">L1-L3</span>
           </Link>
 
-          {/* Center: Nav Items (Desktop) */ }
-          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-700">
-            <Link
-              href="/vendor-admin"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <Link
-              href="/vendor-admin/addUser"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add User
-            </Link>
-            <Link
-              href="/vendor-admin/usersprofile"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              Users Profiles
-            </Link>
-            <Link
-              href="/vendor-admin/products"
-              className="flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <List className="w-4 h-4" />
-              Vendor Product View
-            </Link>
-            <Link
-              href="/vendor-admin/AdminNotification"
-              className="relative flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Bell className="w-4 h-4" />
-              <span>Orders</span>
-            </Link>
-            <Link
-              href="/vendor-admin/PoTracking"
-              className="relative flex items-center gap-2 p-2 rounded-md text-sm hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors"
-            >
-              <Clipboard className="w-4 h-4" />
-              <span>Po Tracking</span>
-            </Link>
-          </div>
+          <div className="va-nav-divider" />
+
+          <nav className="va-nav-links">
+            {menuItems.map((item) => (
+              <Link key={item.href} href={item.href} className={`va-nav-link${isActive(item.href) ? " active" : ""}`}>
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        {/* Right: Date, Notifications and Vendor Profile */ }
-        <div className="flex items-center gap-4 sm:gap-6">
-          {/* Date (Desktop) */ }
-          <div className="hidden sm:flex items-center gap-2">
-            <Calendar className="text-black-900" />
-            <span className="ml-2">{ currentDate }</span>
+        <div className="va-nav-right">
+          <div className="va-nav-date">
+            <Calendar size={13} />
+            {currentDate}
           </div>
-          <div className="hidden sm:block h-10 w-[1px] bg-gray-300"></div>
 
-          {/* Vendor Admin Name & Dropdown */ }
-          <div className="relative">
-            <div
-              className="group flex items-center gap-2 p-2 rounded-md hover:bg-blue-50 hover:text-blue-700 hover:border hover:border-blue-300 transition-colors cursor-pointer"
-              onClick={ () => setDropdownOpen(!dropdownOpen) }
-            >
-              <User
-                size={ 32 }
-                className="text-gray-800 group-hover:text-blue-700 transition-colors"
-              />
-              <div className="hidden sm:block text-[14px]">
-                { loading && <span>Loading...</span> }
-                { error && <span className="text-red-500">{ error }</span> }
-                { vendor && (
-                  <span>
-                    { vendor.firstName } { vendor.lastName }
-                    <br />
-                    <p className="text-[#999999] text-[12px]">Vendor Admin</p>
-                  </span>
-                ) }
-              </div>
+          <button className="va-nav-icon-btn" aria-label="Notifications" onClick={toggleNotification}>
+            <Bell size={16} />
+            {unreadCount > 0 ? (
+              <span className="va-nav-bell-count">{unreadCount > 99 ? "99+" : unreadCount}</span>
+            ) : (
+              <div className="va-nav-bell-dot" />
+            )}
+          </button>
+
+          <div className={`va-nav-profile${dropdownOpen ? " open" : ""}`} onClick={() => setDropdownOpen((o) => !o)}>
+            <div className="va-nav-avatar">{initials}</div>
+
+            <div className="va-nav-profile-info">
+              {vendorDisplayName ? (
+                <>
+                  <p className="text-[14px] font-medium">{vendorDisplayName}</p>
+                  <p className="text-[#999999] text-[12px]">Vendor Admin</p>
+                </>
+              ) : (
+                <span className="text-sm">Loading...</span>
+              )}
             </div>
 
-            {/* Dropdown Menu */ }
-            { dropdownOpen && (
-              <div className="absolute right-0 left-2 top-full mt-3 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
-                <ul className="py-2 text-sm text-gray-700 font-medium">
-                  <li>
-                    <Link
-                      href="/vendor-admin/myProfile"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors"
-                    >
-                      <User size={ 20 } className="text-gray-600" />
-                      <span>My Profile</span>
-                    </Link>
-                  </li>
+            <ChevronDown size={14} className="va-nav-chevron" />
 
-                  <li>
-                    <button
-                      onClick={ handleLogout }
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
-                    >
-                      <LogOut size={ 20 } className="text-red-500" />
-                      <span>Logout</span>
-                    </button>
-                  </li>
-                </ul>
+            {dropdownOpen && (
+              <div className="va-dropdown">
+                <Link href="/vendor-admin/myProfile" className="va-dropdown-item" onClick={() => setDropdownOpen(false)}>
+                  <User size={15} />
+                  My Profile
+                </Link>
+                <div className="va-dropdown-divider" />
+                <button className="va-dropdown-item danger" onClick={handleLogout}>
+                  <LogOut size={15} />
+                  Logout
+                </button>
               </div>
-            ) }
+            )}
           </div>
         </div>
       </nav>
 
-      {/* Mobile Navbar */ }
-      <nav className="sm:hidden fixed top-0 left-0 w-full h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 z-50">
-        {/* Left: Brand Name and Mobile Menu Button */ }
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-indigo-500 p-1">
-            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-inner">
-              <img
-                src="/Logo.png"
-                alt="M-Place Logo"
-                className="w-7 h-7 object-contain"
-              />
+      {notificationOpen && (
+        <>
+          <div className="va-notif-overlay" onClick={toggleNotification} />
+          <aside className="va-notif-sidebar">
+            <div className="va-notif-header">
+              <h3>Notifications</h3>
+              <button className="va-notif-close" onClick={toggleNotification}>×</button>
             </div>
-          </div>
 
-          <span className="font-medium text-sm">Vendor Admin</span>
+            <div className="va-notif-controls">
+              <select value={notifFilter} onChange={(e) => setNotifFilter(e.target.value)}>
+                <option value="all">All</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+              </select>
+              <button onClick={handleMarkAllRead}>Mark all as read</button>
+            </div>
+
+            <div className="va-notif-list">
+              {filteredNotifications.length === 0 ? (
+                <p className="va-notif-empty">No notifications found.</p>
+              ) : (
+                filteredNotifications.map((item) => {
+                  const isHighPriority = isHighPriorityNotification(item);
+                  return (
+                  <div
+                    key={item.id}
+                    className={`va-notif-item${item.is_read ? "" : " unread"}${isHighPriority ? " high-priority" : ""}`}
+                    style={isHighPriority ? highPriorityCardStyle : undefined}
+                  >
+                    {isHighPriority ? (
+                      <div className="va-notif-priority-banner" style={highPriorityBannerStyle}>
+                        <span className="va-notif-priority-signal" style={highPrioritySignalStyle} />
+                        High Priority
+                      </div>
+                    ) : null}
+                    <div className="va-notif-card-head">
+                      <div className="va-notif-message" style={isHighPriority ? { color: "#0f172a", fontWeight: 700 } : undefined}>{item.message}</div>
+                    </div>
+                    <div className="va-notif-meta" style={isHighPriority ? { color: "#475569" } : undefined}>
+                      <span className="va-notif-meta-pill" style={isHighPriority ? highPriorityMetaPillStyle : undefined}>{item.ticket_number || "-"}</span>
+                      <span className="va-notif-meta-pill" style={isHighPriority ? highPriorityMetaPillStyle : undefined}>{new Date(item.created_at).toLocaleString("en-IN")}</span>
+                    </div>
+                    {!item.is_read ? (
+                      <button onClick={() => handleMarkRead(item.id)} className="va-notif-read-btn" style={isHighPriority ? highPriorityReadButtonStyle : undefined}>
+                        Mark as Read
+                      </button>
+                    ) : null}
+                  </div>
+                )})
+              )}
+            </div>
+          </aside>
+        </>
+      )}
+
+      <nav className="va-nav-mobile">
+        <div className="va-nav-mobile-brand">
+          <div className="va-nav-mobile-logo">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M4 15L9 4L14 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 10.5H12" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <span className="va-nav-mobile-title">Vendor Admin</span>
         </div>
 
-        {/* Right: Menu Button */ }
-        <button
-          className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-          onClick={ () => setMobileMenuOpen(!mobileMenuOpen) }
-        >
-          { mobileMenuOpen ? <X size={ 24 } /> : <Menu size={ 24 } /> }
+        <button className="va-nav-mobile-menu-btn" onClick={() => setMobileMenuOpen((o) => !o)} aria-label="Toggle menu">
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Mobile Menu */ }
-        { mobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 mt-16 backdrop-blur-sm"
-            onClick={ () => setMobileMenuOpen(false) }
-          >
-            <div
-              className="absolute right-0 top-0 h-full w-72 bg-white shadow-xl"
-              onClick={ (e) => e.stopPropagation() }
-            >
-              {/* Profile Info */ }
-              <div className="flex items-center gap-4 p-4 border-b">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <User size={ 24 } className="text-gray-600" />
-                </div>
+        {mobileMenuOpen && (
+          <div className="va-mobile-overlay" onClick={() => setMobileMenuOpen(false)}>
+            <div className="va-mobile-drawer" onClick={(e) => e.stopPropagation()}>
+              <div className="va-mobile-drawer-profile">
+                <div className="va-mobile-drawer-avatar">{initials}</div>
                 <div>
-                  <p className="font-medium">
-                    { vendor.firstName } { vendor.lastName }
-                  </p>
-                  <p className="text-sm text-gray-500">Vendor Admin</p>
+                  <div className="va-mobile-drawer-name">{vendorDisplayName || "Vendor Admin"}</div>
+                  <div className="va-mobile-drawer-role">Vendor Admin</div>
                 </div>
               </div>
 
-              {/* Navigation Links */ }
-              <div className="p-4 space-y-2">
-                <Link
-                  href="/vendor-admin"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <LayoutDashboard size={ 20 } />
-                  <span>Dashboard</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/addUser"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <UserPlus size={ 20 } />
-                  <span>Add User</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/usersprofile"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Users size={ 20 } />
-                  <span>Users Profiles</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/products"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <List size={ 20 } />
-                  <span>Vendor Product View</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/AdminNotification"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Bell size={ 20 } />
-                  <span>Orders</span>
-                </Link>
-                <Link
-                  href="/vendor-admin/PoTracking"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100"
-                  onClick={ () => setMobileMenuOpen(false) }
-                >
-                  <Clipboard size={ 20 } />
-                  <span>Po Tracking</span>
-                </Link>
-              </div>
-
-              {/* Bottom Section */ }
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-                <div className="space-y-2">
+              <div className="va-mobile-nav-links">
+                {menuItems.map((item) => (
                   <Link
-                    href="/vendor-admin/myProfile"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100"
-                    onClick={ () => setMobileMenuOpen(false) }
+                    key={item.href}
+                    href={item.href}
+                    className={`va-mobile-nav-link${isActive(item.href) ? " active" : ""}`}
+                    onClick={() => setMobileMenuOpen(false)}
                   >
-                    <UserRoundPen size={ 20 } />
-                    <span>My Profile</span>
+                    {item.icon}
+                    {item.label}
                   </Link>
-                  <button
-                    onClick={ () => {
-                      setMobileMenuOpen(false);
-                      handleLogout();
-                    } }
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-100 text-red-600 w-full text-left"
-                  >
-                    <LogOut size={ 20 } />
-                    <span>Logout</span>
-                  </button>
-                </div>
+                ))}
+              </div>
+
+              <div className="va-mobile-drawer-footer">
+                <Link href="/vendor-admin/myProfile" className="va-mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                  <UserRoundPen size={17} />
+                  My Profile
+                </Link>
+                <button className="va-mobile-nav-link" style={{ color: "var(--red)" }} onClick={handleLogout}>
+                  <LogOut size={17} />
+                  Logout
+                </button>
               </div>
             </div>
           </div>
-        ) }
+        )}
       </nav>
     </>
   );

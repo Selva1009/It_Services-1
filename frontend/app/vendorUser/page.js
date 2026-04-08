@@ -1,12 +1,7 @@
 "use client";
 
-import ProductCards from "./productcards/page";
+import VendorTicketsPage from "./tickets/page";
 
 export default function VendorDashboardPage() {
-  return (
-    <div>
-      
-   <ProductCards/>
-    </div>
-  );
+  return <VendorTicketsPage />;
 }

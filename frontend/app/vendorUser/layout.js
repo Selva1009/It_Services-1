@@ -2,14 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import DashboardLayout from "@/app/Components/DashboardLayout";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const normalizeRole = (role) => String(role || "").toLowerCase().replace(/-/g, "_");
-
-const readAuthValue = (key) => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(key) || sessionStorage.getItem(key);
-};
 
 const decodeJwtPayload = (token) => {
   if (!token) return null;
@@ -30,43 +25,43 @@ const decodeJwtPayload = (token) => {
 
 export default function VendorDashboardLayout({ children }) {
   const router = useRouter();
+  useEffect(() => {
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
   const [vendorUserId, setVendorUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { auth } = useAuth();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const role = normalizeRole(readAuthValue("role"));
+    const role = normalizeRole(auth.role);
     if (role && role !== "vendor_user") {
       router.replace("/SignIn");
       setIsLoading(false);
       return;
     }
 
-    let storedVendorUserId = readAuthValue("vendorUserId");
+    let resolvedVendorUserId = auth.vendorUserId || auth.userId || null;
 
-    if (!storedVendorUserId) {
-      const authToken = readAuthValue("authToken");
-      const payload = decodeJwtPayload(authToken);
-      storedVendorUserId = payload?.id ? String(payload.id) : null;
+    if (!resolvedVendorUserId && auth.authToken) {
+      const payload = decodeJwtPayload(auth.authToken);
+      resolvedVendorUserId = payload?.id ? String(payload.id) : null;
     }
 
-    if (!storedVendorUserId) {
-      localStorage.removeItem("vendorUserId");
-      sessionStorage.removeItem("vendorUserId");
+    if (!resolvedVendorUserId) {
       router.replace("/SignIn");
       setIsLoading(false);
       return;
     }
 
-    localStorage.setItem("vendorUserId", String(storedVendorUserId));
-    setVendorUserId(storedVendorUserId);
+    setVendorUserId(resolvedVendorUserId);
     setIsLoading(false);
-  }, [router]);
+  }, [auth.role, auth.vendorUserId, auth.userId, auth.authToken, router]);
 
   if (isLoading || !vendorUserId) {
     return <p className="text-center text-gray-600 mt-10">Loading...</p>;
   }
 
-  return <DashboardLayout id={vendorUserId}>{children}</DashboardLayout>;
+  return <div className="min-h-screen bg-gray-50">{children}</div>;
 }

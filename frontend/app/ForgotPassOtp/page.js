@@ -1,6 +1,5 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,9 @@ const schema = yup.object().shape({
 
 export default function ForgotPassOtp() {
   const router = useRouter();
+  useEffect(() => {
+    ["/ResetPassword", "/ForgotPassword"].forEach((path) => router.prefetch(path));
+  }, []);
   const {
     register,
     handleSubmit,
@@ -45,36 +47,16 @@ export default function ForgotPassOtp() {
     setSuccessMessage("");
 
     try {
-      const email = localStorage.getItem("userEmail");
+      const email = sessionStorage.getItem("userEmail");
 
       if (!email) {
         setErrorMessage("Email is missing. Please request a new OTP.");
         setLoading(false);
         return;
       }
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/password/verify-otp`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            otp: data.otp,
-          }),
-        }
+      setErrorMessage(
+        "OTP verification is unavailable because the API endpoint is not available in this backend."
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Invalid OTP");
-      }
-
-      const result = await response.json();
-      setSuccessMessage(result.message || "OTP validated successfully.");
-      router.push("/ResetPassword");
     } catch (error) {
       setErrorMessage(error.message || "Failed to validate OTP");
     } finally {

@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../../db");   // correct path
 require("dotenv").config();
 const {generateOtp,getOtpExpiry} =require("../utils/otp")
+const { sendEmail } = require("../utils/email");
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto=require("crypto")
 
@@ -90,14 +91,16 @@ exports.signup = async (data) => {
 
   /* ---------- Insert Services ---------- */
   if (services && services.length) {
-    for (const svc of services) {
-      await db.query(
-        `INSERT INTO vendor_services
-         (vendor_id, service_name, support_level)
-         VALUES (?, ?, ?)`,
-        [vendorId, svc.name, svc.level]
-      );
-    }
+   for (const svc of services) {
+  for (const level of svc.level) {
+    await db.query(
+      `INSERT INTO vendor_services
+       (vendor_id, service_name, support_level)
+       VALUES (?, ?, ?)`,
+      [vendorId, svc.name, level]
+    );
+  }
+}
   }
 
   /* ---------- Remove OTP ---------- */
@@ -108,7 +111,7 @@ exports.signup = async (data) => {
 
   /* ---------- Auth JWT Token ---------- */
   const authToken = jwt.sign(
-    { vendorId },
+    { id: vendorId, role: "vendor_admin" },
     JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -135,7 +138,7 @@ exports.sendOtp = async (email) => {
   );
 
   if (vendors.length) {
-    throw new Error("Vendor already registered. Please login.");
+    throw new Error("If the account exists, an OTP will be sent");
   }
 
 
@@ -148,8 +151,175 @@ exports.sendOtp = async (email) => {
      ON DUPLICATE KEY UPDATE otp=?, expires_at=?`,
     [email, otp, expiry, otp, expiry]
   );
-
-  console.log("Generated OTP:", otp);
-
+  const subject = "Your OTP Code";
+  const text = `Your OTP is ${otp}. It expires in 5 minutes.`;
+  const html = `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`;
+  await sendEmail({ to: email, subject, text, html });
   return { message: "OTP sent successfully" };
+};
+
+
+exports.getVendorProfile= async(vendorId)=> {
+
+  if (!vendorId) throw {status:400,message:"vendor ID Required"}
+  
+    const [vendorRows] = await db.query(
+    `SELECT 
+      id, company_name, contact_person, email, 
+      mobile, pan, gst, vendor_token, created_at
+     FROM vendor_engineers_signup 
+     WHERE id = ?`,
+    [vendorId]
+  );
+
+  if(!vendorRows.length){
+    throw {status:404,message:"vendor not found"}
+  }
+  
+  const vendor = vendorRows[0];
+
+  const [addressRows]=await db.query(
+    `SELECT 
+      address, country, state, city, pincode
+     FROM vendor_company_addresses 
+     WHERE vendor_id = ?`,
+    [vendorId]
+  )
+
+    const [serviceRows] = await db.query(
+    `SELECT 
+      id, service_name, support_level
+     FROM vendor_services 
+     WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+   return {
+    message: "Vendor profile fetched successfully",
+    data: {
+      id: vendor.id,
+      companyName: vendor.company_name,
+      contactPerson: vendor.contact_person,
+      email: vendor.email,
+      mobile: vendor.mobile,
+      pan: vendor.pan,
+      gst: vendor.gst,
+      vendorToken: vendor.vendor_token,
+      createdAt: vendor.created_at,
+      address: addressRows.length ? addressRows[0] : null,
+      services: serviceRows || []
+    }
+  };
+
+
+}
+
+
+
+exports.updateVendorProfile=async(vendorId,data)=>{
+  if(!vendorId) throw {status:400,message:"vendor id required"}
+
+   const {
+    contactPerson,
+    mobile,
+    gst,
+    address,
+    country,
+    state,
+    city,
+    pincode,
+  } = data;
+
+
+  await db.query(
+    `UPDATE vendor_engineers_signup
+     SET contact_person = ?,
+         mobile         = ?,
+         gst            = ?
+     WHERE id = ?`,
+    [contactPerson, mobile, gst, vendorId]
+  )
+
+  const [addressRows] = await db.query(
+    `SELECT id FROM vendor_company_addresses WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+   if (addressRows.length) {
+    /* ---------- Update address ---------- */
+    await db.query(
+      `UPDATE vendor_company_addresses
+       SET address = ?,
+           country = ?,
+           state   = ?,
+           city    = ?,
+           pincode = ?
+       WHERE vendor_id = ?`,
+      [address, country, state, city, pincode, vendorId]
+    );
+  } else {
+    /* ---------- Insert address if not exists ---------- */
+    await db.query(
+      `INSERT INTO vendor_company_addresses
+       (vendor_id, address, country, state, city, pincode)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [vendorId, address, country, state, city, pincode]
+    );
+  }
+  
+
+
+  /* ---------- Fetch updated profile ---------- */
+  const [vendorRows] = await db.query(
+    `SELECT
+       id, company_name, contact_person, email,
+       mobile, pan, gst, created_at
+     FROM vendor_engineers_signup
+     WHERE id = ?`,
+    [vendorId]
+  );
+
+  const [updatedAddress] = await db.query(
+    `SELECT address, country, state, city, pincode
+     FROM vendor_company_addresses
+     WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+ const [services] = await db.query(
+    `SELECT id, service_name, support_level
+     FROM vendor_services
+     WHERE vendor_id = ?`,
+    [vendorId]
+  );
+
+  const vendor = vendorRows[0];
+
+   return {
+    message: "Profile updated successfully",
+    data: {
+      id:            vendor.id,
+      companyName:   vendor.company_name,
+      contactPerson: vendor.contact_person,
+      email:         vendor.email,
+      mobile:        vendor.mobile,
+      pan:           vendor.pan,
+      gst:           vendor.gst,
+      createdAt:     vendor.created_at,
+      address:       updatedAddress[0] || null,
+      services:      services || [],
+    },
+  };
+
+}
+
+
+exports.getVendorUsers = async (vendor_id) => {
+  const [users] = await db.query(
+    `SELECT id, name, email, mobile, designation, created_at 
+     FROM vendor_users 
+     WHERE vendor_id = ?`,
+    [vendor_id]
+  );
+  return { total: users.length, users };
 };

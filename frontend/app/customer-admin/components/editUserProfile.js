@@ -1,5 +1,4 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,48 +58,12 @@ export const EditUserForm = ({ user, onClose, onUpdate }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const { companyName, personName, contactNumber, Email, status } = formData;
-
     try {
-      let userId = user?.id;
-
-      if (!userId) {
-        throw new Error("No user ID found in user object");
-      }
-
-      // Force userId to be number
-      userId = Number(userId);
-      if (isNaN(userId)) {
-        throw new Error(`Invalid user ID format: ${user.id}`);
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/customer-users/profile/${user.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            companyName,
-            personName,
-            contactNumber,
-            Email,
-            status,
-          }),
-        }
+      Swal.fire(
+        "Unavailable",
+        "Customer profile updates are disabled because the API endpoint is not available in this backend.",
+        "warning"
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
-      }
-
-      Swal.fire("Success", data.message, "success");
-      onUpdate(); // Refresh the user list
-      onClose(); // Close the modal
     } catch (error) {
       console.error("Update error details:", error);
       Swal.fire("Error", error.message, "error");

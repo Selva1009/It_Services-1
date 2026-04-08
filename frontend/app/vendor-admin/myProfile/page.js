@@ -1,296 +1,382 @@
 ﻿"use client";
-import { API_BASE_URL } from "@/lib/api/config";
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowBigLeftDash, DiscAlbum } from "lucide-react";
-import { FiEdit2 } from "react-icons/fi";
-import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import Swal from "sweetalert2";
-import Footer from "@/app/LandingPage/Footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import "./profile.css";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { fetchVendorAdminProfile, updateVendorAdminProfile } from "@/app/services/profileService";
 
-const VendorProfilePage = () => {
-  const [vendor, setVendor] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+const COMPANY_FIELDS = [
+  { label: "Company Name",    key: "companyName",    editable: false },
+  { label: "Contact Person",  key: "contactPerson",  editable: true  },
+  { label: "PAN Number",      key: "pan",            editable: false },
+  { label: "GST Number",      key: "gst",            editable: true  },
+];
+
+const CONTACT_FIELDS = [
+  { label: "Email",           key: "email",          editable: false, type: "email"  },
+  { label: "Mobile",          key: "mobile",         editable: true,  type: "tel"    },
+];
+
+const ADDRESS_KEYS = ["address", "country", "state", "city", "pincode"];
+
+/* ─── Helpers ────────────────────────────────────────────── */
+const val = (v) => v || <span className="not-provided">Not provided</span>;
+
+/* ─── Sub-components ─────────────────────────────────────── */
+function SectionTitle({ children }) {
+  return <p className="vp-section-title">{children}</p>;
+}
+
+function InfoItem({ label, value }) {
+  return (
+    <div className="vp-info-item">
+      <span className="vp-info-label">{label}</span>
+      <span className={`vp-info-value ${!value ? "not-provided" : ""}`}>
+        {value || "Not provided"}
+      </span>
+    </div>
+  );
+}
+
+function FormField({ label, fieldKey, value, onChange, editable = true, type = "text" }) {
+  return (
+    <div className="vp-form-field">
+      <label className="vp-form-label" htmlFor={fieldKey}>{label}</label>
+      <input
+        id={fieldKey}
+        name={fieldKey}
+        type={type}
+        value={value || ""}
+        onChange={onChange}
+        disabled={!editable}
+        className="vp-form-input"
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
+function ServiceChip({ name, level }) {
+  return (
+    <div className="vp-service-chip">
+      <span className="vp-service-name">{name}</span>
+      <span className="vp-service-level">{level}</span>
+    </div>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────────────── */
+export default function VendorProfilePage() {
   const router = useRouter();
-  const getAuthToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
-
   useEffect(() => {
-    let isMounted = true;
+    ["/SignIn"].forEach((path) => router.prefetch(path));
+  }, []);
+  const { getAuthToken: getAuthTokenFromContext, setVendor: setAuthVendor } = useAuth();
 
-    const loadVendorData = async () => {
-      const storedVendor = localStorage.getItem("vendor");
-      if (!storedVendor) {
-        router.push("/SignIn");
-        return;
-      }
+  const [profile, setProfile]     = useState(null);
+  const [formData, setFormData]   = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving]   = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-      try {
-        const vendorData = JSON.parse(storedVendor);
-        if (!vendorData?.id) {
-          router.push("/SignIn");
-          return;
-        }
-
-        try {
-          const authToken = getAuthToken();
-          const response = await fetch(
-            `${API_BASE_URL}/api/vendors/profile`,
-            {
-              cache: "no-store",
-              headers: authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : undefined,
-            }
-          );
-
-          if (response.ok) {
-            const payload = await response.json();
-            const latestVendor = payload.vendor || payload;
-            if (isMounted) {
-              setVendor(latestVendor);
-              setFormData(latestVendor);
-              localStorage.setItem("vendor", JSON.stringify(latestVendor));
-            }
-            return;
-          }
-        } catch (fetchError) {
-          console.error("Error fetching latest vendor profile:", fetchError);
-        }
-
-        if (isMounted) {
-          setVendor(vendorData);
-          setFormData(vendorData);
-        }
-      } catch (error) {
-        console.error("Error parsing vendor data:", error);
-        router.push("/SignIn");
-      }
-    };
-
-    void loadVendorData();
-
-    const handleStorageChange = () => {
-      void loadVendorData();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      isMounted = false;
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, [router]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (isLoading) return;
-    setIsLoading(true);
+  /* ── Fetch profile from API ── */
+  const fetchProfile = useCallback(async () => {
+    const token = getAuthTokenFromContext();
+    if (!token) {
+      router.push("/SignIn");
+      return;
+    }
 
     try {
-      const authToken = getAuthToken();
-      const response = await fetch(
-        `${API_BASE_URL}/api/vendors/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const json = await fetchVendorAdminProfile(token);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update profile");
-      }
-
-      const updatedPayload = await response.json().catch(() => ({}));
-      const completeVendorData = {
-        ...vendor,
-        ...formData,
-        ...(updatedPayload.vendor || updatedPayload),
-      };
-
-      localStorage.setItem("vendor", JSON.stringify(completeVendorData));
-      setVendor(completeVendorData);
-      setFormData(completeVendorData);
-      setIsEditing(false);
-      window.dispatchEvent(new Event("storage"));
-
-      Swal.fire({
-        icon: "success",
-        title: "Profile Updated!",
-        text: "Your changes have been saved successfully",
-        confirmButtonColor: "#3085d6",
-      });
-    } catch (error) {
-      console.error("Profile update error:", error);
+      /* API returns: { message, data: { ...vendor, address: {}, services: [] } } */
+      const data = json.data || json;
+      setProfile(data);
+      setAuthVendor(data);
+      setFormData(flattenProfile(data));
+    } catch (err) {
+      console.error("Profile fetch error:", err);
       Swal.fire({
         icon: "error",
-        title: "Update Failed",
-        text: error.message || "Could not update profile. Please try again.",
+        title: "Error",
+        text: "Could not load your profile. Please try again.",
       });
     } finally {
       setIsLoading(false);
     }
+  }, [getAuthTokenFromContext, router, setAuthVendor]);
+
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  /* ── Flatten nested address for form ── */
+  function flattenProfile(data) {
+    return {
+      companyName:   data.companyName   || "",
+      contactPerson: data.contactPerson || "",
+      email:         data.email         || "",
+      mobile:        data.mobile        || "",
+      pan:           data.pan           || "",
+      gst:           data.gst           || "",
+      address:       data.address?.address || "",
+      country:       data.address?.country || "",
+      state:         data.address?.state   || "",
+      city:          data.address?.city    || "",
+      pincode:       data.address?.pincode || "",
+    };
+  }
+
+  /* ── Form change handler ── */
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (!vendor) {
+  /* ── Save handler ── */
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      const token = getAuthTokenFromContext();
+      await updateVendorAdminProfile(token, formData);
+
+      /* Refresh from server after save */
+      await fetchProfile();
+      setIsEditing(false);
+
+      Swal.fire({
+        icon: "success",
+        title: "Profile Updated",
+        text: "Your changes have been saved successfully.",
+        confirmButtonColor: "#1a56db",
+        timer: 2500,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Save error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Update Failed",
+        text: err.message || "Could not save changes. Please try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setFormData(flattenProfile(profile));
+    setIsEditing(false);
+  };
+
+  /* ── Loading state ── */
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading profile...</div>
+      <div className="vp-loading">
+        <div className="vp-loading-spinner" />
+        <span>Loading your profile…</span>
       </div>
     );
   }
 
-  const profileFields = [
-    { label: "Company Name", name: "companyName", disabled: true },
-    { label: "Registration Number", name: "registrationNumber" },
-    { label: "Company Website", name: "companyWebsite" },
-    { label: "GST Number", name: "gstNumber" },
-    { label: "First Name", name: "firstName" },
-    { label: "Last Name", name: "lastName" },
-    { label: "Phone Number", name: "phoneNumber" },
-    { label: "Email", name: "email", type: "email", disabled: true },
-    { label: "Address", name: "address" },
-    { label: "Country", name: "country" },
-    { label: "State", name: "state" },
-    { label: "City", name: "city" },
-    { label: "Postal Code", name: "postalCode" },
-  ];
+  if (!profile) return null;
 
+  const { services = [] } = profile;
+
+  /* ── Render ── */
   return (
-    <>
-      <div className="bg-gray-50 min-h-screen pt-5 pb-12">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center mb-8">
-            <button
-              onClick={ () => router.back() }
-              className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Back"
-            >
-              <ArrowBigLeftDash className="h-6 w-6 text-gray-600" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
+    <div className="vp-page">
+      <div className="vp-container">
+
+        {/* Back */}
+        <button className="vp-back-btn" onClick={() => router.back()}>
+          ← Back
+        </button>
+
+        <div className="vp-card">
+
+          {/* ── Header ── */}
+          <div className="vp-card-header">
+            <div className="vp-avatar-wrapper">
+              <img
+                src="/User_Icon.jpg"
+                alt="Profile avatar"
+                className="vp-avatar"
+                onError={(e) => { e.target.src = "/default-avatar.png"; }}
+              />
+              <div className="vp-avatar-badge" title="Active" />
+            </div>
+
+            <div className="vp-header-info">
+              <h1 className="vp-header-name">
+                {profile.contactPerson || profile.companyName} 
+              </h1>
+              <p className="vp-header-role">{profile.email}</p>
+              <span className="vp-header-badge">
+                ✦ Vendor Admin
+              </span>
+            </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 flex items-center">
-              <div className="relative">
-                <img
-                  src="/User_Icon.jpg"
-                  alt="Profile"
-                  className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-md"
-                />
-                { isEditing && (
-                  <div className="absolute bottom-0 right-0 bg-blue-100 p-1.5 rounded-full border-2 border-white">
-                    <FiEdit2 className="text-blue-600 h-4 w-4" />
-                  </div>
-                ) }
-              </div>
-              <div className="ml-5">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  { vendor.firstName } { vendor.lastName }
-                </h2>
-                <p className="text-sm text-gray-600">Vendor Account</p>
-              </div>
-            </div>
+          {/* ── Body ── */}
+          <div className="vp-card-body">
 
-            <div className="p-6">
-              { !isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  { profileFields.map(({ label, name }) => (
-                    <div key={ name } className="space-y-1">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        { label }
-                      </p>
-                      <p className="text-base font-medium text-gray-800 break-words">
-                        { vendor[name] || (
-                          <span className="text-gray-400 italic">Not provided</span>
-                        ) }
-                      </p>
-                    </div>
-                  )) }
+            {!isEditing ? (
+              /* ── View Mode ── */
+              <>
+                {/* Company Info */}
+                <SectionTitle sx>Company Information</SectionTitle>
+                <div className="vp-info-grid">
+                  {COMPANY_FIELDS.map(({ label, key }) => (
+                    <InfoItem key={key} label={label} value={profile[key]?.charAt(0).toUpperCase() + profile[key]?.slice(1)} />
+                  ))}
                 </div>
-              ) : (
-                <form onSubmit={ handleSave } className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    { profileFields.map(({ label, name, type = "text", disabled }) => (
-                      <div key={ name } className="space-y-2">
-                        <Label htmlFor={ name } className="text-gray-700">
-                          { label }
-                        </Label>
-                        <Input
-                          id={ name }
-                          name={ name }
-                          type={ type }
-                          value={ formData[name] || "" }
-                          onChange={ handleChange }
-                          required={ !disabled }
-                          className="focus:ring-2 focus:ring-blue-500"
-                          disabled={ disabled }
+
+                <div className="vp-divider" />
+
+                {/* Contact Info */}
+                <SectionTitle>Contact Details</SectionTitle>
+                <div className="vp-info-grid">
+                  {CONTACT_FIELDS.map(({ label, key }) => (
+                    <InfoItem key={key} label={label} value={profile[key]} />
+                  ))}
+                </div>
+
+                <div className="vp-divider" />
+
+                {/* Address */}
+                <SectionTitle>Address</SectionTitle>
+                <div className="vp-info-grid">
+                  {ADDRESS_KEYS.map((key) => (
+                    <InfoItem
+                      key={key}
+                      label={key.charAt(0).toUpperCase() + key.slice(1)}
+                      value={profile.address?.[key]}
+                    />
+                  ))}
+                </div>
+
+                {/* Services */}
+                {services.length > 0 && (
+                  <>
+                    <div className="vp-divider" />
+                    <SectionTitle>Services</SectionTitle>
+                    <div className="vp-services-list">
+                      {services.map((svc) => (
+                        <ServiceChip
+                          key={svc.id}
+                          name={svc.service_name}
+                          level={svc.support_level}
                         />
-                      </div>
-                    )) }
-                  </div>
+                      ))}
+                    </div>
+                  </>
+                )}
 
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={ () => {
-                        setFormData(vendor);
-                        setIsEditing(false);
-                      } }
-                      disabled={ isLoading }
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={ isLoading }>
-                      { isLoading ? (
-                        <span className="flex items-center">
-                          <AiOutlineLoading3Quarters className="animate-spin mr-2 h-4 w-4" />
-                          Saving...
-                        </span>
-                      ) : (
-                        "Save Changes"
-                      ) }
-                    </Button>
-                  </div>
-                </form>
-              ) }
-
-              { !isEditing && (
-                <div className="flex justify-end mt-8">
-                  <Button
-                    onClick={ () => setIsEditing(true) }
-                    className="bg-blue-600 hover:bg-blue-700"
+                {/* Edit Button */}
+                <div className="vp-actions">
+                  <button
+                    className="vp-btn vp-btn-primary"
+                    onClick={() => setIsEditing(true)}
                   >
-                    Edit Profile
-                  </Button>
+                    ✎ Edit Profile
+                  </button>
                 </div>
-              ) }
-            </div>
+              </>
+            ) : (
+              /* ── Edit Mode ── */
+              <form onSubmit={handleSave}>
+                <SectionTitle>Company Information</SectionTitle>
+                <div className="vp-form-grid" style={{ marginBottom: 28 }}>
+                  {COMPANY_FIELDS.map(({ label, key, editable }) => (
+                    <FormField
+                      key={key}
+                      label={label}
+                      fieldKey={key}
+                      value={formData[key]}
+                      onChange={handleChange}
+                      editable={editable}
+                    />
+                  ))}
+                </div>
+
+                <div className="vp-divider" />
+
+                <SectionTitle>Contact Details</SectionTitle>
+                <div className="vp-form-grid" style={{ marginBottom: 28 }}>
+                  {CONTACT_FIELDS.map(({ label, key, editable, type }) => (
+                    <FormField
+                      key={key}
+                      label={label}
+                      fieldKey={key}
+                      value={formData[key]}
+                      onChange={handleChange}
+                      editable={editable}
+                      type={type}
+                    />
+                  ))}
+                </div>
+
+                <div className="vp-divider" />
+
+                <SectionTitle>Address</SectionTitle>
+                <div className="vp-form-grid" style={{ marginBottom: 28 }}>
+                  {ADDRESS_KEYS.map((key) => (
+                    <FormField
+                      key={key}
+                      label={key.charAt(0).toUpperCase() + key.slice(1)}
+                      fieldKey={key}
+                      value={formData[key]}
+                      onChange={handleChange}
+                      editable={true}
+                    />
+                  ))}
+                </div>
+
+                {/* Form Actions */}
+                <div className="vp-btn-group">
+                  <button
+                    type="button"
+                    className="vp-btn vp-btn-outline"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="vp-btn vp-btn-primary"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <svg
+                          className="vp-spin"
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                        >
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                        Saving…
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>
-
-    </>
+    </div>
   );
-};
-
-export default VendorProfilePage;
-
+}
